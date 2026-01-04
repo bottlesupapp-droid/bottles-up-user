@@ -1,0 +1,65 @@
+name: bottles_up_user
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.2+2
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  flutter_riverpod: ^2.4.9
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  go_router: ^13.0.1
+  supabase_flutter: ^2.3.2
+  gap: ^3.0.1
+  iconsax_flutter: ^1.0.0
+  url_launcher: ^6.2.4
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  carousel_slider: ^5.1.1
+  loading_animation_widget: ^1.3.0
+  font_awesome_flutter: ^10.8.0
+  riverpod_annotation: ^2.6.1
+  flutter_svg: ^2.2.0
+  google_sign_in: ^6.2.1
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  shared_preferences: ^2.5.3
+  smooth_page_indicator: ^1.2.1
+  image_picker: ^1.0.7
+  ionicons: ^0.2.2
+  intl: ^0.19.0
+  app_links: ^6.3.2
+  flutter_stripe: ^11.1.0
+  http: ^1.1.0
+  share_plus: ^7.2.2
+  sign_in_with_apple: ^6.1.2
+  path_provider: ^2.1.2
+  qr_flutter: ^4.1.0
+  timeago: ^3.7.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  build_runner: ^2.4.7
+  freezed: ^2.4.6
+  json_serializable: ^6.7.1
+  riverpod_generator: ^2.6.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/app_logo.jpg
+    - assets/app_logo.svg
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/app_logo.jpg"
+  min_sdk_android: 21
