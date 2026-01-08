@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:carousel_slider/carousel_slider.dart';
+import 'package:carousel_slider/carousel_slider.dart' as cs;
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class SpecialOffersSection extends StatelessWidget {
-  final CarouselSliderController carouselController;
+  final cs.CarouselSliderController carouselController;
   final int currentIndex;
   final Function(int) onPageChanged;
 
@@ -49,9 +49,9 @@ class SpecialOffersSection extends StatelessWidget {
         // Offers Carousel
         SizedBox(
           height: 160,
-          child: CarouselSlider(
+          child: cs.CarouselSlider(
             carouselController: carouselController,
-            options: CarouselOptions(
+            options: cs.CarouselOptions(
               height: 160,
               autoPlay: true,
               autoPlayInterval: const Duration(seconds: 4),

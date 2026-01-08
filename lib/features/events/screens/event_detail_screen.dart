@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:carousel_slider/carousel_slider.dart';
+import 'package:carousel_slider/carousel_slider.dart' as cs;
 
 import '../models/event.dart';
 import '../providers/event_provider.dart';
@@ -22,7 +22,7 @@ class EventDetailScreen extends ConsumerStatefulWidget {
 
 class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final cs.CarouselSliderController _carouselController = cs.CarouselSliderController();
   int _currentCarouselIndex = 0;
 
   @override
@@ -132,9 +132,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
               children: [
                 // Image Carousel
                 if (event.images != null && event.images!.isNotEmpty)
-                  CarouselSlider(
+                  cs.CarouselSlider(
                     carouselController: _carouselController,
-                    options: CarouselOptions(
+                    options: cs.CarouselOptions(
                       height: double.infinity,
                       viewportFraction: 1.0,
                       enableInfiniteScroll: event.images!.length > 1,
