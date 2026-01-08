@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:bottles_up_user/features/bookings/screens/booking_detail_screen.dart';
 
 class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
@@ -610,12 +611,10 @@ class _MyBookingsScreenInternalState
   }
 
   void _showBookingDetails(MockBooking booking) {
-    // Navigate to detailed booking screen
-    // TODO: Implement detailed booking screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Booking details for ${booking.eventName}'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingDetailScreen(booking: booking),
       ),
     );
   }

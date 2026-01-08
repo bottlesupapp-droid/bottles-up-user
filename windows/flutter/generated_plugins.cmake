@@ -5,8 +5,10 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   file_selector_windows
+  flutter_secure_storage_windows
   geolocator_windows
-  share_plus
+  rive_native
+  smart_auth
   url_launcher_windows
 )
 

@@ -4,7 +4,10 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
+  flutter_secure_storage_linux
   gtk
+  rive_native
+  smart_auth
   url_launcher_linux
 )
 
