@@ -58,6 +58,7 @@ class PaymentScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
+  final PaymentService _paymentService = PaymentService();
   bool _isProcessing = false;
   String? _errorMessage;
   PaymentIntent? _paymentIntent;
@@ -67,56 +68,21 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    _createPaymentIntent();
+    // In the new system, we create the session when the user clicks pay
+    // or we can pre-create it here if we want to follow the old pattern
   }
 
   Future<void> _createPaymentIntent() async {
-    try {
-      setState(() {
-        _isProcessing = true;
-        _errorMessage = null;
-      });
-
-      final paymentIntentData = await PaymentService.createPaymentIntent(
-        amount: widget.amount,
-        currency: widget.currency,
-        description: widget.description,
-        metadata: {
-          'booking_id': widget.bookingId,
-          'payment_type': widget.paymentType.name,
-          ...?widget.metadata,
-        },
-      );
-
-      // Validate required fields before creating PaymentIntent
-      if (paymentIntentData['id'] == null ||
-          paymentIntentData['client_secret'] == null ||
-          paymentIntentData['amount'] == null ||
-          paymentIntentData['currency'] == null ||
-          paymentIntentData['status'] == null ||
-          paymentIntentData['created'] == null) {
-        throw Exception('Invalid payment intent response from Stripe');
-      }
-
-      _paymentIntent = PaymentIntent.fromJson(paymentIntentData);
-
-      setState(() {
-        _isProcessing = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isProcessing = false;
-        _errorMessage = e.toString();
-      });
-    }
+    // This method is now replaced by createCheckoutSession in the new service
+    // We'll handle Stripe payment by redirecting to the checkout URL
   }
 
   bool _canProcessPayment() {
     if (_isProcessing) return false;
 
-    // For Stripe, check if payment intent is created
-    if (_selectedPaymentMethod == PaymentMethod.stripe && _paymentIntent == null) {
-      return false;
+    // For Stripe, we don't need a pre-created intent anymore in the new system
+    if (_selectedPaymentMethod == PaymentMethod.stripe) {
+      return true;
     }
 
     // For Wallet, check if sufficient balance
@@ -138,8 +104,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
       switch (_selectedPaymentMethod) {
         case PaymentMethod.stripe:
-          success = await _processStripePayment();
-          break;
+          await _processStripePayment();
+          // Stripe payment redirect happens, so we don't return a simple success here
+          // The return from Stripe is handled via deep links
+          return;
         case PaymentMethod.googlePay:
           success = await _processGooglePayPayment();
           break;
@@ -170,17 +138,35 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     }
   }
 
-  Future<bool> _processStripePayment() async {
-    if (_paymentIntent == null) {
-      throw Exception('Payment intent not created');
-    }
-
+  Future<void> _processStripePayment() async {
     try {
-      final success = await PaymentService.presentPaymentSheet(
-        clientSecret: _paymentIntent!.clientSecret,
-        merchantDisplayName: 'Bottles Up',
+      // Step 1: Create checkout session
+      final result = await _paymentService.createCheckoutSession(
+        paymentType: widget.paymentType.name,
+        amount: widget.amount,
+        bookingId: widget.bookingId,
+        description: widget.description,
+        metadata: widget.metadata,
       );
-      return success;
+
+      // Step 2: Open Stripe checkout URL
+      final opened = await _paymentService.openCheckoutUrl(result.checkoutUrl);
+
+      if (!opened) {
+        throw Exception('Failed to open payment page');
+      }
+
+      // Step 3: The user is now in the browser. 
+      // In a real app, we'd wait for them to return or use a listener.
+      // For this UI, we'll just show a message that they've been redirected.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Redirecting to secure payment page...'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       throw Exception('Stripe payment failed: ${e.toString()}');
     }

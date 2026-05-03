@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' as share_plus;
 import '../models/social_models.dart';
 
 class ShareService {
@@ -198,12 +198,12 @@ class ShareService {
   }) async {
     try {
       if (url != null) {
-        await Share.share(
+        await share_plus.Share.share(
           '$text\n\n$url',
           subject: title,
         );
       } else {
-        await Share.share(
+        await share_plus.Share.share(
           text,
           subject: title,
         );

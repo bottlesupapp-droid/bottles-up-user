@@ -930,14 +930,36 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
     );
   }
 
-  void _handleBooking(String type) {
-    // TODO: Navigate to appropriate booking screen based on type
-    // For now, show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening $type booking...'),
-        behavior: SnackBarBehavior.floating,
-      ),
+  void _handleBooking(String type) async {
+    final eventAsync = ref.read(eventByIdProvider(widget.eventId));
+    final event = eventAsync.valueOrNull;
+
+    if (event == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Event information not available'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Navigate to checkout screen with event payment
+    context.push(
+      '/checkout',
+      extra: {
+        'paymentType': 'event_ticket',
+        'amount': event.ticketPrice,
+        'eventId': event.id,
+        'description': 'Event Ticket - ${event.name}',
+        'metadata': {
+          'event_name': event.name,
+          'event_date': event.eventDate.toIso8601String(),
+          'event_time': '${event.startTime} - ${event.endTime}',
+          'club_name': event.clubName ?? 'Unknown',
+          'ticket_quantity': 1, // Default to 1, can be enhanced later
+        },
+      },
     );
   }
 }

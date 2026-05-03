@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bottles_up_user/core/services/payment_service.dart';
+import 'package:bottles_up_user/core/services/payment_service.dart' as service;
 import 'package:bottles_up_user/core/models/payment_models.dart';
 
 class PaymentState {
@@ -31,32 +31,31 @@ class PaymentState {
 }
 
 class PaymentNotifier extends StateNotifier<PaymentState> {
+  final service.PaymentService _paymentService = service.PaymentService();
   PaymentNotifier() : super(PaymentState());
 
-  Future<PaymentIntent?> createPaymentIntent({
+  Future<service.PaymentCheckoutResult?> createCheckoutSession({
+    required String paymentType,
     required double amount,
-    required String currency,
+    String? bookingId,
+    String? eventId,
     String? description,
     Map<String, dynamic>? metadata,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      final paymentIntentData = await PaymentService.createPaymentIntent(
+      final result = await _paymentService.createCheckoutSession(
+        paymentType: paymentType,
         amount: amount,
-        currency: currency,
+        bookingId: bookingId,
+        eventId: eventId,
         description: description,
         metadata: metadata,
       );
       
-      final paymentIntent = PaymentIntent.fromJson(paymentIntentData);
-      
-      state = state.copyWith(
-        isLoading: false,
-        currentPaymentIntent: paymentIntent,
-      );
-      
-      return paymentIntent;
+      state = state.copyWith(isLoading: false);
+      return result;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -66,26 +65,21 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     }
   }
 
-  Future<bool> processPayment({
-    required String clientSecret,
-    String? merchantDisplayName,
-  }) async {
-    state = state.copyWith(isLoading: true, error: null);
-    
+  Future<bool> openCheckoutUrl(String url) async {
     try {
-      final success = await PaymentService.presentPaymentSheet(
-        clientSecret: clientSecret,
-        merchantDisplayName: merchantDisplayName,
-      );
-      
-      state = state.copyWith(isLoading: false);
-      return success;
+      return await _paymentService.openCheckoutUrl(url);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(error: e.toString());
       return false;
+    }
+  }
+
+  Future<service.PaymentStatus?> checkStatus(String sessionId) async {
+    try {
+      return await _paymentService.checkPaymentStatus(sessionId);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return null;
     }
   }
 

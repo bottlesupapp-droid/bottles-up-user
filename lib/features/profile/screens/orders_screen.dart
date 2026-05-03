@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -378,14 +379,31 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         final booking = _eventBookings[index];
         final event = booking['events'];
         final club = event['clubs'];
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: InkWell(
+            onTap: () {
+              // Navigate to ticket detail screen with QR code
+              context.push(
+                '/tickets/${booking['id']}?'
+                'eventName=${Uri.encodeComponent(event['name'] ?? 'Event')}&'
+                'venueName=${Uri.encodeComponent(club?['name'] ?? 'Venue')}&'
+                'eventDate=${Uri.encodeComponent(event['event_date']?.toString() ?? '')}&'
+                'eventTime=${Uri.encodeComponent('${event['start_time']} - ${event['end_time']}')}&'
+                'ticketQuantity=${booking['ticket_quantity']}&'
+                'ticketPrice=${booking['ticket_price']}&'
+                'totalAmount=${booking['total_amount']}&'
+                'status=${booking['status']}&'
+                'confirmationCode=${booking['confirmation_code'] ?? ''}',
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Row(
                   children: [
                     ClipRRect(
@@ -447,8 +465,35 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                   {'label': 'Total Amount', 'value': '\$${booking['total_amount']?.toString() ?? '0'}'},
                   if (booking['confirmation_code'] != null) {'label': 'Confirmation Code', 'value': booking['confirmation_code']},
                 ]),
+                const Gap(16),
+                // View Ticket button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.push(
+                        '/tickets/${booking['id']}?'
+                        'eventName=${Uri.encodeComponent(event['name'] ?? 'Event')}&'
+                        'venueName=${Uri.encodeComponent(club?['name'] ?? 'Venue')}&'
+                        'eventDate=${Uri.encodeComponent(event['event_date']?.toString() ?? '')}&'
+                        'eventTime=${Uri.encodeComponent('${event['start_time']} - ${event['end_time']}')}&'
+                        'ticketQuantity=${booking['ticket_quantity']}&'
+                        'ticketPrice=${booking['ticket_price']}&'
+                        'totalAmount=${booking['total_amount']}&'
+                        'status=${booking['status']}&'
+                        'confirmationCode=${booking['confirmation_code'] ?? ''}',
+                      );
+                    },
+                    icon: const Icon(Iconsax.scan_barcode),
+                    label: const Text('View Ticket QR Code'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
               ],
             ),
+          ),
           ),
         );
       },

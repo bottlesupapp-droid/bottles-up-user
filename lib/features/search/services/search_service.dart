@@ -59,12 +59,11 @@ class SearchService {
       var queryBuilder = _supabase
           .from('events')
           .select('*, venues!inner(name, location, rating)')
-          .or('name.ilike.%$query%,description.ilike.%$query%')
-          .limit(limit);
+          .or('name.ilike.%$query%,description.ilike.%$query%');
 
       // Apply filters
       if (filters?.categories != null && filters!.categories!.isNotEmpty) {
-        queryBuilder = queryBuilder.in_('category', filters.categories!);
+        queryBuilder = queryBuilder.inFilter('category', filters.categories!);
       }
 
       if (filters?.dateRange != null) {
@@ -83,7 +82,7 @@ class SearchService {
         queryBuilder = queryBuilder.gt('available_tickets', 0);
       }
 
-      final response = await queryBuilder;
+      final response = await queryBuilder.limit(limit);
 
       return (response as List)
           .map((item) => SearchResult(
@@ -115,12 +114,11 @@ class SearchService {
       var queryBuilder = _supabase
           .from('venues')
           .select('*')
-          .or('name.ilike.%$query%,description.ilike.%$query%,neighborhood.ilike.%$query%')
-          .limit(limit);
+          .or('name.ilike.%$query%,description.ilike.%$query%,neighborhood.ilike.%$query%');
 
       // Apply filters
       if (filters?.neighborhoods != null && filters!.neighborhoods!.isNotEmpty) {
-        queryBuilder = queryBuilder.in_('neighborhood', filters.neighborhoods!);
+        queryBuilder = queryBuilder.inFilter('neighborhood', filters.neighborhoods!);
       }
 
       if (filters?.verifiedVenuesOnly == true) {
@@ -131,7 +129,7 @@ class SearchService {
         queryBuilder = queryBuilder.contains('amenities', filters.amenities!);
       }
 
-      final response = await queryBuilder;
+      final response = await queryBuilder.limit(limit);
 
       return (response as List)
           .map((item) => SearchResult(

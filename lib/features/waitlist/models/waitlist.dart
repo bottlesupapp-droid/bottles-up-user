@@ -16,6 +16,8 @@ enum WaitlistStatus {
 
 @freezed
 class WaitlistEntry with _$WaitlistEntry {
+  const WaitlistEntry._();
+
   const factory WaitlistEntry({
     required String id,
     required String userId,

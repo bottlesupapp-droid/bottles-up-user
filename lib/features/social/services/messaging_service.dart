@@ -136,9 +136,7 @@ class MessagingService {
       var query = _supabase
           .from('messages')
           .select('*, sender:users!sender_id(*)')
-          .eq('conversation_id', conversationId)
-          .order('sent_at', ascending: false)
-          .limit(limit);
+          .eq('conversation_id', conversationId);
 
       if (beforeMessageId != null) {
         final beforeMessage = await _supabase
@@ -150,7 +148,9 @@ class MessagingService {
         query = query.lt('sent_at', beforeMessage['sent_at']);
       }
 
-      final response = await query;
+      final response = await query
+          .order('sent_at', ascending: false)
+          .limit(limit);
 
       return (response as List)
           .map((item) => Message.fromSupabase(item as Map<String, dynamic>))

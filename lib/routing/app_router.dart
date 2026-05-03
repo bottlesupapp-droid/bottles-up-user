@@ -27,6 +27,8 @@ import 'package:bottles_up_user/features/events/screens/event_chat_screen.dart';
 import 'package:bottles_up_user/features/events/screens/event_polls_screen.dart';
 import 'package:bottles_up_user/features/events/screens/announcements_screen.dart';
 import 'package:bottles_up_user/features/events/screens/ticket_transfer_screen.dart';
+import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
+import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -323,6 +325,59 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/ticket-transfers',
       builder: (context, state) => const TicketTransferScreen(),
+    ),
+    // Ticket detail route
+    GoRoute(
+      path: '/tickets/:id',
+      builder: (context, state) {
+        final ticketId = state.pathParameters['id']!;
+        final eventName = state.uri.queryParameters['eventName'] ?? 'Event';
+        final venueName = state.uri.queryParameters['venueName'] ?? 'Venue';
+        final eventDate = state.uri.queryParameters['eventDate'] ?? '';
+        final eventTime = state.uri.queryParameters['eventTime'] ?? '';
+        final ticketQuantity = int.tryParse(state.uri.queryParameters['ticketQuantity'] ?? '1') ?? 1;
+        final ticketPrice = state.uri.queryParameters['ticketPrice'] ?? '0';
+        final totalAmount = state.uri.queryParameters['totalAmount'] ?? '0';
+        final status = state.uri.queryParameters['status'] ?? 'pending';
+        final confirmationCode = state.uri.queryParameters['confirmationCode'];
+
+        return TicketDetailScreen(
+          ticketId: ticketId,
+          eventName: eventName,
+          venueName: venueName,
+          eventDate: eventDate,
+          eventTime: eventTime,
+          ticketQuantity: ticketQuantity,
+          ticketPrice: ticketPrice,
+          totalAmount: totalAmount,
+          status: status,
+          confirmationCode: confirmationCode,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/checkout',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+
+        if (extra == null) {
+          // Fallback if no data provided
+          return const CheckoutScreen(
+            paymentType: 'general',
+            amount: 0.0,
+            description: 'Payment',
+          );
+        }
+
+        return CheckoutScreen(
+          paymentType: extra['paymentType'] as String? ?? 'general',
+          amount: (extra['amount'] as num?)?.toDouble() ?? 0.0,
+          bookingId: extra['bookingId'] as String?,
+          eventId: extra['eventId'] as String?,
+          description: extra['description'] as String?,
+          metadata: extra['metadata'] as Map<String, dynamic>?,
+        );
+      },
     ),
   ],
 );
