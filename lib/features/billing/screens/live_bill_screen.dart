@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/live_bill.dart';
 import '../services/live_bill_service.dart';
 import '../widgets/bill_split_dialog.dart';

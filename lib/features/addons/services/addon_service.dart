@@ -11,16 +11,16 @@ class AddonService {
   // Get all available addons
   Future<List<Addon>> getAvailableAddons({String? venueId}) async {
     try {
-      var query = _supabase
+      dynamic query = _supabase
           .from('addons')
           .select()
-          .eq('is_available', true)
-          .order('category');
+          .eq('is_available', true);
 
       if (venueId != null) {
         query = query.eq('venue_id', venueId);
       }
 
+      query = query.order('category');
       final response = await query;
 
       return (response as List)
@@ -225,7 +225,7 @@ class AddonService {
   Future<double> calculateAddonsTotal(String bookingId) async {
     try {
       final addons = await getBookingAddons(bookingId);
-      return addons.fold(0.0, (sum, addon) => sum + addon.totalPrice);
+      return addons.fold<double>(0.0, (sum, addon) => sum + addon.totalPrice);
     } catch (e) {
       return 0.0;
     }

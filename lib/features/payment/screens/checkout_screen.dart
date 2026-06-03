@@ -35,7 +35,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   PaymentState _paymentState = PaymentState.idle;
   String? _errorMessage;
-  String? _sessionId;
 
   @override
   void initState() {
@@ -46,7 +45,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     });
   }
 
-  /// Step 1: Create checkout session via Supabase Edge Function
+  /// Step 1: Create Payment Intent and present in-app Payment Sheet
   Future<void> _initiatePayment() async {
     setState(() {
       _paymentState = PaymentState.loading;
@@ -54,8 +53,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     });
 
     try {
-      // Call edge function to create checkout session
-      final result = await _paymentService.createCheckoutSession(
+      // Call edge function to create payment intent for in-app payment
+      final paymentIntent = await _paymentService.createPaymentIntent(
         paymentType: widget.paymentType,
         amount: widget.amount,
         bookingId: widget.bookingId,
@@ -64,79 +63,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         metadata: widget.metadata,
       );
 
-      _sessionId = result.sessionId;
-
-      // Step 2: Open Stripe checkout URL
+      // Step 2: Present Payment Sheet IN-APP
       setState(() {
         _paymentState = PaymentState.openingCheckout;
       });
 
-      final opened = await _paymentService.openCheckoutUrl(result.checkoutUrl);
+      final success = await _paymentService.presentPaymentSheet(
+        paymentIntent: paymentIntent,
+        enableGooglePay: true,
+        enableApplePay: true,
+      );
 
-      if (!opened) {
-        throw PaymentException('Failed to open payment page');
+      if (success) {
+        setState(() {
+          _paymentState = PaymentState.success;
+        });
+      } else {
+        setState(() {
+          _paymentState = PaymentState.cancelled;
+          _errorMessage = 'Payment was cancelled';
+        });
       }
-
-      // Step 3: Wait for user to return from Stripe
-      setState(() {
-        _paymentState = PaymentState.waitingConfirmation;
-      });
-
-      // Start polling payment status
-      _pollPaymentStatus();
     } on PaymentException catch (e) {
-      setState(() {
-        _paymentState = PaymentState.failed;
-        _errorMessage = e.message;
-      });
+      if (e.message.contains('cancelled') || e.message.contains('canceled')) {
+        setState(() {
+          _paymentState = PaymentState.cancelled;
+          _errorMessage = 'Payment was cancelled';
+        });
+      } else {
+        setState(() {
+          _paymentState = PaymentState.failed;
+          _errorMessage = e.message;
+        });
+      }
     } catch (e) {
       setState(() {
         _paymentState = PaymentState.failed;
         _errorMessage = 'Payment failed: $e';
       });
     }
-  }
-
-  /// Step 4: Poll payment status from database
-  Future<void> _pollPaymentStatus() async {
-    if (_sessionId == null) return;
-
-    // Poll every 2 seconds for up to 2 minutes
-    for (int i = 0; i < 60; i++) {
-      await Future.delayed(const Duration(seconds: 2));
-
-      try {
-        final status = await _paymentService.checkPaymentStatus(_sessionId!);
-
-        if (status.isPaid) {
-          setState(() {
-            _paymentState = PaymentState.success;
-          });
-          return;
-        } else if (status.isFailed) {
-          setState(() {
-            _paymentState = PaymentState.failed;
-            _errorMessage = status.message;
-          });
-          return;
-        } else if (status.isCancelled) {
-          setState(() {
-            _paymentState = PaymentState.cancelled;
-            _errorMessage = 'Payment was cancelled';
-          });
-          return;
-        }
-      } catch (e) {
-        // Continue polling on error
-        continue;
-      }
-    }
-
-    // Timeout
-    setState(() {
-      _paymentState = PaymentState.failed;
-      _errorMessage = 'Payment verification timeout. Please check your orders.';
-    });
   }
 
   /// Retry payment

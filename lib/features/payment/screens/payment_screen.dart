@@ -140,8 +140,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   Future<void> _processStripePayment() async {
     try {
-      // Step 1: Create checkout session
-      final result = await _paymentService.createCheckoutSession(
+      // Step 1: Create Payment Intent for in-app payment
+      final paymentIntent = await _paymentService.createPaymentIntent(
         paymentType: widget.paymentType.name,
         amount: widget.amount,
         bookingId: widget.bookingId,
@@ -149,26 +149,41 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         metadata: widget.metadata,
       );
 
-      // Step 2: Open Stripe checkout URL
-      final opened = await _paymentService.openCheckoutUrl(result.checkoutUrl);
+      // Step 2: Present Payment Sheet IN-APP
+      final success = await _paymentService.presentPaymentSheet(
+        paymentIntent: paymentIntent,
+        enableGooglePay: true,
+        enableApplePay: true,
+      );
 
-      if (!opened) {
-        throw Exception('Failed to open payment page');
+      if (success && mounted) {
+        // Payment successful
+        setState(() {
+          _isProcessing = false;
+        });
+        _showSuccessDialog();
+        widget.onPaymentSuccess?.call();
       }
-
-      // Step 3: The user is now in the browser. 
-      // In a real app, we'd wait for them to return or use a listener.
-      // For this UI, we'll just show a message that they've been redirected.
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Redirecting to secure payment page...'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+    } on PaymentException catch (e) {
+      if (e.message.contains('cancelled') || e.message.contains('canceled')) {
+        // User cancelled payment - not an error
+        setState(() {
+          _isProcessing = false;
+          _errorMessage = null; // Don't show error for cancellation
+        });
+      } else {
+        setState(() {
+          _isProcessing = false;
+          _errorMessage = e.message;
+        });
+        widget.onPaymentFailed?.call();
       }
     } catch (e) {
-      throw Exception('Stripe payment failed: ${e.toString()}');
+      setState(() {
+        _isProcessing = false;
+        _errorMessage = 'Payment failed: ${e.toString()}';
+      });
+      widget.onPaymentFailed?.call();
     }
   }
 

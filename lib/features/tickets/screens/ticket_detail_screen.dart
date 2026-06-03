@@ -185,7 +185,7 @@ class TicketDetailScreen extends StatelessWidget {
                 const Gap(16),
                 Center(
                   child: Text(
-                    'Ticket ID: ${ticketId.substring(0, 8).toUpperCase()}',
+                    'Ticket ID: ${ticketId.substring(0, ticketId.length > 8 ? 8 : ticketId.length).toUpperCase()}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
