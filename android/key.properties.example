@@ -1,0 +1,17 @@
+# Android Release Signing Configuration
+# Copy this file to key.properties and fill in your actual values
+# NEVER commit key.properties to git!
+
+storePassword=your_keystore_password
+keyPassword=your_key_password
+keyAlias=your_key_alias
+storeFile=../path/to/your/keystore.jks
+
+# To create a keystore:
+# keytool -genkey -v -keystore bottlesup-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias bottlesup
+#
+# Then fill in the values above:
+# - storePassword: Password for the keystore
+# - keyPassword: Password for the key (can be same as storePassword)
+# - keyAlias: Alias you used when creating the keystore (e.g., bottlesup)
+# - storeFile: Path to your .jks file relative to android/app/ (e.g., ../bottlesup-release-key.jks)

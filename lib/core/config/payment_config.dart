@@ -1,16 +1,26 @@
 /// Payment configuration for the Bottles Up app
-/// Contains Stripe API keys and payment settings
+/// SECURITY: All sensitive keys loaded from environment variables
+/// NO hardcoded secrets - Stripe secret keys NEVER belong in client code
 class PaymentConfig {
-  // Stripe API Keys
-  // Live Keys (get proper publishable key from Stripe dashboard)
-  static const String stripePublishableKey = 'pk_live_51RG48ACAp3BDUztNna3vtSxo6XSUd1eU9LV3Mu1j88rwvyoOePTxC0Fg7B41RoCa4uRZsgGHG2Io4VBt1S9GKNyR002ATpwcyK';
-  static const String stripeSecretKey = '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';
+  // Stripe Publishable Key (client-safe, loaded from environment)
+  // CRITICAL: Only publishable key is allowed client-side
+  // Secret keys must ONLY exist server-side in Supabase Edge Functions
+  static String get stripePublishableKey {
+    const key = String.fromEnvironment('STRIPE_PUBLISHABLE_KEY');
+    if (key.isEmpty) {
+      throw StateError(
+        'STRIPE_PUBLISHABLE_KEY not configured. '
+        'Pass --dart-define=STRIPE_PUBLISHABLE_KEY=pk_... when building.',
+      );
+    }
+    return key;
+  }
 
-  // Test Keys for development (replace with your actual test keys)
-  static const String stripeTestPublishableKey = 'pk_test_51H7GWUBk8jNkJoAZ8f4MQjZaXUvZkLGFJNVQyGkFkqfGBPjZnCvyQUXJkZP2Jf3F5GkJNV4Q1JfGBPjZnCvyQUXJkZP2';
-  static const String stripeTestSecretKey = 'sk_test_51H7GWUBk8jNkJoAZ8f4MQjZaXUvZkLGFJNVQyGkFkqfGBPjZnCvyQUXJkZP2Jf3F5GkJNV4Q1JfGBPjZnCvyQUXJkZP2';
-  
-  // Stripe API Base URL
+  // REMOVED: stripeSecretKey - SECRET KEYS MUST NEVER EXIST IN MOBILE APPS
+  // All server operations (PaymentIntents, refunds, etc.) are handled by
+  // Supabase Edge Functions: create-payment-intent, create-checkout-session, stripe-webhook
+
+  // Stripe API Base URL (not used - all API calls via Supabase Edge Functions)
   static const String stripeApiBaseUrl = 'https://api.stripe.com/v1';
   
   // Default currency
@@ -74,18 +84,10 @@ class PaymentConfig {
     }
   }
   
-  // Get appropriate Stripe keys based on test mode
-  static String get currentPublishableKey {
-    if (isTestMode) {
-      return stripeTestPublishableKey;
-    }
-    return stripePublishableKey;
-  }
+  // Get current publishable key (always from environment)
+  static String get currentPublishableKey => stripePublishableKey;
 
-  static String get currentSecretKey {
-    if (isTestMode) {
-      return stripeTestSecretKey;
-    }
-    return stripeSecretKey;
-  }
+  // REMOVED: currentSecretKey getter
+  // Secret keys must NEVER be accessed from client code
+  // All secret operations handled by Supabase Edge Functions
 }
