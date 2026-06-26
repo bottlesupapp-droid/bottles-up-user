@@ -18,9 +18,6 @@ class EmailService {
     required String verificationCode,
   }) async {
     try {
-      print('🚀 Attempting to send RSVP pending email to: $to');
-      print('📧 Event: $eventName');
-      print('🔑 Verification Code: $verificationCode');
 
       final response = await _supabase.functions.invoke(
         'send-email-notifications',
@@ -36,18 +33,12 @@ class EmailService {
         },
       );
 
-      print('📡 Edge Function Response Status: ${response.status}');
-      print('📡 Edge Function Response Data: ${response.data}');
 
       if (response.status != 200) {
         throw Exception('Failed to send email. Status: ${response.status}, Data: ${response.data}');
       }
 
-      print('✅ RSVP pending email sent successfully to $to');
-      print('📧 Message ID: ${response.data?['messageId']}');
     } catch (e) {
-      print('❌ Failed to send RSVP pending email: $e');
-      print('🔍 Full error details: ${e.toString()}');
       // Don't throw error to prevent blocking RSVP submission
       // Email failure shouldn't prevent successful RSVP
     }
@@ -64,9 +55,6 @@ class EmailService {
     required String verificationCode,
   }) async {
     try {
-      print('🚀 Attempting to send RSVP approved email to: $to');
-      print('📧 Event: $eventName');
-      print('🔑 Verification Code: $verificationCode');
 
       final response = await _supabase.functions.invoke(
         'send-email-notifications',
@@ -82,18 +70,12 @@ class EmailService {
         },
       );
 
-      print('📡 Edge Function Response Status: ${response.status}');
-      print('📡 Edge Function Response Data: ${response.data}');
 
       if (response.status != 200) {
         throw Exception('Failed to send email. Status: ${response.status}, Data: ${response.data}');
       }
 
-      print('✅ RSVP approved email sent successfully to $to');
-      print('📧 Message ID: ${response.data?['messageId']}');
     } catch (e) {
-      print('❌ Failed to send RSVP approved email: $e');
-      print('🔍 Full error details: ${e.toString()}');
       // Don't throw error to prevent blocking approval process
     }
   }
@@ -136,9 +118,7 @@ class EmailService {
         throw Exception('Failed to send email: ${response.data}');
       }
 
-      print('✅ Table booking confirmation email sent successfully to $to');
     } catch (e) {
-      print('❌ Failed to send table booking confirmation email: $e');
       // Don't throw error to prevent blocking booking submission
     }
   }
@@ -178,9 +158,7 @@ class EmailService {
         throw Exception('Failed to send email: ${response.data}');
       }
 
-      print('✅ Payment confirmation email sent successfully to $to');
     } catch (e) {
-      print('❌ Failed to send payment confirmation email: $e');
       // Don't throw error to prevent blocking payment process
     }
   }

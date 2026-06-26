@@ -4,9 +4,13 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/event.dart';
 import '../providers/event_provider.dart';
+import '../../payment/screens/payment_screen.dart';
+import '../../../core/models/payment_models.dart';
+import '../services/event_booking_service.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   final String eventId;
@@ -561,147 +565,38 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
   }
 
   Widget _buildLineupTab(ThemeData theme, Color primaryColor, Event event) {
-    // Mock DJ lineup data - in production, this should come from the database
-    final djLineup = [
-      {'name': 'DJ Snake', 'genre': 'EDM', 'time': '10:00 PM - 12:00 AM', 'isHeadliner': true},
-      {'name': 'Diplo', 'genre': 'Hip-Hop/Electronic', 'time': '12:00 AM - 2:00 AM', 'isHeadliner': true},
-      {'name': 'Local Artists', 'genre': 'House', 'time': '8:00 PM - 10:00 PM', 'isHeadliner': false},
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'DJ Lineup',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Iconsax.music_dashboard, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+            const Gap(16),
+            Text(
+              'Lineup Coming Soon',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ),
-          const Gap(8),
-          Text(
-            'Experience the best DJs in the city',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            const Gap(8),
+            Text(
+              'The artist lineup for this event has not been announced yet.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
-          ),
-          const Gap(20),
-
-          ...djLineup.map((dj) => _buildDJCard(theme, primaryColor, dj)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDJCard(ThemeData theme, Color primaryColor, Map<String, dynamic> dj) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: dj['isHeadliner']
-              ? primaryColor.withValues(alpha: 0.5)
-              : theme.colorScheme.outline.withValues(alpha: 0.2),
-          width: dj['isHeadliner'] ? 2 : 1,
+          ],
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Iconsax.music_dashboard, color: primaryColor, size: 30),
-          ),
-          const Gap(16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        dj['name'],
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (dj['isHeadliner'])
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'HEADLINER',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const Gap(4),
-                Text(
-                  dj['genre'],
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const Gap(8),
-                Row(
-                  children: [
-                    Icon(Iconsax.clock, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                    const Gap(4),
-                    Text(
-                      dj['time'],
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildPackagesTab(ThemeData theme, Color primaryColor, Event event) {
-    // Mock packages - in production, this should come from the database
-    final packages = [
-      {
-        'name': 'General Admission',
-        'price': event.ticketPrice,
-        'features': ['Entry to the event', 'Access to main floor', 'Standard drinks'],
-        'type': 'ticket',
-      },
-      {
-        'name': 'VIP Table Package',
-        'price': event.ticketPrice * 5,
-        'features': ['Reserved table for 4-6 people', '1 Premium bottle', 'VIP entrance', 'Dedicated server'],
-        'type': 'table',
-      },
-      {
-        'name': 'Guestlist RSVP',
-        'price': 0.0,
-        'features': ['Free entry before 11 PM', 'Access to main floor', 'RSVP required'],
-        'type': 'guestlist',
-        'condition': 'Free before 11 PM',
-      },
+    final options = <Map<String, dynamic>>[
+      if (event.ticketPrice > 0)
+        {'label': 'General Admission', 'price': event.ticketPrice, 'type': 'ticket'},
+      {'label': 'Table Booking', 'price': null, 'type': 'table'},
+      {'label': 'Guestlist RSVP', 'price': 0.0, 'type': 'guestlist'},
     ];
 
     return SingleChildScrollView(
@@ -709,110 +604,48 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Booking Options',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text('Booking Options', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
           const Gap(8),
           Text(
-            'Choose the perfect package for your night',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+            'Choose how you want to experience this event',
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
           ),
           const Gap(20),
-
-          ...packages.map((package) => _buildPackageCard(theme, primaryColor, package)),
+          ...options.map((opt) => _buildPackageCard(theme, primaryColor, opt)),
         ],
       ),
     );
   }
 
   Widget _buildPackageCard(ThemeData theme, Color primaryColor, Map<String, dynamic> package) {
+    final price = package['price'] as double?;
+    final type = package['type'] as String;
+    final priceLabel = price == null ? 'Deposit req.' : (price == 0.0 ? 'FREE' : '\$${price.toStringAsFixed(0)}');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        package['name'],
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        package['price'] == 0.0 ? 'FREE' : '\$${package['price'].toStringAsFixed(0)}',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (package['condition'] != null) ...[
-                  const Gap(8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green, width: 1),
-                    ),
-                    child: Text(
-                      package['condition'],
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                Text(package['label'], style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-                const Gap(16),
-                ...((package['features'] as List).map((feature) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(Iconsax.tick_circle, size: 18, color: primaryColor),
-                        const Gap(8),
-                        Expanded(
-                          child: Text(
-                            feature,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                })),
+                  child: Text(priceLabel, style: TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
           ),
@@ -822,22 +655,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () {
-                  // Navigate to booking screen based on type
-                  _handleBooking(package['type']);
-                },
+                onPressed: () => _handleBooking(type),
                 style: FilledButton.styleFrom(
                   backgroundColor: primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text(
-                  package['type'] == 'guestlist' ? 'RSVP Now' : 'Book Now',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  type == 'guestlist' ? 'RSVP Now' : 'Book Now',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -944,22 +770,105 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
       return;
     }
 
-    // Navigate to checkout screen with event payment
-    context.push(
-      '/checkout',
-      extra: {
-        'paymentType': 'event_ticket',
-        'amount': event.ticketPrice,
-        'eventId': event.id,
-        'description': 'Event Ticket - ${event.name}',
-        'metadata': {
-          'event_name': event.name,
-          'event_date': event.eventDate.toIso8601String(),
-          'event_time': '${event.startTime} - ${event.endTime}',
-          'club_name': event.clubName ?? 'Unknown',
-          'ticket_quantity': 1, // Default to 1, can be enhanced later
-        },
-      },
+    final supabase = Supabase.instance.client;
+
+    // Navigate to in-app payment screen (not browser checkout)
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          amount: event.ticketPrice,
+          currency: 'USD',
+          description: 'Event Ticket - ${event.name}',
+          paymentType: PaymentType.eventTicket,
+          metadata: {
+            'event_id': event.id,
+            'event_name': event.name,
+            'event_date': event.eventDate.toIso8601String(),
+            'event_time': '${event.startTime} - ${event.endTime}',
+            'club_name': event.clubName ?? 'Unknown',
+            'ticket_quantity': 1,
+          },
+          onPaymentSuccess: () async {
+            // Create event booking after successful payment
+            try {
+              final user = supabase.auth.currentUser;
+              if (user == null) {
+                throw Exception('User not authenticated');
+              }
+
+              // Generate confirmation code
+              final confirmationCode = 'BU${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+
+              debugPrint('📝 [TICKET-1] Creating event ticket booking');
+              debugPrint('📝 [TICKET-2] User: ${user.id}, Event: ${event.id}');
+
+              // Create booking record with QR code
+              final bookingData = {
+                'user_id': user.id,
+                'event_id': event.id,
+                'ticket_quantity': 1,
+                'ticket_price': event.ticketPrice,
+                'total_amount': event.ticketPrice,
+                'status': 'confirmed',
+                'confirmation_code': confirmationCode,
+                'payment_status': 'paid',
+                'qr_code': confirmationCode,
+              };
+
+              debugPrint('📝 [TICKET-DEBUG] Inserting: $bookingData');
+
+              final response = await supabase
+                  .from('events_bookings')
+                  .insert(bookingData)
+                  .select('id, confirmation_code')
+                  .single();
+
+              debugPrint('✅ [TICKET-3] Booking created: ${response['id']}');
+              debugPrint('🎫 [TICKET-4] Confirmation: $confirmationCode');
+
+              // Show success message
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🎫 Ticket purchased! Check "My Bookings" tab'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            } catch (e, stackTrace) {
+              debugPrint('❌ [TICKET-ERROR] Failed to create booking: $e');
+              debugPrint('❌ [TICKET-STACK] $stackTrace');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Payment succeeded but booking failed.\nPlease contact support.'),
+                    backgroundColor: Colors.orange,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              }
+            }
+          },
+          onPaymentFailed: () {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Payment failed. Please try again.'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          clubName: event.clubName ?? 'Event Venue',
+          date: event.formattedDate,
+          timeSlot: '${event.startTime} - ${event.endTime}',
+        ),
+      ),
     );
   }
 }

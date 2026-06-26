@@ -3,10 +3,10 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:bottles_up_user/features/bookings/screens/my_bookings_screen.dart';
+import 'package:bottles_up_user/features/bookings/models/user_booking.dart';
 
 class BookingDetailScreen extends StatelessWidget {
-  final MockBooking booking;
+  final UserBooking booking;
 
   const BookingDetailScreen({
     super.key,
@@ -35,10 +35,13 @@ class BookingDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    booking.eventImage,
-                    fit: BoxFit.cover,
-                  ),
+                  booking.eventImage != null
+                      ? Image.network(
+                          booking.eventImage!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildImagePlaceholder(theme),
+                        )
+                      : _buildImagePlaceholder(theme),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -167,8 +170,26 @@ class BookingDetailScreen extends StatelessWidget {
                         theme: theme,
                         icon: Iconsax.card,
                         label: 'Booking ID',
-                        value: booking.id.substring(0, 8).toUpperCase(),
+                        value: booking.shortId,
                       ),
+                      if (booking.confirmationCode != null) ...[
+                        const Divider(height: 24),
+                        _buildInfoRow(
+                          theme: theme,
+                          icon: Iconsax.ticket_star,
+                          label: 'Confirmation',
+                          value: booking.confirmationCode!,
+                        ),
+                      ],
+                      if (booking.totalAmount != null) ...[
+                        const Divider(height: 24),
+                        _buildInfoRow(
+                          theme: theme,
+                          icon: Iconsax.money,
+                          label: 'Total Paid',
+                          value: '\$${booking.totalAmount!.toStringAsFixed(2)}',
+                        ),
+                      ],
                       if (booking.details != null) ...[
                         const Divider(height: 24),
                         _buildInfoRow(
@@ -258,7 +279,7 @@ class BookingDetailScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: FilledButton.icon(
-                  onPressed: () => _showQRCodeModal(context, booking, theme, primaryColor),
+                  onPressed: () => _showQRCodeModal(context, theme, primaryColor),
                   icon: const Icon(Iconsax.scan_barcode),
                   label: const Text('View Full QR Code'),
                   style: FilledButton.styleFrom(
@@ -269,6 +290,17 @@ class BookingDetailScreen extends StatelessWidget {
               ),
             )
           : null,
+    );
+  }
+
+  Widget _buildImagePlaceholder(ThemeData theme) {
+    return Container(
+      color: theme.colorScheme.surface,
+      child: Icon(
+        Iconsax.image,
+        size: 64,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+      ),
     );
   }
 
@@ -426,7 +458,7 @@ class BookingDetailScreen extends StatelessWidget {
     }
   }
 
-  void _showQRCodeModal(BuildContext context, MockBooking booking, ThemeData theme, Color primaryColor) {
+  void _showQRCodeModal(BuildContext context, ThemeData theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -441,7 +473,6 @@ class BookingDetailScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle Bar
               Container(
                 width: 40,
                 height: 4,
@@ -451,7 +482,6 @@ class BookingDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
               Text(
                 'Your ${booking.type} QR Code',
                 style: theme.textTheme.headlineSmall?.copyWith(
@@ -466,8 +496,6 @@ class BookingDetailScreen extends StatelessWidget {
                 ),
               ),
               const Gap(24),
-
-              // QR Code
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -488,9 +516,7 @@ class BookingDetailScreen extends StatelessWidget {
                   errorCorrectionLevel: QrErrorCorrectLevel.M,
                 ),
               ),
-
               const Gap(24),
-
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

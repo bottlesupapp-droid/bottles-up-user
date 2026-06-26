@@ -37,11 +37,15 @@ serve(async (req) => {
       throw new Error('Invalid amount')
     }
 
-    // Get Stripe secret key
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    // Get Stripe secret key — reads from live_SK in live mode, test_SK in test mode
+    const stripeMode = Deno.env.get('STRIPE_MODE') ?? 'test'
+    const skSecret = stripeMode === 'live' ? 'live_SK' : 'test_SK'
+    const stripeKey = Deno.env.get(skSecret)
     if (!stripeKey) {
-      throw new Error('Stripe secret key not configured')
+      throw new Error(`Stripe secret key not configured (expected secret: ${skSecret})`)
     }
+
+    console.log(`✅ Using ${stripeMode.toUpperCase()} mode Stripe secret key`)
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: '2023-10-16',
@@ -65,21 +69,43 @@ serve(async (req) => {
         .maybeSingle()
 
       if (existingCustomer?.stripe_customer_id) {
-        stripeCustomerId = existingCustomer.stripe_customer_id
-      } else {
+        // Verify the customer exists in the current Stripe mode before using it
+        try {
+          await stripe.customers.retrieve(existingCustomer.stripe_customer_id)
+          stripeCustomerId = existingCustomer.stripe_customer_id
+          console.log('✅ Using existing customer:', stripeCustomerId)
+        } catch (err: any) {
+          // Customer doesn't exist in this mode (e.g. live customer used with test key)
+          console.log('⚠️ Existing customer invalid in current mode, creating new one:', err.message)
+        }
+      }
+
+      if (!stripeCustomerId) {
         // Create new Stripe customer
+        console.log('Creating new customer for user:', user_id)
         const customer = await stripe.customers.create({
           email,
           metadata: { user_id },
         })
         stripeCustomerId = customer.id
+        console.log('✅ Created new customer:', stripeCustomerId)
 
-        // Save to database
-        await supabase.from('stripe_customers').insert({
-          user_id,
-          stripe_customer_id: stripeCustomerId,
-          email,
-        })
+        // Update or insert database record
+        if (existingCustomer) {
+          await supabase.from('stripe_customers')
+            .update({
+              stripe_customer_id: stripeCustomerId,
+              email,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user_id)
+        } else {
+          await supabase.from('stripe_customers').insert({
+            user_id,
+            stripe_customer_id: stripeCustomerId,
+            email,
+          })
+        }
       }
     }
 
@@ -90,6 +116,8 @@ serve(async (req) => {
     )
 
     // Create Payment Intent
+    // Use payment_method_types: ["card"] instead of automatic_payment_methods
+    // to avoid enabling unsupported payment methods (us_bank_account, Link, etc.)
     const paymentIntent = await stripe.paymentIntents.create({
       amount, // Already in cents
       currency: currency.toLowerCase(),
@@ -102,9 +130,7 @@ serve(async (req) => {
         event_id: event_id || '',
         ...metadata,
       },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'], // Only enable card payments
     })
 
     // Store transaction in database
@@ -130,6 +156,15 @@ serve(async (req) => {
       console.error('Database error:', dbError)
     }
 
+    // Get publishable key matching current mode
+    const pkSecret = stripeMode === 'live' ? 'live_PK' : 'test_PK'
+    const publishableKey = Deno.env.get(pkSecret)
+    if (!publishableKey) {
+      throw new Error(`Stripe publishable key not configured (expected secret: ${pkSecret})`)
+    }
+
+    console.log(`✅ Returning ${stripeMode.toUpperCase()} mode publishable key`)
+
     // Return payment intent details
     return new Response(
       JSON.stringify({
@@ -137,7 +172,7 @@ serve(async (req) => {
         payment_intent: paymentIntent.client_secret,
         ephemeral_key: ephemeralKey.secret,
         customer: stripeCustomerId,
-        publishable_key: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
+        publishable_key: publishableKey,
         transaction_id: transaction?.id,
       }),
       {

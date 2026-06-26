@@ -301,7 +301,7 @@ class __$$WaitlistEntryImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$WaitlistEntryImpl implements _WaitlistEntry {
+class _$WaitlistEntryImpl extends _WaitlistEntry {
   const _$WaitlistEntryImpl(
       {required this.id,
       required this.userId,
@@ -318,7 +318,8 @@ class _$WaitlistEntryImpl implements _WaitlistEntry {
       this.notifiedAt,
       this.expiresAt,
       required this.createdAt,
-      this.updatedAt});
+      this.updatedAt})
+      : super._();
 
   factory _$WaitlistEntryImpl.fromJson(Map<String, dynamic> json) =>
       _$$WaitlistEntryImplFromJson(json);
@@ -433,7 +434,7 @@ class _$WaitlistEntryImpl implements _WaitlistEntry {
   }
 }
 
-abstract class _WaitlistEntry implements WaitlistEntry {
+abstract class _WaitlistEntry extends WaitlistEntry {
   const factory _WaitlistEntry(
       {required final String id,
       required final String userId,
@@ -451,6 +452,7 @@ abstract class _WaitlistEntry implements WaitlistEntry {
       final DateTime? expiresAt,
       required final DateTime createdAt,
       final DateTime? updatedAt}) = _$WaitlistEntryImpl;
+  const _WaitlistEntry._() : super._();
 
   factory _WaitlistEntry.fromJson(Map<String, dynamic> json) =
       _$WaitlistEntryImpl.fromJson;

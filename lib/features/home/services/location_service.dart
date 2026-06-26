@@ -92,7 +92,6 @@ class LocationService {
         return location;
       }
     } catch (e) {
-      print('Error getting location: $e');
       return null;
     }
 
@@ -113,7 +112,7 @@ class LocationService {
     }
 
     // Fallback to default location
-    return 'New York, USA';
+    return 'Nearby';
   }
 
   /// Clear cached location

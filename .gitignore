@@ -50,3 +50,4 @@ env.json
 .env
 .env.local
 *.env
+ios/Flutter/DartDefines.xcconfig

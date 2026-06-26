@@ -39,7 +39,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Future<void> _handleResetPassword() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        print('DEBUG: UI - Starting reset password for: ${_emailController.text.trim()}');
         await ref.read(authStateProvider.notifier).resetPassword(_emailController.text.trim());
         
         // Check if there was an error in the auth state
@@ -49,19 +48,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           loading: () {},
           authenticated: (user) {},
           unauthenticated: () {
-            print('DEBUG: UI - Reset password completed successfully');
             setState(() {
               _emailSent = true;
             });
           },
           error: (message) {
-            print('DEBUG: UI - Reset password failed with auth state error: $message');
             throw message;
           },
         );
         
       } catch (e) {
-        print('DEBUG: UI - Reset password failed: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -1,17 +1,38 @@
 import 'dart:async';
+import 'package:bottles_up_user/core/config/payment_config.dart';
 import 'package:bottles_up_user/core/error/global_error_handler.dart';
 import 'package:bottles_up_user/features/auth/services/deep_link_listener.dart';
 import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:bottles_up_user/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
+  // Disable runtime font fetching — fonts must be bundled or cached.
+  // Without this, GoogleFonts makes network calls on first launch which
+  // can cause a white screen if the device is offline or the CDN is slow.
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   // Run app in error-handling zone
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Initialize Stripe with a placeholder key
+      // The actual key will be set dynamically from the edge function response
+      // This prevents initializing with potentially wrong environment variable key
+      try {
+        Stripe.publishableKey = PaymentConfig.stripePublishableKey;
+        await Stripe.instance.applySettings();
+      } catch (e) {
+        // If environment variable key is not set or invalid, that's OK
+        // Payment service will set the correct key from edge function
+        debugPrint('⚠️ Stripe initialization skipped: $e');
+        debugPrint('Stripe will be initialized with key from payment intent');
+      }
 
       // Initialize global error handler
       GlobalErrorHandler().initialize(
@@ -69,16 +90,30 @@ class MainApp extends StatefulWidget {
   State<MainApp> createState() => _MainAppState();
 }
 
-class _MainAppState extends State<MainApp> {
+class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Initialize deep link listener
+    WidgetsBinding.instance.addObserver(this);
+    debugPrint('🚀 [APP-1] MainApp.initState — app starting or re-mounting');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint('🚀 [APP-2] First frame rendered — initializing DeepLinkListener');
       if (mounted) {
         await DeepLinkListener().initialize(context);
+        debugPrint('🚀 [APP-3] DeepLinkListener initialized');
       }
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('🚀 [APP-LIFECYCLE] AppLifecycleState changed: $state');
   }
 
   @override

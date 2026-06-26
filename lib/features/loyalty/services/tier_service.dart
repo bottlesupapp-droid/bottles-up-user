@@ -125,7 +125,6 @@ class TierService {
       await _updateUserTierStatus(userId, points, amount);
     } catch (e) {
       // For frontend development, silently fail
-      print('Error adding points: $e');
     }
   }
 
@@ -195,7 +194,6 @@ class TierService {
           .update({'birthday_reward_claimed_at': DateTime.now().toIso8601String()})
           .eq('user_id', userId);
     } catch (e) {
-      print('Error claiming birthday reward: $e');
     }
   }
 
@@ -213,7 +211,6 @@ class TierService {
       // Update referral count
       await _supabase.rpc('increment_referral_count', params: {'user_id': userId});
     } catch (e) {
-      print('Error adding referral points: $e');
     }
   }
 
@@ -230,7 +227,6 @@ class TierService {
         'amount_spent': amount,
       });
     } catch (e) {
-      print('Error updating tier status: $e');
     }
   }
 

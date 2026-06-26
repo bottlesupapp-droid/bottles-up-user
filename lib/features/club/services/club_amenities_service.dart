@@ -21,7 +21,6 @@ class ClubAmenitiesService {
           .map<ClubAmenity>((data) => ClubAmenity.fromSupabase(data))
           .toList();
     } catch (e) {
-      print('Error fetching club amenities: $e');
       return _getFallbackAmenities();
     }
   }

@@ -191,26 +191,21 @@ class AuthService {
       }
     } catch (e) {
       // Log error but don't throw - we don't want to break the sign-in flow
-      print('Error creating profile for OAuth user: $e');
     }
   }
 
   // Reset password with custom redirect URL
   Future<void> resetPassword(String email) async {
     try {
-      print('DEBUG: Starting password reset for email: $email');
       
       await _supabase.auth.resetPasswordForEmail(
         email,
         redirectTo: 'bottlesupapp://auth-callback/reset-password',
       );
       
-      print('DEBUG: Password reset email sent successfully with app redirect');
     } on AuthException catch (e) {
-      print('DEBUG: AuthException during password reset: ${e.message}');
       throw e.message;
     } catch (e) {
-      print('DEBUG: Unexpected error during password reset: $e');
       throw 'An unexpected error occurred: $e';
     }
   }
@@ -235,23 +230,18 @@ class AuthService {
   // Sign in with phone OTP
   Future<void> signInWithPhone(String phoneNumber) async {
     try {
-      print('DEBUG [signInWithPhone]: Starting OTP request for phone: $phoneNumber');
 
       await _supabase.auth.signInWithOtp(
         phone: phoneNumber,
       );
 
-      print('DEBUG [signInWithPhone]: OTP sent successfully to $phoneNumber');
     } on AuthException catch (e) {
-      print('DEBUG [signInWithPhone]: AuthException occurred - ${e.message}');
-      print('DEBUG [signInWithPhone]: Status code: ${e.statusCode}');
 
       if (e.message.contains('Rate limit')) {
         throw 'Too many OTP requests. Please try again later.';
       }
       throw e.message;
     } catch (e) {
-      print('DEBUG [signInWithPhone]: Unexpected error - $e');
       throw 'Failed to send OTP. Please try again.';
     }
   }
@@ -262,8 +252,6 @@ class AuthService {
     required String otp,
   }) async {
     try {
-      print('DEBUG [verifyPhoneOtp]: Starting OTP verification for phone: $phoneNumber');
-      print('DEBUG [verifyPhoneOtp]: OTP length: ${otp.length}');
 
       final response = await _supabase.auth.verifyOTP(
         phone: phoneNumber,
@@ -271,30 +259,21 @@ class AuthService {
         type: OtpType.sms,
       );
 
-      print('DEBUG [verifyPhoneOtp]: OTP verification response received');
-      print('DEBUG [verifyPhoneOtp]: User ID: ${response.user?.id}');
-      print('DEBUG [verifyPhoneOtp]: User phone: ${response.user?.phone}');
 
       // After successful verification, check and create profile if needed
       if (response.user != null) {
-        print('DEBUG [verifyPhoneOtp]: Creating/checking user profile');
         await handleOAuthCallback();
-        print('DEBUG [verifyPhoneOtp]: Profile check completed');
       } else {
-        print('DEBUG [verifyPhoneOtp]: WARNING - No user in response');
       }
 
       return response;
     } on AuthException catch (e) {
-      print('DEBUG [verifyPhoneOtp]: AuthException occurred - ${e.message}');
-      print('DEBUG [verifyPhoneOtp]: Status code: ${e.statusCode}');
 
       if (e.message.contains('Invalid') || e.message.contains('expired')) {
         throw 'Invalid or expired OTP. Please try again.';
       }
       throw e.message;
     } catch (e) {
-      print('DEBUG [verifyPhoneOtp]: Unexpected error - $e');
       throw 'Failed to verify OTP. Please try again.';
     }
   }

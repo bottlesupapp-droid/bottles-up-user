@@ -40,8 +40,8 @@ class PaymentConfig {
   static const bool enableApplePay = true;
   static const bool enableGooglePay = true;
   
-  // Test mode settings (for development)
-  static const bool isTestMode = false; // Set to true for testing
+  // Auto-detect test mode from the publishable key prefix (pk_test_ = test, pk_live_ = production)
+  static bool get isTestMode => stripePublishableKey.startsWith('pk_test_');
   
   // Test card numbers for Stripe testing
   static const Map<String, String> testCards = {

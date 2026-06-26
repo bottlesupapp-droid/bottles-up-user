@@ -29,7 +29,6 @@ class BottleService {
           .map<Bottle>((data) => Bottle.fromSupabase(data))
           .toList();
     } catch (e) {
-      print('Error fetching bottles: $e');
       return _getFallbackBottles(clubId);
     }
   }
@@ -67,7 +66,6 @@ class BottleService {
 
       return bottles;
     } catch (e) {
-      print('Error fetching featured bottles: $e');
       return _getFallbackBottles(clubId).take(6).toList();
     }
   }
@@ -87,7 +85,6 @@ class BottleService {
           .map<Bottle>((data) => Bottle.fromSupabase(data))
           .toList();
     } catch (e) {
-      print('Error fetching bottles by category: $e');
       return _getFallbackBottles(clubId)
           .where((bottle) => bottle.category.toLowerCase() == category.toLowerCase())
           .toList();
@@ -111,7 +108,6 @@ class BottleService {
       categories.sort();
       return categories;
     } catch (e) {
-      print('Error fetching bottle categories: $e');
       return ['champagne', 'spirits', 'wine', 'beer', 'cocktail'];
     }
   }

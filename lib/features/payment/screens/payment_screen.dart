@@ -10,9 +10,6 @@ import '../../club/models/bottle.dart';
 
 enum PaymentMethod {
   stripe,
-  googlePay,
-  applePay,
-  wallet,
 }
 
 class PaymentScreen extends ConsumerStatefulWidget {
@@ -63,7 +60,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   String? _errorMessage;
   PaymentIntent? _paymentIntent;
   PaymentMethod _selectedPaymentMethod = PaymentMethod.stripe;
-  double _walletBalance = 250.00; // Mock wallet balance - should come from user profile
 
   @override
   void initState() {
@@ -80,16 +76,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   bool _canProcessPayment() {
     if (_isProcessing) return false;
 
-    // For Stripe, we don't need a pre-created intent anymore in the new system
-    if (_selectedPaymentMethod == PaymentMethod.stripe) {
-      return true;
-    }
-
-    // For Wallet, check if sufficient balance
-    if (_selectedPaymentMethod == PaymentMethod.wallet && _walletBalance < _getTotal()) {
-      return false;
-    }
-
+    // Stripe is the only supported payment method
     return true;
   }
 
@@ -100,35 +87,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         _errorMessage = null;
       });
 
-      bool success = false;
-
-      switch (_selectedPaymentMethod) {
-        case PaymentMethod.stripe:
-          await _processStripePayment();
-          // Stripe payment redirect happens, so we don't return a simple success here
-          // The return from Stripe is handled via deep links
-          return;
-        case PaymentMethod.googlePay:
-          success = await _processGooglePayPayment();
-          break;
-        case PaymentMethod.applePay:
-          success = await _processApplePayPayment();
-          break;
-        case PaymentMethod.wallet:
-          success = await _processWalletPayment();
-          break;
-      }
-
-      if (success) {
-        // Payment successful
-        _showSuccessDialog();
-        widget.onPaymentSuccess?.call();
-      } else {
-        // Payment was canceled
-        setState(() {
-          _isProcessing = false;
-        });
-      }
+      await _processStripePayment();
+      // Stripe payment redirect happens, return from Stripe is handled via deep links
+      return;
     } catch (e) {
       setState(() {
         _isProcessing = false;
@@ -140,7 +101,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   Future<void> _processStripePayment() async {
     try {
+      debugPrint('💳 Starting payment process...');
+
       // Step 1: Create Payment Intent for in-app payment
+      debugPrint('💳 Creating payment intent...');
       final paymentIntent = await _paymentService.createPaymentIntent(
         paymentType: widget.paymentType.name,
         amount: widget.amount,
@@ -149,6 +113,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         metadata: widget.metadata,
       );
 
+      debugPrint('💳 Payment intent created successfully');
+      debugPrint('💳 Presenting payment sheet...');
+
       // Step 2: Present Payment Sheet IN-APP
       final success = await _paymentService.presentPaymentSheet(
         paymentIntent: paymentIntent,
@@ -156,100 +123,92 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         enableApplePay: true,
       );
 
-      if (success && mounted) {
+      debugPrint('💳 Payment sheet result: $success');
+
+      if (success) {
         // Payment successful
-        setState(() {
-          _isProcessing = false;
-        });
-        _showSuccessDialog();
-        widget.onPaymentSuccess?.call();
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+          _showSuccessDialog();
+          widget.onPaymentSuccess?.call();
+        }
       }
     } on PaymentException catch (e) {
-      if (e.message.contains('cancelled') || e.message.contains('canceled')) {
-        // User cancelled payment - not an error
-        setState(() {
-          _isProcessing = false;
-          _errorMessage = null; // Don't show error for cancellation
-        });
-      } else {
-        setState(() {
-          _isProcessing = false;
-          _errorMessage = e.message;
-        });
-        widget.onPaymentFailed?.call();
+      debugPrint('💳 Payment exception: ${e.message}');
+      if (mounted) {
+        if (e.message.contains('cancelled') || e.message.contains('canceled')) {
+          // User cancelled payment - not an error
+          setState(() {
+            _isProcessing = false;
+            _errorMessage = null; // Don't show error for cancellation
+          });
+        } else {
+          setState(() {
+            _isProcessing = false;
+            _errorMessage = e.message;
+          });
+
+          // Show user-friendly error dialog
+          _showErrorDialog(e.message);
+          widget.onPaymentFailed?.call();
+        }
       }
     } catch (e) {
-      setState(() {
-        _isProcessing = false;
-        _errorMessage = 'Payment failed: ${e.toString()}';
-      });
-      widget.onPaymentFailed?.call();
+      debugPrint('💳 Payment error: $e');
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _errorMessage = 'Payment failed: ${e.toString()}';
+        });
+
+        // Show user-friendly error dialog
+        _showErrorDialog(e.toString());
+        widget.onPaymentFailed?.call();
+      }
     }
   }
 
-  Future<bool> _processGooglePayPayment() async {
-    // Simulate Google Pay processing
-    // In production, integrate with Google Pay SDK
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Mock success - replace with actual Google Pay integration
-    // Using flutter_stripe's Google Pay support or google_pay package
-    print('Processing Google Pay payment for \$${_getTotal()}');
-
-    return true;
-  }
-
-  Future<bool> _processApplePayPayment() async {
-    // Simulate Apple Pay processing
-    // In production, integrate with Apple Pay SDK via Stripe or PassKit
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Mock success - replace with actual Apple Pay integration
-    // Using flutter_stripe's Apple Pay support or pay package
-    print('Processing Apple Pay payment for \$${_getTotal()}');
-
-    return true;
-  }
-
-  Future<bool> _processWalletPayment() async {
-    final total = _getTotal();
-
-    // Check if wallet has sufficient balance
-    if (_walletBalance < total) {
-      throw Exception('Insufficient wallet balance. Please top up your wallet or choose another payment method.');
-    }
-
-    // Simulate wallet deduction
-    await Future.delayed(const Duration(seconds: 1));
-
-    // In production, call API to deduct from user's wallet
-    // await WalletService.deductBalance(userId: currentUserId, amount: total);
-    print('Processing Wallet payment for \$${total}');
-    print('New balance: \$${(_walletBalance - total).toStringAsFixed(2)}');
-
-    setState(() {
-      _walletBalance -= total;
-    });
-
-    return true;
+  void _showErrorDialog(String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Payment Failed'),
+        content: Text(
+          error.contains('account') || error.contains('incomplete')
+              ? 'Your payment account needs additional setup. Please check:\n\n'
+                  '• Your payment method is valid\n'
+                  '• Your account information is complete\n'
+                  '• You have sufficient funds\n\n'
+                  'Error: $error'
+              : 'Unable to process payment.\n\n$error',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Go back to previous screen
+            },
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Retry payment
+              setState(() {
+                _errorMessage = null;
+              });
+            },
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSuccessDialog() {
-    String paymentMethodName;
-    switch (_selectedPaymentMethod) {
-      case PaymentMethod.stripe:
-        paymentMethodName = 'Stripe';
-        break;
-      case PaymentMethod.googlePay:
-        paymentMethodName = 'Google Pay';
-        break;
-      case PaymentMethod.applePay:
-        paymentMethodName = 'Apple Pay';
-        break;
-      case PaymentMethod.wallet:
-        paymentMethodName = 'Wallet';
-        break;
-    }
+    const paymentMethodName = 'Card';
 
     showDialog(
       context: context,
@@ -289,34 +248,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
-            if (_selectedPaymentMethod == PaymentMethod.wallet) ...[
-              const Gap(12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Iconsax.wallet_2,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'New Balance: \$${_walletBalance.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             const Gap(20),
             SizedBox(
               width: double.infinity,
@@ -456,6 +387,45 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // TEST MODE BANNER
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      border: Border.all(color: Colors.orange, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.orange, size: 24),
+                        const Gap(12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '🧪 TEST MODE',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const Gap(4),
+                              Text(
+                                'Use test card: 4242 4242 4242 4242\nAny CVC, future date',
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   _buildBookingDetails(theme, primaryColor),
                   const Gap(24),
                   _buildTableSection(theme, primaryColor),
@@ -1074,48 +1044,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             icon: Iconsax.card,
           ),
         ),
-        const Gap(12),
-        // Google Pay
-        GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = PaymentMethod.googlePay),
-          child: _buildPaymentMethodCard(
-            theme: theme,
-            primaryColor: primaryColor,
-            method: PaymentMethod.googlePay,
-            title: 'Google Pay',
-            subtitle: 'Pay with Google Pay',
-            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/2560px-Google_Pay_Logo.svg.png',
-            icon: Iconsax.card,
-          ),
-        ),
-        const Gap(12),
-        // Apple Pay
-        GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = PaymentMethod.applePay),
-          child: _buildPaymentMethodCard(
-            theme: theme,
-            primaryColor: primaryColor,
-            method: PaymentMethod.applePay,
-            title: 'Apple Pay',
-            subtitle: 'Pay with Apple Pay',
-            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png',
-            icon: Iconsax.card,
-          ),
-        ),
-        const Gap(12),
-        // Wallet
-        GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = PaymentMethod.wallet),
-          child: _buildPaymentMethodCard(
-            theme: theme,
-            primaryColor: primaryColor,
-            method: PaymentMethod.wallet,
-            title: 'Wallet',
-            subtitle: 'Available balance: \$${_walletBalance.toStringAsFixed(2)}',
-            icon: Iconsax.wallet_2,
-            showBalance: true,
-          ),
-        ),
+        // Google Pay, Apple Pay and Wallet are coming soon
       ],
     );
   }
@@ -1131,7 +1060,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     bool showBalance = false,
   }) {
     final isSelected = _selectedPaymentMethod == method;
-    final isWalletInsufficient = method == PaymentMethod.wallet && _walletBalance < _getTotal();
 
     return Container(
       decoration: BoxDecoration(
@@ -1189,26 +1117,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
-                  if (isWalletInsufficient) ...[
-                    const Gap(4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning_rounded,
-                          size: 14,
-                          color: Colors.orange,
-                        ),
-                        const Gap(4),
-                        Text(
-                          'Insufficient balance',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),

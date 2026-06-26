@@ -63,7 +63,7 @@ class _HomeScreenInternalState extends ConsumerState<HomeScreenInternal> {
   final TextEditingController _searchController = TextEditingController();
 
   double _scrollOffset = 0.0;
-  String _currentLocation = 'New York, USA';
+  String _currentLocation = 'Nearby';
   bool _isLoadingLocation = false;
   bool _showBackToTop = false;
   DateTime _lastScrollUpdate = DateTime.now();
@@ -120,7 +120,7 @@ class _HomeScreenInternalState extends ConsumerState<HomeScreenInternal> {
       });
     } catch (e) {
       setState(() {
-        _currentLocation = 'New York, USA';
+        _currentLocation = 'Nearby';
         _isLoadingLocation = false;
       });
     }

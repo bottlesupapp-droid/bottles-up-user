@@ -279,7 +279,7 @@ class BookingModificationService {
   // Helper: Get booking
   Future<TableBooking> _getBooking(String bookingId) async {
     final response = await _supabase
-        .from('club_table_bookings')
+        .from('table_bookings')
         .select()
         .eq('id', bookingId)
         .single();

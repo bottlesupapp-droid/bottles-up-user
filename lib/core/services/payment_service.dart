@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter/material.dart';
+import 'package:bottles_up_user/core/config/payment_config.dart';
 
 /// Payment service that integrates with Supabase Edge Functions
 /// ALL payment processing is done via Supabase Edge Functions - NO hardcoded Stripe keys
@@ -90,38 +92,65 @@ class PaymentService {
     try {
       // Initialize Stripe if needed
       if (paymentIntent.publishableKey != null) {
-        Stripe.publishableKey = paymentIntent.publishableKey!;
+        final publishableKey = paymentIntent.publishableKey!;
+
+        final mode = publishableKey.startsWith('pk_live_') ? 'LIVE' : 'TEST';
+        debugPrint('✅ Using $mode mode Stripe key: ${publishableKey.substring(0, 20)}...');
+
+        Stripe.publishableKey = publishableKey;
         await Stripe.instance.applySettings();
       }
 
+      debugPrint('💳 Initializing payment sheet...');
+      debugPrint('💳 Payment Intent: ${paymentIntent.paymentIntent.substring(0, 20)}...');
+      debugPrint('💳 Customer: ${paymentIntent.customer}');
+      debugPrint('💳 Ephemeral Key: ${paymentIntent.ephemeralKey?.substring(0, 20)}...');
+
       // Initialize payment sheet
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: paymentIntent.paymentIntent,
-          merchantDisplayName: 'BottlesUp',
-          customerEphemeralKeySecret: paymentIntent.ephemeralKey,
-          customerId: paymentIntent.customer,
-          style: ThemeMode.system,
-          googlePay: enableGooglePay
-              ? const PaymentSheetGooglePay(
-                  merchantCountryCode: 'US',
-                  currencyCode: 'USD',
-                  testEnv: true,
-                )
-              : null,
-          applePay: enableApplePay
-              ? const PaymentSheetApplePay(
-                  merchantCountryCode: 'US',
-                )
-              : null,
-          allowsDelayedPaymentMethods: true,
-        ),
-      );
+      try {
+        await Stripe.instance.initPaymentSheet(
+          paymentSheetParameters: SetupPaymentSheetParameters(
+            paymentIntentClientSecret: paymentIntent.paymentIntent,
+            merchantDisplayName: 'BottlesUp',
+            customerEphemeralKeySecret: paymentIntent.ephemeralKey,
+            customerId: paymentIntent.customer,
+            style: ThemeMode.dark,
+            googlePay: enableGooglePay
+                ? const PaymentSheetGooglePay(
+                    merchantCountryCode: 'US',
+                    currencyCode: 'USD',
+                    testEnv: true,
+                  )
+                : null,
+            applePay: null, // Always disable Apple Pay
+            allowsDelayedPaymentMethods: true,
+          ),
+        );
+        debugPrint('💳 Payment sheet initialized successfully!');
+      } catch (e) {
+        debugPrint('❌ initPaymentSheet() failed: $e');
+        debugPrint('❌ Error type: ${e.runtimeType}');
+        rethrow;
+      }
 
-      // Present payment sheet
-      await Stripe.instance.presentPaymentSheet();
+      debugPrint('💳 Presenting payment sheet now...');
 
-      return true; // Payment successful
+      // Small delay to let any pending navigation/UI transitions settle
+      // before presenting the modal (especially needed on iOS).
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Do NOT apply a Dart-side timeout here.
+      // On Android the PaymentSheet runs in a separate Activity; a Dart timeout
+      // orphans the awaiting future so the ActivityResultRegistry drops the
+      // result when the user finishes payment, making every payment appear failed.
+      try {
+        await Stripe.instance.presentPaymentSheet();
+        debugPrint('💳 Payment sheet completed successfully!');
+        return true;
+      } catch (e) {
+        debugPrint('❌ presentPaymentSheet() error: $e');
+        rethrow;
+      }
     } on StripeException catch (e) {
       if (e.error.code == FailureCode.Canceled) {
         throw PaymentException('Payment cancelled by user');
@@ -165,25 +194,60 @@ class PaymentService {
         'cancel_url': 'bottlesup://payment/cancel',
       };
 
-      // Call Supabase Edge Function
-      final response = await _supabase.functions.invoke(
-        'create-checkout-session',
-        body: payload,
-      );
+      debugPrint('💳 Calling edge function: create-checkout-session');
+      debugPrint('💳 Payload: user_id=${user.id}, email=${user.email}, amount=\$${amount.toStringAsFixed(2)}');
+
+      // Retry up to 3 times with a 30-second per-attempt timeout.
+      // Edge Functions can cold-start slowly on Supabase free tier.
+      FunctionResponse? response;
+      PaymentException? lastError;
+      for (int attempt = 1; attempt <= 3; attempt++) {
+        try {
+          debugPrint('💳 Attempt $attempt/3 calling edge function...');
+          response = await _supabase.functions
+              .invoke('create-checkout-session', body: payload)
+              .timeout(
+                const Duration(seconds: 30),
+                onTimeout: () {
+                  debugPrint('⏳ Attempt $attempt timed out after 30s, retrying...');
+                  throw TimeoutException('Edge function cold-start timeout');
+                },
+              );
+          break; // Success — exit retry loop
+        } on TimeoutException {
+          lastError = PaymentException(
+            'Payment session creation timed out after 3 attempts.\nPlease check your connection and try again.',
+          );
+          if (attempt < 3) await Future.delayed(const Duration(seconds: 2));
+        } on FunctionException catch (e) {
+          // Non-retriable server error
+          throw PaymentException('Payment service error: ${e.details}');
+        }
+      }
+
+      if (response == null) throw lastError!;
+
+      debugPrint('💳 Edge function response status: ${response.status}');
 
       // Check for errors
       if (response.status != 200) {
+        final errorMsg = response.data?['error'] ?? 'Unknown error';
+        debugPrint('❌ Edge function error: $errorMsg');
         throw PaymentException(
-          'Failed to create checkout session: ${response.data?['error'] ?? 'Unknown error'}',
+          'Failed to create checkout session: $errorMsg',
         );
       }
 
       final data = response.data as Map<String, dynamic>;
+      debugPrint('💳 Response data keys: ${data.keys.toList()}');
 
       // Validate response
       if (data['checkout_url'] == null || data['session_id'] == null) {
+        debugPrint('❌ Invalid response: missing checkout_url or session_id');
         throw PaymentException('Invalid response from payment server');
       }
+
+      debugPrint('✅ Checkout session created successfully');
 
       return PaymentCheckoutResult(
         checkoutUrl: data['checkout_url'] as String,
@@ -191,9 +255,41 @@ class PaymentService {
         transactionId: data['transaction_id'] as String?,
       );
     } on FunctionException catch (e) {
+      debugPrint('❌ FunctionException: ${e.details}');
       throw PaymentException('Payment service error: ${e.details}');
-    } catch (e) {
+    } on PaymentException {
+      rethrow; // Re-throw PaymentException as-is
+    } catch (e, stackTrace) {
+      debugPrint('❌ Unexpected error: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       throw PaymentException('Failed to create checkout session: $e');
+    }
+  }
+
+  /// Open Stripe checkout page in browser
+  Future<void> openCheckoutPage(String checkoutUrl) async {
+    try {
+      debugPrint('💳 Opening checkout URL: $checkoutUrl');
+
+      // Import url_launcher package
+      final Uri url = Uri.parse(checkoutUrl);
+
+      // Try to launch the URL
+      if (await canLaunchUrl(url)) {
+        final launched = await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication, // Open in external browser
+        );
+
+        if (!launched) {
+          throw PaymentException('Could not open payment page. Please try again.');
+        }
+      } else {
+        throw PaymentException('Could not open payment page. Invalid URL.');
+      }
+    } catch (e) {
+      if (e is PaymentException) rethrow;
+      throw PaymentException('Failed to open payment page: $e');
     }
   }
 
@@ -214,6 +310,52 @@ class PaymentService {
       return launched;
     } catch (e) {
       throw PaymentException('Failed to open checkout: $e');
+    }
+  }
+
+  /// Verify checkout session after payment
+  /// Call this when user returns from Stripe checkout page
+  Future<CheckoutSessionVerification> verifyCheckoutSession(String sessionId) async {
+    try {
+      debugPrint('💳 Verifying checkout session: $sessionId');
+
+      final response = await _supabase.functions.invoke(
+        'verify-checkout-session',
+        body: {'sessionId': sessionId},
+      );
+
+      if (response.status != 200) {
+        throw PaymentException(
+          'Failed to verify payment: ${response.data?['error'] ?? 'Unknown error'}',
+        );
+      }
+
+      final data = response.data as Map<String, dynamic>;
+
+      if (data['success'] == true) {
+        final sessionData = data['session'] as Map<String, dynamic>;
+
+        debugPrint('✅ Payment verified: ${sessionData['paymentStatus']}');
+
+        return CheckoutSessionVerification(
+          success: true,
+          sessionId: sessionData['id'] as String,
+          paymentStatus: sessionData['paymentStatus'] as String,
+          amount: (sessionData['amount'] as num?)?.toDouble(),
+          currency: sessionData['currency'] as String?,
+          customerEmail: sessionData['customerEmail'] as String?,
+          paymentIntent: sessionData['paymentIntent'] as String?,
+        );
+      } else {
+        throw PaymentException(data['error'] ?? 'Payment verification failed');
+      }
+    } on FunctionException catch (e) {
+      debugPrint('❌ Verification error: ${e.details}');
+      throw PaymentException('Payment verification failed: ${e.details}');
+    } catch (e) {
+      debugPrint('❌ Verification error: $e');
+      if (e is PaymentException) rethrow;
+      throw PaymentException('Failed to verify payment: $e');
     }
   }
 
@@ -424,6 +566,29 @@ class PaymentTransaction {
           : null,
     );
   }
+}
+
+/// Checkout session verification result
+class CheckoutSessionVerification {
+  final bool success;
+  final String sessionId;
+  final String paymentStatus;
+  final double? amount;
+  final String? currency;
+  final String? customerEmail;
+  final String? paymentIntent;
+
+  CheckoutSessionVerification({
+    required this.success,
+    required this.sessionId,
+    required this.paymentStatus,
+    this.amount,
+    this.currency,
+    this.customerEmail,
+    this.paymentIntent,
+  });
+
+  bool get isPaid => paymentStatus == 'paid';
 }
 
 /// Custom payment exception

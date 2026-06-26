@@ -1,23 +1,25 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../home/screens/home_screen.dart';
 import '../../events/screens/event_discovery_screen.dart';
 import '../../bookings/screens/my_bookings_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../messaging/screens/conversations_screen.dart';
+import '../providers/nav_index_provider.dart';
 
 // Replace the above import with Ionicons
 import 'package:ionicons/ionicons.dart';
 
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen>
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   bool _isBottomNavVisible = true;
@@ -40,7 +42,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
@@ -48,9 +50,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _animationController.forward();
-    
+
     // Listen to scroll events on all controllers
     for (int i = 0; i < _scrollControllers.length; i++) {
       _scrollControllers[i].addListener(() => _onScroll(i));
@@ -102,6 +104,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       setState(() {
         _currentIndex = index;
       });
+      ref.read(mainNavIndexProvider.notifier).state = index;
     }
   }
 
@@ -124,6 +127,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Listen to external tab-switch requests (e.g. from success dialogs)
+    ref.listen<int>(mainNavIndexProvider, (previous, next) {
+      if (next != _currentIndex) {
+        setState(() => _currentIndex = next);
+      }
+    });
+
     return Scaffold(
       body: Stack(
         children: [

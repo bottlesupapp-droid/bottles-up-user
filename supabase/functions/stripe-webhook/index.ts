@@ -15,13 +15,20 @@ serve(async (req) => {
   try {
     const body = await req.text()
 
-    // Get Stripe keys
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    // Get Stripe keys - use TEST key for sandbox payments
+    const stripeKey = Deno.env.get('test_SK')
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
 
     if (!stripeKey || !webhookSecret) {
       throw new Error('Stripe configuration missing')
     }
+
+    // Verify it's a test key
+    if (!stripeKey.startsWith('sk_test_')) {
+      throw new Error('Invalid Stripe test key. Expected sk_test_... for test mode.')
+    }
+
+    console.log('✅ Webhook using TEST mode Stripe secret key')
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: '2023-10-16',

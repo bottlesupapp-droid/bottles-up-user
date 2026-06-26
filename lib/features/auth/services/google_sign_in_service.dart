@@ -183,7 +183,6 @@ class GoogleSignInService {
       }
     } catch (e) {
       // Log error but don't throw - we don't want to break the sign-in flow
-      print('Error creating profile for Google user: $e');
     }
   }
 
@@ -192,7 +191,6 @@ class GoogleSignInService {
     try {
       await _googleSignIn.signOut();
     } catch (e) {
-      print('Error signing out from Google: $e');
     }
   }
 

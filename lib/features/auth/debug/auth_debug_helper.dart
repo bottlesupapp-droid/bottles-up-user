@@ -69,7 +69,6 @@ class AuthDebugHelper {
 
   /// Check profiles table structure and data
   static Future<void> checkProfilesTable() async {
-    print('\n=== PROFILES TABLE DEBUG ===');
     
     try {
       // Get a few sample profiles to understand the structure
@@ -78,9 +77,7 @@ class AuthDebugHelper {
           .select('id, email, name')
           .limit(3);
       
-      print('Sample profiles found: ${profiles.length}');
       for (var profile in profiles) {
-        print('  Profile: $profile');
       }
       
       // Check total count (simpliit fied)
@@ -89,37 +86,25 @@ class AuthDebugHelper {
           .select('id')
           .limit(100); // Reasonable limit for counting
       
-      print('Total profiles in database (up to 100): ${allProfiles.length}');
       
     } catch (e) {
-      print('Error accessing profiles table: $e');
     }
   }
 
   /// Print comprehensive debug info
   static Future<void> printDebugInfo() async {
-    print('=== SUPABASE DEBUG INFO ===');
     
     final connectionTest = await testSupabaseConnection();
-    print('Connection Test Results:');
     connectionTest.forEach((key, value) {
-      print('  $key: $value');
     });
     
-    print('\n=== PASSWORD RESET DEBUG INFO ===');
     
     final resetTest = await testPasswordResetSetup();
-    print('Password Reset Test Results:');
     resetTest.forEach((key, value) {
-      print('  $key: $value');
     });
     
     // Check profiles table
     await checkProfilesTable();
     
-    print('\n=== CONFIGURATION INFO ===');
-    print('Supabase URL: https://hwmynlghrmtoufyrcihp.supabase.co');
-    print('Current DateTime: ${DateTime.now()}');
-    print('================================');
   }
 }

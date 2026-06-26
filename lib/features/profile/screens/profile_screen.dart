@@ -311,6 +311,13 @@ class ProfileScreenInternal extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Iconsax.star),
+                  title: const Text('Loyalty & Rewards'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 20),
+                  onTap: () => context.push('/loyalty'),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   leading: const Icon(Iconsax.card),
                   title: const Text('Payment History'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 20),

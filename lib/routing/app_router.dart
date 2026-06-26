@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bottles_up_user/features/auth/screens/forgot_password_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
@@ -29,12 +30,85 @@ import 'package:bottles_up_user/features/events/screens/announcements_screen.dar
 import 'package:bottles_up_user/features/events/screens/ticket_transfer_screen.dart';
 import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
 import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
+import 'package:bottles_up_user/features/loyalty/screens/loyalty_dashboard_screen.dart';
+import 'package:bottles_up_user/features/loyalty/screens/tier_status_screen.dart';
+import 'package:bottles_up_user/features/loyalty/screens/reward_redemption_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Routes that do not require authentication.
+const _publicRoutes = {
+  '/',
+  '/login',
+  '/signup',
+  '/phone-login',
+  '/forgot-password',
+  '/reset-password',
+  '/location-permission',
+  '/location/manual-entry',
+};
+
+// Refreshes the router whenever Supabase auth state changes.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  late final StreamSubscription<AuthState> _sub;
+
+  _AuthRefreshNotifier() {
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
+final _authRefreshNotifier = _AuthRefreshNotifier();
 
 final appRouter = GoRouter(
   initialLocation: '/',
-  debugLogDiagnostics: true,
+  refreshListenable: _authRefreshNotifier,
+  redirect: (context, state) {
+    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
+    final path = state.uri.path;
+
+    // Splash manages its own flow — leave it alone.
+    if (path == '/') return null;
+
+    final isPublic = _publicRoutes.any((r) => path == r || path.startsWith('$r/'));
+
+    if (!isLoggedIn && !isPublic) {
+      // Preserve the intended destination so we can redirect back after login.
+      final encoded = Uri.encodeComponent(state.uri.toString());
+      return '/login?redirect=$encoded';
+    }
+
+    if (isLoggedIn && (path == '/login' || path == '/signup' || path == '/phone-login')) {
+      return '/home';
+    }
+
+    return null;
+  },
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('Page not found: ${state.uri}'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => context.go('/home'),
+            child: const Text('Go Home'),
+          ),
+        ],
+      ),
+    ),
+  ),
   routes: [
     GoRoute(
       path: '/',
@@ -65,7 +139,6 @@ final appRouter = GoRouter(
 
         // Parse fragment parameters (Supabase uses fragments)
         if (state.uri.fragment.isNotEmpty) {
-          print('DEBUG: Processing fragment in router: ${state.uri.fragment}');
           final fragmentParts = state.uri.fragment.split('&');
           for (final part in fragmentParts) {
             final keyValue = part.split('=');
@@ -77,9 +150,6 @@ final appRouter = GoRouter(
 
         final accessToken = params['access_token'];
         final refreshToken = params['refresh_token'];
-
-        print(
-            'DEBUG: Router extracted - access_token: ${accessToken != null ? "present" : "missing"}');
 
         return ResetPasswordScreen(
           accessToken: accessToken,
@@ -216,9 +286,9 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/event-detail/:eventId',
+      path: '/events/:id/book',
       builder: (context, state) {
-        final eventId = state.pathParameters['eventId']!;
+        final eventId = state.pathParameters['id']!;
         return EventBookingScreen(eventId: eventId);
       },
     ),
@@ -378,6 +448,32 @@ final appRouter = GoRouter(
           metadata: extra['metadata'] as Map<String, dynamic>?,
         );
       },
+    ),
+    GoRoute(
+      path: '/checkout-success',
+      builder: (context, state) {
+        final sessionId = state.uri.queryParameters['session_id'] ?? '';
+
+        return CheckoutScreen(
+          paymentType: 'success',
+          amount: 0.0,
+          description: 'Payment Success',
+          metadata: {'session_id': sessionId},
+        );
+      },
+    ),
+    // Loyalty & rewards
+    GoRoute(
+      path: '/loyalty',
+      builder: (context, state) => const LoyaltyDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/loyalty/tiers',
+      builder: (context, state) => const TierStatusScreen(),
+    ),
+    GoRoute(
+      path: '/loyalty/rewards',
+      builder: (context, state) => const RewardRedemptionScreen(),
     ),
   ],
 );

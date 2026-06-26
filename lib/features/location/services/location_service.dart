@@ -15,6 +15,7 @@ final locationServiceProvider = Provider<LocationService>((ref) => LocationServi
 
 class LocationService {
   static const String _manualLocationKey = 'manual_location';
+  static const String _locationPermissionGrantedKey = 'location_permission_granted';
 
   Future<LocationPermissionResult> requestLocationPermission() async {
     try {
@@ -26,7 +27,7 @@ class LocationService {
 
       // Check current permission status
       LocationPermission permission = await Geolocator.checkPermission();
-      
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
@@ -36,6 +37,12 @@ class LocationService {
 
       if (permission == LocationPermission.deniedForever) {
         return LocationPermissionResult.deniedForever;
+      }
+
+      // Save that permission was granted
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_locationPermissionGrantedKey, true);
       }
 
       return LocationPermissionResult.granted;
@@ -97,7 +104,7 @@ class LocationService {
     } catch (e) {
       // Fallback to manual location or default
       final manualLocation = await getManualLocation();
-      return manualLocation ?? 'New York, USA';
+      return manualLocation ?? 'Nearby';
     }
   }
 
@@ -132,6 +139,13 @@ class LocationService {
     // Check if we have a manual location set
     final manualLocation = await getManualLocation();
     if (manualLocation != null) {
+      return false;
+    }
+
+    // Check if permission was previously granted
+    final prefs = await SharedPreferences.getInstance();
+    final permissionGranted = prefs.getBool(_locationPermissionGrantedKey) ?? false;
+    if (permissionGranted) {
       return false;
     }
 

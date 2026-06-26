@@ -4,6 +4,9 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:bottles_up_user/features/bookings/models/user_booking.dart';
+import 'package:bottles_up_user/features/bookings/providers/user_bookings_provider.dart';
+import 'package:bottles_up_user/features/bookings/screens/booking_detail_screen.dart';
 
 class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
@@ -50,13 +53,7 @@ class _MyBookingsScreenInternalState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
-
-    // TODO: Replace with actual provider
-    final bookings = _getMockBookings();
-    final upcomingBookings = bookings.where((b) => b.isUpcoming).toList();
-    final pastBookings = bookings.where((b) => !b.isUpcoming).toList();
-
-    final displayBookings = _selectedTab == 0 ? upcomingBookings : pastBookings;
+    final bookingsAsync = ref.watch(userBookingsProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -75,6 +72,13 @@ class _MyBookingsScreenInternalState
                 fontWeight: FontWeight.bold,
               ),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Iconsax.refresh),
+                onPressed: () => ref.invalidate(userBookingsProvider),
+                tooltip: 'Refresh',
+              ),
+            ],
           ),
 
           // Tab Selector
@@ -124,83 +128,115 @@ class _MyBookingsScreenInternalState
             ),
           ),
 
-          // Bookings List
-          if (displayBookings.isEmpty)
-            SliverFillRemaining(
+          // Bookings content
+          bookingsAsync.when(
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => SliverFillRemaining(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      _selectedTab == 0 ? Iconsax.calendar_1 : Iconsax.ticket_2,
-                      size: 64,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                      Iconsax.warning_2,
+                      size: 48,
+                      color: theme.colorScheme.error,
                     ),
                     const Gap(16),
                     Text(
-                      _selectedTab == 0 ? 'No Upcoming Events' : 'No Past Events',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                      'Failed to load bookings',
+                      style: theme.textTheme.titleMedium,
                     ),
                     const Gap(8),
-                    Text(
-                      _selectedTab == 0
-                          ? 'Book an event to see it here'
-                          : 'Your past events will appear here',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
+                    FilledButton.icon(
+                      onPressed: () => ref.invalidate(userBookingsProvider),
+                      icon: const Icon(Iconsax.refresh),
+                      label: const Text('Retry'),
                     ),
-                    if (_selectedTab == 0) ...[
-                      const Gap(24),
-                      FilledButton.icon(
-                        onPressed: () {
-                          // Switch to Discover tab
-                          context.go('/home');
-                        },
-                        icon: const Icon(Iconsax.search_normal_1),
-                        label: const Text('Discover Events'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final booking = displayBookings[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildBookingCard(booking, theme, primaryColor),
-                    );
-                  },
-                  childCount: displayBookings.length,
-                ),
-              ),
             ),
+            data: (bookings) {
+              final upcomingBookings = bookings.where((b) => b.isUpcoming).toList();
+              final pastBookings = bookings.where((b) => !b.isUpcoming).toList();
+              final displayBookings = _selectedTab == 0 ? upcomingBookings : pastBookings;
 
-          // Bottom Padding
-          const SliverToBoxAdapter(
-            child: Gap(100),
+              if (displayBookings.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _selectedTab == 0 ? Iconsax.calendar_1 : Iconsax.ticket_2,
+                          size: 64,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                        const Gap(16),
+                        Text(
+                          _selectedTab == 0 ? 'No Upcoming Events' : 'No Past Events',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const Gap(8),
+                        Text(
+                          _selectedTab == 0
+                              ? 'Book an event to see it here'
+                              : 'Your past events will appear here',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        if (_selectedTab == 0) ...[
+                          const Gap(24),
+                          FilledButton.icon(
+                            onPressed: () => context.go('/home'),
+                            icon: const Icon(Iconsax.search_normal_1),
+                            label: const Text('Discover Events'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index == displayBookings.length) {
+                        return const Gap(100);
+                      }
+                      final booking = displayBookings[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildBookingCard(booking, theme, primaryColor),
+                      );
+                    },
+                    childCount: displayBookings.length + 1,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBookingCard(MockBooking booking, ThemeData theme, Color primaryColor) {
+  Widget _buildBookingCard(UserBooking booking, ThemeData theme, Color primaryColor) {
     return GestureDetector(
       onTap: () => _showBookingDetails(booking),
       child: Container(
@@ -219,16 +255,15 @@ class _MyBookingsScreenInternalState
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Container(
-                    height: 160,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(booking.eventImage),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+                  child: booking.eventImage != null
+                      ? Image.network(
+                          booking.eventImage!,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildImagePlaceholder(theme),
+                        )
+                      : _buildImagePlaceholder(theme),
                 ),
                 // Type Badge
                 Positioned(
@@ -415,6 +450,19 @@ class _MyBookingsScreenInternalState
     );
   }
 
+  Widget _buildImagePlaceholder(ThemeData theme) {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      child: Icon(
+        Iconsax.image,
+        size: 48,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+      ),
+    );
+  }
+
   Color _getBookingTypeColor(String type) {
     switch (type) {
       case 'Ticket':
@@ -454,7 +502,7 @@ class _MyBookingsScreenInternalState
     }
   }
 
-  void _showQRCode(MockBooking booking) {
+  void _showQRCode(UserBooking booking) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
 
@@ -540,10 +588,13 @@ class _MyBookingsScreenInternalState
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
-                        Text(
-                          booking.eventName,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            booking.eventName,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.end,
                           ),
                         ),
                       ],
@@ -577,7 +628,7 @@ class _MyBookingsScreenInternalState
                           ),
                         ),
                         Text(
-                          booking.id.substring(0, 8).toUpperCase(),
+                          booking.shortId,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             fontFamily: 'monospace',
@@ -609,109 +660,11 @@ class _MyBookingsScreenInternalState
     );
   }
 
-  void _showBookingDetails(MockBooking booking) {
-    // Navigate to detailed booking screen
-    // TODO: Implement detailed booking screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Booking details for ${booking.eventName}'),
-        behavior: SnackBarBehavior.floating,
+  void _showBookingDetails(UserBooking booking) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BookingDetailScreen(booking: booking),
       ),
     );
-  }
-
-  List<MockBooking> _getMockBookings() {
-    final now = DateTime.now();
-    return [
-      MockBooking(
-        id: '1',
-        eventName: 'EDM Paradise - NYC',
-        venueName: 'Marquee NYC',
-        eventImage: 'https://images.unsplash.com/photo-1571266028243-d220a9937dad?w=800',
-        date: now.add(const Duration(days: 7)),
-        time: '22:00',
-        type: 'Ticket',
-        status: 'confirmed',
-        details: '2 General Admission Tickets',
-        hasQRCode: true,
-        qrCode: 'BOOKING-1-EDM-NYC-2024',
-        isUpcoming: true,
-      ),
-      MockBooking(
-        id: '2',
-        eventName: 'Hip-Hop Saturday Night',
-        venueName: 'LIV Miami',
-        eventImage: 'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?w=800',
-        date: now.add(const Duration(days: 3)),
-        time: '21:00',
-        type: 'Table',
-        status: 'confirmed',
-        details: 'VIP Table for 6 + 2 Bottles',
-        hasQRCode: true,
-        qrCode: 'BOOKING-2-HIP-HOP-MIAMI-2024',
-        isUpcoming: true,
-      ),
-      MockBooking(
-        id: '3',
-        eventName: 'Afrobeats Night',
-        venueName: 'The Shrine',
-        eventImage: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?w=800',
-        date: now.add(const Duration(days: 1)),
-        time: '20:00',
-        type: 'Guestlist',
-        status: 'confirmed',
-        details: 'Free Entry before 11 PM',
-        hasQRCode: true,
-        qrCode: 'BOOKING-3-AFROBEATS-LA-2024',
-        isUpcoming: true,
-      ),
-    ];
-  }
-}
-
-// Mock Booking Model
-class MockBooking {
-  final String id;
-  final String eventName;
-  final String venueName;
-  final String eventImage;
-  final DateTime date;
-  final String time;
-  final String type; // Ticket, Table, Guestlist
-  final String status; // confirmed, pending, cancelled
-  final String? details;
-  final bool hasQRCode;
-  final String? qrCode;
-  final bool isUpcoming;
-
-  MockBooking({
-    required this.id,
-    required this.eventName,
-    required this.venueName,
-    required this.eventImage,
-    required this.date,
-    required this.time,
-    required this.type,
-    required this.status,
-    this.details,
-    required this.hasQRCode,
-    this.qrCode,
-    required this.isUpcoming,
-  });
-
-  String get formattedDate {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  String get formattedTime {
-    final hour = int.parse(time.split(':')[0]);
-    final minute = time.split(':')[1];
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-    return '$displayHour:$minute $period';
   }
 }

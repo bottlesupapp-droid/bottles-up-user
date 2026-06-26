@@ -53,7 +53,6 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 
   Future<void> _handleSendOtp() async {
     if (_formKey.currentState?.validate() ?? false) {
-      print('DEBUG [PhoneLoginScreen]: Form validated, starting OTP send process');
 
       setState(() {
         _isLoading = true;
@@ -62,12 +61,9 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
       try {
         // Format phone number (remove spaces and dashes)
         final phoneNumber = _phoneController.text.replaceAll(RegExp(r'[\s-]'), '');
-        print('DEBUG [PhoneLoginScreen]: Formatted phone number: $phoneNumber');
-        print('DEBUG [PhoneLoginScreen]: Calling signInWithPhone...');
 
         await ref.read(authStateProvider.notifier).signInWithPhone(phoneNumber);
 
-        print('DEBUG [PhoneLoginScreen]: signInWithPhone completed successfully');
 
         if (mounted) {
           setState(() {
@@ -75,7 +71,6 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
             _isLoading = false;
           });
 
-          print('DEBUG [PhoneLoginScreen]: UI state updated - OTP sent flag set to true');
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -85,7 +80,6 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
           );
         }
       } catch (e) {
-        print('DEBUG [PhoneLoginScreen]: Error occurred - $e');
 
         if (mounted) {
           setState(() {
@@ -101,13 +95,11 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
         }
       }
     } else {
-      print('DEBUG [PhoneLoginScreen]: Form validation failed');
     }
   }
 
   Future<void> _handleVerifyOtp() async {
     if (_otpController.text.length != 6) {
-      print('DEBUG [PhoneLoginScreen]: Invalid OTP length - ${_otpController.text.length}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter a valid 6-digit OTP'),
@@ -117,7 +109,6 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
       return;
     }
 
-    print('DEBUG [PhoneLoginScreen]: Starting OTP verification process');
 
     setState(() {
       _isLoading = true;
@@ -125,23 +116,18 @@ class _PhoneLoginScreenState extends ConsumerState<PhoneLoginScreen> {
 
     try {
       final phoneNumber = _phoneController.text.replaceAll(RegExp(r'[\s-]'), '');
-      print('DEBUG [PhoneLoginScreen]: Phone number for verification: $phoneNumber');
-      print('DEBUG [PhoneLoginScreen]: OTP entered: ${_otpController.text}');
-      print('DEBUG [PhoneLoginScreen]: Calling verifyPhoneOtp...');
 
       await ref.read(authStateProvider.notifier).verifyPhoneOtp(
         phoneNumber: phoneNumber,
         otp: _otpController.text,
       );
 
-      print('DEBUG [PhoneLoginScreen]: OTP verification successful, navigating to home');
 
       // Navigate to home on successful verification
       if (mounted) {
         context.go('/home');
       }
     } catch (e) {
-      print('DEBUG [PhoneLoginScreen]: OTP verification failed - $e');
 
       if (mounted) {
         setState(() {

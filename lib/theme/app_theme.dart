@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   AppTheme._();
@@ -66,7 +65,7 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: _backgroundColor,
-      fontFamily: GoogleFonts.inter().fontFamily,
+      fontFamily: 'Inter',
       
       // Container Theme - Force dark containers
       canvasColor: _surfaceColor,

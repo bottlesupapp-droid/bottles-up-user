@@ -362,7 +362,7 @@ class EventCard extends StatelessWidget {
 
   void _onEventTap(BuildContext context) {
     // Navigate to event detail or RSVP page
-    context.push('/event-detail/${event.id}');
+    context.push('/events/${event.id}/book');
   }
 
   String _getMonthAbbreviation(int month) {

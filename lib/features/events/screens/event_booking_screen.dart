@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event.dart';
 import '../models/event_rsvp.dart';
 import '../providers/event_booking_provider.dart';
 import '../services/event_booking_service.dart';
+import '../services/email_service.dart';
 import '../providers/event_provider.dart'; // For eventByIdProvider
+import '../../bookings/providers/user_bookings_provider.dart';
 import '../../payment/screens/payment_screen.dart';
 import '../../../core/models/payment_models.dart';
 import '../widgets/add_to_wallet_button.dart';
@@ -26,7 +29,9 @@ class EventBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
+  final _supabase = Supabase.instance.client;
   final PageController _pageController = PageController();
+  int _ticketQuantity = 1;
 
   @override
   void dispose() {
@@ -76,7 +81,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
             if (config != null)
               _buildEventConfigurationSliver(context, config),
             // Booking options selector as part of header
-            _buildBookingSelectorSliver(context, config),
+            _buildBookingSelectorSliver(context, eventWithClub, config),
           ],
           body: Padding(
             padding: const EdgeInsets.only(bottom: 80), // Space for sticky button
@@ -93,18 +98,22 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
                 // Table Booking Form
                 if (config?.enableTableBooking ?? true)
                   _buildTableBookingForm(context, eventWithClub, config),
+
+                // Ticket Purchase Form
+                if (eventWithClub.ticketPrice > 0)
+                  _buildTicketPurchaseForm(context, eventWithClub),
               ],
             ),
           ),
         ),
 
         // Sticky bottom button
-        _buildStickyBottomButton(context, config),
+        _buildStickyBottomButton(context, eventWithClub, config),
       ],
     );
   }
 
-  Widget _buildStickyBottomButton(BuildContext context, EventConfiguration? config) {
+  Widget _buildStickyBottomButton(BuildContext context, Event event, EventConfiguration? config) {
     final bookingOption = ref.watch(eventBookingStateProvider);
 
     return Positioned(
@@ -134,9 +143,11 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
             ),
           ],
         ),
-        child: bookingOption == BookingOption.table
-            ? _buildTableBookingButton(context, config)
-            : _buildRSVPButton(context),
+        child: bookingOption == BookingOption.ticket
+            ? _buildTicketPurchaseButton(context, event)
+            : bookingOption == BookingOption.table
+                ? _buildTableBookingButton(context, config)
+                : _buildRSVPButton(context),
       ),
     );
   }
@@ -159,7 +170,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
         );
 
         final costs = EventBookingService().calculateTotalCost(
-          depositAmount: formState.selectedTable!['price'].toDouble(),
+          depositAmount: formState.selectedTable!['deposit_amount'].toDouble(),
           bottlesTotal: bottlesTotal,
           serviceFeeRate: config?.serviceFeeRate ?? 0.07,
           taxRate: config?.taxRate ?? 0.13,
@@ -255,11 +266,11 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
     );
   }
 
-  Widget _buildBookingSelectorSliver(BuildContext context, EventConfiguration? config) {
+  Widget _buildBookingSelectorSliver(BuildContext context, Event event, EventConfiguration? config) {
     return SliverToBoxAdapter(
       child: Column(
         children: [
-          _buildBookingSelector(context, config),
+          _buildBookingSelector(context, event, config),
           const Gap(16),
         ],
       ),
@@ -343,7 +354,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
               children: [
                 Icon(Iconsax.dollar_circle, size: 16, color: Theme.of(context).colorScheme.primary),
                 const Gap(8),
-                const Expanded(child: Text('Table deposit: \$50 required')),
+                Expanded(child: Text('Table deposit: \$${config.minTableDeposit.toStringAsFixed(0)} required')),
               ],
             ),
             const Gap(8),
@@ -360,7 +371,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
     );
   }
 
-  Widget _buildBookingSelector(BuildContext context, EventConfiguration? config) {
+  Widget _buildBookingSelector(BuildContext context, Event event, EventConfiguration? config) {
     final bookingOption = ref.watch(eventBookingStateProvider);
 
     return Container(
@@ -377,7 +388,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
                 onTap: () {
                   ref.read(eventBookingStateProvider.notifier).setBookingOption(BookingOption.guestlist);
                   _pageController.animateToPage(
-                    0,
+                    0, // guestlist is always first when enabled
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
@@ -438,8 +449,10 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
               child: GestureDetector(
                 onTap: () {
                   ref.read(eventBookingStateProvider.notifier).setBookingOption(BookingOption.table);
+                  // If guestlist is disabled, table is at index 0; otherwise index 1
+                  final tablePageIndex = (config?.enableGuestlistRsvp ?? true) ? 1 : 0;
                   _pageController.animateToPage(
-                    1,
+                    tablePageIndex,
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
@@ -494,10 +507,276 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
                 ),
               ),
             ),
+
+          if (event.ticketPrice > 0)
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(eventBookingStateProvider.notifier).setBookingOption(BookingOption.ticket);
+                  int ticketPageIndex = 0;
+                  if (config?.enableGuestlistRsvp ?? true) ticketPageIndex++;
+                  if (config?.enableTableBooking ?? true) ticketPageIndex++;
+                  _pageController.animateToPage(
+                    ticketPageIndex,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: bookingOption == BookingOption.ticket
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Iconsax.ticket,
+                        color: bookingOption == BookingOption.ticket
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      const Gap(8),
+                      Text(
+                        'Option C',
+                        style: TextStyle(
+                          color: bookingOption == BookingOption.ticket
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'Buy Ticket',
+                        style: TextStyle(
+                          color: bookingOption == BookingOption.ticket
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        event.formattedPrice,
+                        style: TextStyle(
+                          color: bookingOption == BookingOption.ticket
+                              ? Colors.white.withValues(alpha: 0.8)
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+
+  // ── Ticket Purchase ────────────────────────────────────────────────────────
+
+  Widget _buildTicketPurchaseForm(BuildContext context, Event event) {
+    final price = event.ticketPrice;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Buy Tickets', style: Theme.of(context).textTheme.headlineSmall),
+          const Gap(8),
+          Text(
+            event.name,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+          ),
+          const Gap(24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Price per ticket',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                    Text(event.formattedPrice,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            )),
+                  ],
+                ),
+                const Gap(16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Quantity', style: Theme.of(context).textTheme.bodyMedium),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _ticketQuantity > 1
+                              ? () => setState(() => _ticketQuantity--)
+                              : null,
+                          icon: const Icon(Icons.remove_circle_outline),
+                          iconSize: 28,
+                        ),
+                        SizedBox(
+                          width: 36,
+                          child: Text(
+                            '$_ticketQuantity',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _ticketQuantity < 10
+                              ? () => setState(() => _ticketQuantity++)
+                              : null,
+                          icon: const Icon(Icons.add_circle_outline),
+                          iconSize: 28,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Total',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            )),
+                    Text(
+                      '\$${(price * _ticketQuantity).toStringAsFixed(0)}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Gap(16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Iconsax.ticket, size: 16, color: Theme.of(context).colorScheme.primary),
+                const Gap(8),
+                Expanded(
+                  child: Text(
+                    'Your ticket QR code will be available immediately after purchase.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTicketPurchaseButton(BuildContext context, Event event) {
+    final price = event.ticketPrice;
+    final total = price * _ticketQuantity;
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () => _proceedToTicketPayment(context, event, total),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          'Buy $_ticketQuantity ${_ticketQuantity == 1 ? 'Ticket' : 'Tickets'} — \$${total.toStringAsFixed(0)}',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _proceedToTicketPayment(BuildContext context, Event event, double total) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          amount: total,
+          currency: 'USD',
+          description: 'Event Ticket — ${event.name}',
+          paymentType: PaymentType.eventTicket,
+          bookingId: null,
+          metadata: {
+            'event_id': event.id,
+            'ticket_quantity': _ticketQuantity.toString(),
+            'ticket_price': event.ticketPrice.toString(),
+            'total_amount': total.toString(),
+          },
+          onPaymentSuccess: () async {
+            final confirmationCode =
+                'BU${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+            await _supabase.from('events_bookings').insert({
+              'user_id': user.id,
+              'event_id': event.id,
+              'ticket_quantity': _ticketQuantity,
+              'ticket_price': event.ticketPrice,
+              'total_amount': total,
+              'status': 'confirmed',
+              'confirmation_code': confirmationCode,
+              'payment_status': 'paid',
+              'qr_code': confirmationCode,
+            });
+
+            ref.invalidate(userBookingsProvider);
+
+            // Send confirmation email
+            try {
+              final userEmail = user.email;
+              if (userEmail != null) {
+                final userData = await _supabase.auth.getUser();
+                final fullName = userData.user?.userMetadata?['full_name'] as String? ?? userEmail;
+                await EmailService().sendPaymentConfirmationEmail(
+                  to: userEmail,
+                  customerName: fullName,
+                  eventName: event.name,
+                  eventDate: event.formattedDate,
+                  eventTime: event.formattedTime,
+                  venue: event.venueDisplay,
+                  amount: total,
+                  paymentMethod: 'Card',
+                  transactionId: confirmationCode,
+                );
+              }
+            } catch (_) {}
+          },
+        ),
+      ),
+    );
+  }
+
+  // ── Guestlist ──────────────────────────────────────────────────────────────
 
   Widget _buildGuestlistForm(BuildContext context, Event eventWithClub) {
     return SingleChildScrollView(
@@ -645,7 +924,58 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
 
   Widget _buildTableSelection(BuildContext context, List<Map<String, dynamic>> tables, EventConfiguration? config) {
     final selectedTable = ref.watch(tableBookingFormStateProvider).selectedTable;
-    
+
+    // No tables configured for this event
+    if (tables.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select a Table',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Gap(12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.table_restaurant_outlined,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const Gap(12),
+                Text(
+                  'No tables available',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const Gap(6),
+                Text(
+                  'The organiser hasn\'t added table reservations for this event yet.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     // Get the event to access table arrangement image
     final eventAsync = ref.watch(eventByIdProvider(widget.eventId));
 
@@ -1027,17 +1357,43 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
                   specialRequests: formState.specialRequests,
                   splitPayments: formState.enableSplitPayment ? formState.splitPaymentParticipants : null,
                 );
-                EventBookingService().updateDepositPaymentStatus(
+                await EventBookingService().updateDepositPaymentStatus(
                   booking.id,
                   true,
-                  null, // paymentIntentId would be available from payment service
+                  null,
                 );
 
-                // Invalidate providers to refresh data
+                // Invalidate providers so both event detail and bookings tab refresh
                 ref.invalidate(userEventTableBookingProvider);
+                ref.invalidate(userBookingsProvider);
 
-                // Get event data for the success dialog
+                // Get event data for the success dialog and email
                 final eventWithClub = await ref.read(eventByIdProvider(eventId).future);
+
+                // Send booking confirmation email
+                try {
+                  if (eventWithClub != null) {
+                    final userEmail = booking.userId.isNotEmpty
+                        ? (await _supabase.auth.getUser()).user?.email
+                        : null;
+                    if (userEmail != null) {
+                      await EmailService().sendTableBookingConfirmationEmail(
+                        to: userEmail,
+                        customerName: (await _supabase.auth.getUser()).user?.userMetadata?['full_name'] as String? ?? userEmail,
+                        eventName: eventWithClub.name,
+                        eventDate: eventWithClub.formattedDate,
+                        eventTime: eventWithClub.formattedTime,
+                        venue: eventWithClub.venueDisplay,
+                        confirmationCode: booking.id.substring(0, 8).toUpperCase(),
+                        tableName: formState.selectedTable!['name'],
+                        partySize: formState.partySize,
+                        depositAmount: formState.selectedTable!['deposit_amount'].toDouble(),
+                      );
+                    }
+                  }
+                } catch (_) {
+                  // Email failure must not block the booking success flow
+                }
 
                 // Show success dialog with Apple Wallet option
                 if (context.mounted && eventWithClub != null) {
@@ -1482,242 +1838,7 @@ class _BottleSelection extends ConsumerWidget {
   }
 }
 
-// Individual Bottle Card Widget
-class _BottleCard extends ConsumerStatefulWidget {
-  final Map<String, dynamic> bottle;
-
-  const _BottleCard({required this.bottle});
-
-  @override
-  ConsumerState<_BottleCard> createState() => _BottleCardState();
-}
-
-class _BottleCardState extends ConsumerState<_BottleCard> {
-  int quantity = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottle = widget.bottle;
-    final price = bottle['price'] as double? ?? 0.0;
-    final isFeatured = bottle['is_featured'] as bool? ?? false;
-    final imageUrl = bottle['image_url'] as String?;
-    final brand = bottle['brand'] as String?;
-    final volume = bottle['volume_ml'] as int?;
-    final alcoholContent = bottle['alcohol_content'] as double?;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-        boxShadow: isFeatured ? [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ] : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Bottle Image
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Theme.of(context).colorScheme.surfaceContainer,
-              ),
-              child: imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.wine_bar,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                          );
-                        },
-                      ),
-                    )
-                  : Icon(
-                      Icons.wine_bar,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-            ),
-
-            const Gap(16),
-
-            // Bottle Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (isFeatured)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'FEATURED',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      if (isFeatured) const Gap(8),
-                      Expanded(
-                        child: Text(
-                          bottle['name'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (brand != null) ...[
-                    const Gap(4),
-                    Text(
-                      brand,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                  if (volume != null || alcoholContent != null) ...[
-                    const Gap(4),
-                    Row(
-                      children: [
-                        if (volume != null) ...[
-                          Icon(
-                            Icons.straighten,
-                            size: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                          const Gap(4),
-                          Text(
-                            '${volume}ml',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                        if (volume != null && alcoholContent != null) ...[
-                          const Gap(8),
-                          Container(
-                            width: 1,
-                            height: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const Gap(8),
-                        ],
-                        if (alcoholContent != null) ...[
-                          Icon(
-                            Icons.local_fire_department,
-                            size: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                          const Gap(4),
-                          Text(
-                            '${alcoholContent.toStringAsFixed(1)}% ABV',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            const Gap(16),
-
-            // Price and Quantity Controls
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '\$${price.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const Gap(8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: quantity > 0 ? () => setState(() => quantity--) : null,
-                      icon: const Icon(Icons.remove),
-                      style: IconButton.styleFrom(
-                        backgroundColor: quantity > 0 
-                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                            : Theme.of(context).colorScheme.surfaceContainer,
-                        foregroundColor: quantity > 0 
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                        minimumSize: const Size(32, 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const Gap(8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        quantity.toString(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    const Gap(8),
-                    IconButton(
-                      onPressed: () => setState(() => quantity++),
-                      icon: const Icon(Icons.add),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        foregroundColor: Theme.of(context).colorScheme.primary,
-                        minimumSize: const Size(32, 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// _BottleCard removed — was dead code with disconnected local state. Use _MinimalBottleCard.
 
 // Minimal Bottle Card Widget for horizontal scrolling
 class _MinimalBottleCard extends ConsumerStatefulWidget {

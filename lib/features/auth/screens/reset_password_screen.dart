@@ -64,7 +64,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       });
 
       try {
-        print('DEBUG: Starting password update with tokens...');
         await PasswordResetService().updatePassword(
           newPassword: _passwordController.text,
           accessToken: widget.accessToken,
@@ -84,7 +83,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           context.go('/login');
         }
       } catch (e) {
-        print('DEBUG: Password reset failed: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

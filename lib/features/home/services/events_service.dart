@@ -25,7 +25,7 @@ class HomeEventsService {
             zones:zone_id(name, description)
           ''')
           .eq('is_active', true)
-          .inFilter('status', ['published', 'upcoming', 'live']);
+          .inFilter('status', ['active', 'published', 'upcoming', 'live']);
 
       // Apply date filter
       if (date != null) {
@@ -67,7 +67,7 @@ class HomeEventsService {
           ''')
           .eq('is_active', true)
           .eq('is_featured', true)
-          .inFilter('status', ['published', 'upcoming', 'live'])
+          .inFilter('status', ['active', 'published', 'upcoming', 'live'])
           .gte('event_date', DateTime.now().toIso8601String().split('T')[0])
           .order('event_date', ascending: true)
           .limit(limit);
@@ -93,7 +93,7 @@ class HomeEventsService {
           ''')
           .eq('is_active', true)
           .eq('event_date', today)
-          .inFilter('status', ['published', 'upcoming', 'live', 'ongoing'])
+          .inFilter('status', ['active', 'published', 'upcoming', 'live', 'ongoing'])
           .order('start_time', ascending: true);
 
       return response.map<Event>((data) => Event.fromSupabase(_mapJoinedData(data))).toList();
@@ -114,7 +114,7 @@ class HomeEventsService {
             zones:zone_id(name, description)
           ''')
           .eq('is_active', true)
-          .inFilter('status', ['live', 'ongoing'])
+          .inFilter('status', ['active', 'live', 'ongoing'])
           .order('start_time', ascending: true);
 
       return response.map<Event>((data) => Event.fromSupabase(_mapJoinedData(data))).toList();
@@ -165,7 +165,7 @@ class HomeEventsService {
             zones:zone_id(name, description)
           ''')
           .eq('is_active', true)
-          .inFilter('status', ['published', 'upcoming', 'live'])
+          .inFilter('status', ['active', 'published', 'upcoming', 'live'])
           .gte('event_date', DateTime.now().toIso8601String().split('T')[0])
           .or('name.ilike.%$query%,description.ilike.%$query%')
           .order('event_date', ascending: true)
@@ -190,7 +190,7 @@ class HomeEventsService {
           ''')
           .eq('is_active', true)
           .eq('category_id', categoryId)
-          .inFilter('status', ['published', 'upcoming', 'live'])
+          .inFilter('status', ['active', 'published', 'upcoming', 'live'])
           .gte('event_date', DateTime.now().toIso8601String().split('T')[0])
           .order('event_date', ascending: true)
           .limit(limit);

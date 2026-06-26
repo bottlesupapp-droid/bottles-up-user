@@ -43,19 +43,19 @@ class EventService {
               )
             ''')
             .eq('is_active', true)
-            .eq('status', 'active'); // CRITICAL: Only show published events
+            .inFilter('status', ['active', 'published', 'upcoming', 'live']); // Accept all vendor-created statuses
 
         // Apply optional filters
         if (searchQuery != null && searchQuery.isNotEmpty) {
           query = query.or('name.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
         }
 
-        if (startDate != null) {
-          query = query.gte('event_date', startDate.toIso8601String());
-        }
+        // Always floor to today — past events are never shown
+        final floor = startDate ?? DateTime.now();
+        query = query.gte('event_date', floor.toIso8601String().substring(0, 10));
 
         if (endDate != null) {
-          query = query.lte('event_date', endDate.toIso8601String());
+          query = query.lte('event_date', endDate.toIso8601String().substring(0, 10));
         }
 
         // Apply ordering and limits
@@ -117,7 +117,7 @@ class EventService {
             ''')
             .eq('is_active', true)
             .eq('is_featured', true)
-            .eq('status', 'active') // CRITICAL: Only show published events
+            .inFilter('status', ['active', 'published', 'upcoming', 'live'])
             .order('event_date', ascending: true)
             .limit(10);
 
@@ -218,7 +218,7 @@ class EventService {
               )
             ''')
             .eq('is_active', true)
-            .eq('status', 'active') // CRITICAL: Only show published events
+            .inFilter('status', ['active', 'published', 'upcoming', 'live'])
             .gte('event_date', today.toIso8601String())
             .order('event_date', ascending: true)
             .limit(limit);
