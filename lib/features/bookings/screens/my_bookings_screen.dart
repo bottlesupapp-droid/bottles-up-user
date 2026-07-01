@@ -50,6 +50,16 @@ class _MyBookingsScreenInternalState
   final List<String> _tabs = ['Upcoming', 'Past'];
 
   @override
+  void initState() {
+    super.initState();
+    // Invalidate on every visit so a booking just created by the payment
+    // flow is always visible without a manual pull-to-refresh.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(userBookingsProvider);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;

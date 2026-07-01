@@ -140,10 +140,10 @@ class PhotoService {
       }
 
       // Upload image to storage
-      final fileName = '${currentUser.id}/${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
+      final fileName = 'photos/${currentUser.id}/${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
       final bytes = await imageFile.readAsBytes();
 
-      await _supabase.storage.from('photos').uploadBinary(
+      await _supabase.storage.from('media').uploadBinary(
             fileName,
             bytes,
             fileOptions: const FileOptions(
@@ -152,7 +152,7 @@ class PhotoService {
           );
 
       // Get public URL
-      final url = _supabase.storage.from('photos').getPublicUrl(fileName);
+      final url = _supabase.storage.from('media').getPublicUrl(fileName);
 
       // Create thumbnail (placeholder - would use image processing)
       final thumbnailUrl = url; // In production, generate actual thumbnail
@@ -328,12 +328,16 @@ class PhotoService {
       // Get photo to find file path
       final photo = await getPhoto(photoId);
       if (photo != null) {
-        // Extract file name from URL
+        // Extract path after the bucket name from URL
         final uri = Uri.parse(photo.url);
-        final filePath = uri.pathSegments.last;
+        final segments = uri.pathSegments;
+        final mediaIdx = segments.indexOf('media');
+        final filePath = mediaIdx != -1
+            ? segments.sublist(mediaIdx + 1).join('/')
+            : segments.last;
 
         // Delete from storage
-        await _supabase.storage.from('photos').remove([filePath]);
+        await _supabase.storage.from('media').remove([filePath]);
       }
 
       // Delete record

@@ -151,7 +151,7 @@ class _TableSelectionScreenState extends State<TableSelectionScreen> {
           timeSlot: widget.timeSlot,
           tableName: _selectedTable!['name']?.toString(),
           guestCount: widget.guestCount,
-          onPaymentSuccess: () {
+          onPaymentSuccess: () async {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -162,7 +162,7 @@ class _TableSelectionScreenState extends State<TableSelectionScreen> {
               );
             }
           },
-          onPaymentFailed: () {
+          onPaymentFailed: () async {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

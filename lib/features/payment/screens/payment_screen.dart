@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide PaymentIntent;
 import 'package:gap/gap.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:bottles_up_user/core/services/payment_service.dart';
@@ -19,8 +21,8 @@ class PaymentScreen extends ConsumerStatefulWidget {
   final PaymentType paymentType;
   final String? bookingId;
   final Map<String, dynamic>? metadata;
-  final VoidCallback? onPaymentSuccess;
-  final VoidCallback? onPaymentFailed;
+  final Future<void> Function()? onPaymentSuccess;
+  final Future<void> Function()? onPaymentFailed;
   // Booking details
   final String? clubName;
   final String? date;
@@ -56,6 +58,9 @@ class PaymentScreen extends ConsumerStatefulWidget {
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   final PaymentService _paymentService = PaymentService();
+  // iOS: embedded card form controller — avoids native payment sheet modal
+  // which has a UIKit completion-handler bug on iOS 16+ causing it to hang.
+  final CardFormEditController _cardController = CardFormEditController();
   bool _isProcessing = false;
   String? _errorMessage;
   PaymentIntent? _paymentIntent;
@@ -64,19 +69,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    // In the new system, we create the session when the user clicks pay
-    // or we can pre-create it here if we want to follow the old pattern
+    // Rebuild when card form completeness changes so Pay button enables/disables.
+    _cardController.addListener(() => setState(() {}));
   }
 
-  Future<void> _createPaymentIntent() async {
-    // This method is now replaced by createCheckoutSession in the new service
-    // We'll handle Stripe payment by redirecting to the checkout URL
+  @override
+  void dispose() {
+    _cardController.dispose();
+    super.dispose();
   }
 
   bool _canProcessPayment() {
     if (_isProcessing) return false;
-
-    // Stripe is the only supported payment method
+    // On iOS with the embedded card form, require all card fields to be filled.
+    if (Platform.isIOS) {
+      return _cardController.details.complete == true;
+    }
     return true;
   }
 
@@ -95,7 +103,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         _isProcessing = false;
         _errorMessage = 'Payment failed: ${e.toString()}';
       });
-      widget.onPaymentFailed?.call();
+      await widget.onPaymentFailed?.call();
     }
   }
 
@@ -103,8 +111,6 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     try {
       debugPrint('💳 Starting payment process...');
 
-      // Step 1: Create Payment Intent for in-app payment
-      debugPrint('💳 Creating payment intent...');
       final paymentIntent = await _paymentService.createPaymentIntent(
         paymentType: widget.paymentType.name,
         amount: widget.amount,
@@ -113,46 +119,74 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         metadata: widget.metadata,
       );
 
-      debugPrint('💳 Payment intent created successfully');
-      debugPrint('💳 Presenting payment sheet...');
+      debugPrint('💳 Payment intent created, confirming payment...');
 
-      // Step 2: Present Payment Sheet IN-APP
-      final success = await _paymentService.presentPaymentSheet(
-        paymentIntent: paymentIntent,
-        enableGooglePay: true,
-        enableApplePay: true,
-      );
+      final bool success;
+      if (Platform.isIOS) {
+        // iOS: use embedded CardFormField + confirmPayment.
+        // The native payment sheet (presentPaymentSheet) has a UIKit
+        // UISheetPresentationController bug on iOS 16+ where the completion
+        // handler never fires → the sheet hangs. Using confirmPayment with
+        // the mounted CardFormField avoids the modal entirely and fires the
+        // completion handler through a simpler, reliable code path.
+        success = await _paymentService.confirmPaymentWithCard(
+          paymentIntent: paymentIntent,
+          userEmail: _paymentService.currentUser?.email,
+        );
+      } else {
+        success = await _paymentService.presentPaymentSheet(
+          paymentIntent: paymentIntent,
+          enableGooglePay: true,
+          enableApplePay: true,
+        );
+      }
 
       debugPrint('💳 Payment sheet result: $success');
 
       if (success) {
-        // Payment successful
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-          });
-          _showSuccessDialog();
-          widget.onPaymentSuccess?.call();
+        // On iOS the native payment sheet dismisses asynchronously — give the
+        // Flutter engine 100 ms to reclaim the responder chain before any UI
+        // ops or Supabase writes.
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (!mounted) return;
+
+        // Run booking-creation FIRST so the record lands in DB before the
+        // success dialog shows and the user can navigate away.
+        try {
+          await widget.onPaymentSuccess?.call();
+        } catch (callbackError) {
+          // Payment charged successfully but booking insert failed.
+          // Show the error so the user knows to contact support.
+          debugPrint('❌ Booking insert failed after payment: $callbackError');
+          if (mounted) {
+            setState(() { _isProcessing = false; });
+            _showErrorDialog(
+              'Payment was charged but your booking could not be saved.\n'
+              'Please contact support with this reference: ${DateTime.now().millisecondsSinceEpoch}',
+            );
+          }
+          return;
         }
+
+        if (!mounted) return;
+        setState(() { _isProcessing = false; });
+        _showSuccessDialog();
       }
     } on PaymentException catch (e) {
       debugPrint('💳 Payment exception: ${e.message}');
       if (mounted) {
         if (e.message.contains('cancelled') || e.message.contains('canceled')) {
-          // User cancelled payment - not an error
           setState(() {
             _isProcessing = false;
-            _errorMessage = null; // Don't show error for cancellation
+            _errorMessage = null;
           });
         } else {
           setState(() {
             _isProcessing = false;
             _errorMessage = e.message;
           });
-
-          // Show user-friendly error dialog
           _showErrorDialog(e.message);
-          widget.onPaymentFailed?.call();
+          await widget.onPaymentFailed?.call();
         }
       }
     } catch (e) {
@@ -162,10 +196,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           _isProcessing = false;
           _errorMessage = 'Payment failed: ${e.toString()}';
         });
-
-        // Show user-friendly error dialog
         _showErrorDialog(e.toString());
-        widget.onPaymentFailed?.call();
+        await widget.onPaymentFailed?.call();
       }
     }
   }
@@ -1031,20 +1063,64 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           ),
         ),
         const Gap(12),
-        // Stripe Payment
-        GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = PaymentMethod.stripe),
-          child: _buildPaymentMethodCard(
-            theme: theme,
-            primaryColor: primaryColor,
-            method: PaymentMethod.stripe,
-            title: 'Stripe Payment',
-            subtitle: 'Credit/Debit card via Stripe',
-            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/2560px-Stripe_Logo%2C_revised_2016.svg.png',
-            icon: Iconsax.card,
+        if (Platform.isIOS) ...[
+          // iOS: embedded card form — avoids the native payment sheet modal
+          // which has a known UIKit completion-handler bug causing it to hang.
+          Container(
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: primaryColor.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Iconsax.card, color: primaryColor, size: 20),
+                    const Gap(8),
+                    Text(
+                      'Card Details',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const Gap(12),
+                CardFormField(
+                  controller: _cardController,
+                  style: CardFormStyle(
+                    backgroundColor: theme.colorScheme.surface,
+                    textColor: theme.colorScheme.onSurface,
+                    placeholderColor: theme.colorScheme.onSurface.withOpacity(0.4),
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: primaryColor.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        // Google Pay, Apple Pay and Wallet are coming soon
+        ] else ...[
+          // Android: show payment method selection card (uses native payment sheet)
+          GestureDetector(
+            onTap: () => setState(() => _selectedPaymentMethod = PaymentMethod.stripe),
+            child: _buildPaymentMethodCard(
+              theme: theme,
+              primaryColor: primaryColor,
+              method: PaymentMethod.stripe,
+              title: 'Stripe Payment',
+              subtitle: 'Credit/Debit card via Stripe',
+              logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/2560px-Stripe_Logo%2C_revised_2016.svg.png',
+              icon: Iconsax.card,
+            ),
+          ),
+        ],
       ],
     );
   }

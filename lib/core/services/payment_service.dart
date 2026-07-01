@@ -1,9 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter/material.dart';
 import 'package:bottles_up_user/core/config/payment_config.dart';
+
+// Channel registered in SceneDelegate.swift — calls makeKeyAndVisible() so
+// that stripe_ios finds a UIViewController that is in the window hierarchy.
+const _stripeHelper = MethodChannel('bottles_up/stripe_helper');
 
 /// Payment service that integrates with Supabase Edge Functions
 /// ALL payment processing is done via Supabase Edge Functions - NO hardcoded Stripe keys
@@ -90,14 +98,17 @@ class PaymentService {
     bool enableApplePay = true,
   }) async {
     try {
-      // Initialize Stripe if needed
+      // Re-apply Stripe settings if the edge function returned the key.
       if (paymentIntent.publishableKey != null) {
         final publishableKey = paymentIntent.publishableKey!;
-
         final mode = publishableKey.startsWith('pk_live_') ? 'LIVE' : 'TEST';
         debugPrint('✅ Using $mode mode Stripe key: ${publishableKey.substring(0, 20)}...');
-
         Stripe.publishableKey = publishableKey;
+        // urlScheme only — merchantIdentifier is intentionally omitted because
+        // Apple Pay requires a registered Apple Pay merchant + entitlement file.
+        // Setting merchantIdentifier without those entitlements causes internal
+        // Apple Pay validation to hang on iOS.
+        Stripe.urlScheme = 'bottlesup';
         await Stripe.instance.applySettings();
       }
 
@@ -106,48 +117,89 @@ class PaymentService {
       debugPrint('💳 Customer: ${paymentIntent.customer}');
       debugPrint('💳 Ephemeral Key: ${paymentIntent.ephemeralKey?.substring(0, 20)}...');
 
-      // Initialize payment sheet
       try {
         await Stripe.instance.initPaymentSheet(
           paymentSheetParameters: SetupPaymentSheetParameters(
             paymentIntentClientSecret: paymentIntent.paymentIntent,
-            merchantDisplayName: 'BottlesUp',
-            customerEphemeralKeySecret: paymentIntent.ephemeralKey,
-            customerId: paymentIntent.customer,
+            merchantDisplayName: 'Bottles Up',
+            // customerId + customerEphemeralKeySecret intentionally omitted.
+            // When set, Stripe activates the Link Card integration on iOS.
+            // If Link's network initialization fails (common in test mode and
+            // some network conditions), the payment sheet freezes with:
+            // "PaymentSheet could not offer the Link Card integration."
+            // and the completion handler never fires. Removing these fields
+            // disables Link entirely — users enter card details each time,
+            // which is the correct behaviour for go-live without saved cards.
             style: ThemeMode.dark,
+            // returnURL is REQUIRED on iOS for any payment that opens an external
+            // URL (3D Secure, bank redirects). Without it, Stripe opens Safari but
+            // can never return to the app — presentPaymentSheet freezes forever.
+            returnURL: 'bottlesup://payment/return',
             googlePay: enableGooglePay
-                ? const PaymentSheetGooglePay(
+                ? PaymentSheetGooglePay(
                     merchantCountryCode: 'US',
                     currencyCode: 'USD',
-                    testEnv: true,
+                    testEnv: !(paymentIntent.publishableKey?.startsWith('pk_live_') ?? false),
                   )
                 : null,
-            applePay: null, // Always disable Apple Pay
-            allowsDelayedPaymentMethods: true,
+            // Apple Pay disabled until Apple Pay merchant ID is registered in
+            // Apple Developer Portal and the entitlement is added to Runner.
+            applePay: null,
+            allowsDelayedPaymentMethods: false,
           ),
         );
         debugPrint('💳 Payment sheet initialized successfully!');
       } catch (e) {
         debugPrint('❌ initPaymentSheet() failed: $e');
-        debugPrint('❌ Error type: ${e.runtimeType}');
         rethrow;
       }
 
       debugPrint('💳 Presenting payment sheet now...');
 
-      // Small delay to let any pending navigation/UI transitions settle
-      // before presenting the modal (especially needed on iOS).
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Wait for Flutter's page-push animation to fully complete (300 ms)
+      // before layering the native Stripe modal on top.
+      await Future.delayed(const Duration(milliseconds: 400));
 
-      // Do NOT apply a Dart-side timeout here.
-      // On Android the PaymentSheet runs in a separate Activity; a Dart timeout
-      // orphans the awaiting future so the ActivityResultRegistry drops the
-      // result when the user finishes payment, making every payment appear failed.
+      // iOS: call makeKeyAndVisible() via SceneDelegate before stripe_ios
+      // tries to find a UIViewController to present on. Without this the
+      // FlutterViewController's view can be temporarily detached from the
+      // window hierarchy during a Flutter navigation transition, causing
+      // UIKit to log "whose view is not in the window hierarchy" and the
+      // Stripe completion handler to never fire → presentPaymentSheet hangs.
+      if (Platform.isIOS) {
+        try {
+          await _stripeHelper.invokeMethod('prepareForPayment');
+          debugPrint('💳 iOS window prepared for Stripe presentation');
+          // Small pause after makeKeyAndVisible so UIKit finishes layout.
+          await Future.delayed(const Duration(milliseconds: 100));
+        } catch (e) {
+          debugPrint('⚠️ prepareForPayment channel error (non-fatal): $e');
+        }
+      }
+
+      // Race the sheet completion against a 90-second polling fallback.
+      // The poll hits Stripe's API directly every 3 s so that even if the
+      // native → Dart channel callback is delayed the booking still lands.
+      final paymentIntentId = paymentIntent.paymentIntent.split('_secret_').first;
+      final publishableKey = paymentIntent.publishableKey ?? PaymentConfig.stripePublishableKey;
+
       try {
-        await Stripe.instance.presentPaymentSheet();
-        debugPrint('💳 Payment sheet completed successfully!');
-        return true;
+        final result = await Future.any([
+          Stripe.instance.presentPaymentSheet().then((_) => 'sheet_done'),
+          _pollPaymentIntentStatus(
+            paymentIntentId: paymentIntentId,
+            publishableKey: publishableKey,
+            timeout: const Duration(seconds: 90),
+          ),
+        ]);
+
+        if (result == 'sheet_done' || result == 'succeeded') {
+          debugPrint('💳 Payment confirmed via: $result');
+          return true;
+        }
+        throw PaymentException('Payment cancelled by user');
       } catch (e) {
+        if (e is PaymentException) rethrow;
         debugPrint('❌ presentPaymentSheet() error: $e');
         rethrow;
       }
@@ -463,6 +515,93 @@ class PaymentService {
       default:
         return 'Unknown status';
     }
+  }
+
+  /// iOS: confirm a payment using card details entered in a mounted CardFormField.
+  ///
+  /// This bypasses the native payment sheet entirely, using flutter_stripe's
+  /// confirmPayment API which reads card data from the active CardFormField
+  /// widget rendered in Flutter UI. This avoids the UISheetPresentationController
+  /// completion-handler bug that causes presentPaymentSheet to hang on iOS.
+  Future<bool> confirmPaymentWithCard({
+    required PaymentIntentResult paymentIntent,
+    String? userEmail,
+  }) async {
+    try {
+      if (paymentIntent.publishableKey != null) {
+        final key = paymentIntent.publishableKey!;
+        final mode = key.startsWith('pk_live_') ? 'LIVE' : 'TEST';
+        debugPrint('✅ confirmPayment using $mode Stripe key');
+        Stripe.publishableKey = key;
+        Stripe.urlScheme = 'bottlesup';
+        await Stripe.instance.applySettings();
+      }
+
+      debugPrint('💳 [iOS] confirmPayment via CardFormField...');
+
+      await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: paymentIntent.paymentIntent,
+        data: PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(
+            billingDetails: userEmail != null
+                ? BillingDetails(email: userEmail)
+                : null,
+          ),
+        ),
+      );
+
+      debugPrint('💳 [iOS] confirmPayment succeeded');
+      return true;
+    } on StripeException catch (e) {
+      if (e.error.code == FailureCode.Canceled) {
+        throw PaymentException('Payment cancelled by user');
+      }
+      throw PaymentException('Payment failed: ${e.error.message}');
+    } catch (e) {
+      throw PaymentException('Failed to process payment: $e');
+    }
+  }
+
+  /// iOS fallback: poll Stripe's API directly for payment intent status.
+  ///
+  /// flutter_stripe's presentPaymentSheet() can hang on iOS when dynamic
+  /// framework linkage silently drops the completion handler. This poller
+  /// resolves the race in Future.any() when the sheet result never fires.
+  ///
+  /// Returns 'succeeded', 'cancelled', or throws on hard timeout.
+  Future<String> _pollPaymentIntentStatus({
+    required String paymentIntentId,
+    required String publishableKey,
+    required Duration timeout,
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    const pollInterval = Duration(seconds: 3);
+
+    while (DateTime.now().isBefore(deadline)) {
+      await Future.delayed(pollInterval);
+
+      try {
+        final response = await http.get(
+          Uri.parse('https://api.stripe.com/v1/payment_intents/$paymentIntentId'),
+          headers: {'Authorization': 'Bearer $publishableKey'},
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body) as Map<String, dynamic>;
+          final status = data['status'] as String?;
+          debugPrint('💳 [poll] PaymentIntent status: $status');
+
+          if (status == 'succeeded') return 'succeeded';
+          if (status == 'canceled') return 'cancelled';
+          // requires_payment_method / requires_confirmation / processing — keep polling
+        }
+      } catch (e) {
+        debugPrint('💳 [poll] error checking status: $e');
+      }
+    }
+
+    // Timed out — user likely closed the sheet without paying
+    throw PaymentException('Payment timed out. Please try again.');
   }
 }
 

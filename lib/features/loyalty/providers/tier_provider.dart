@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../auth/providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/tier.dart';
 import '../models/user_tier_status.dart';
 import '../services/tier_service.dart';
@@ -10,33 +10,33 @@ part 'tier_provider.g.dart';
 class UserTierStatusNotifier extends _$UserTierStatusNotifier {
   @override
   Future<UserTierStatus?> build() async {
-    final authState = await ref.watch(authProvider.future);
+    final user = Supabase.instance.client.auth.currentUser;
 
-    if (authState == null) {
+    if (user == null) {
       return null;
     }
 
     final tierService = TierService();
-    return await tierService.getUserTierStatus(authState.id);
+    return await tierService.getUserTierStatus(user.id);
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final authState = await ref.read(authProvider.future);
-      if (authState == null) return null;
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return null;
 
       final tierService = TierService();
-      return await tierService.getUserTierStatus(authState.id);
+      return await tierService.getUserTierStatus(user.id);
     });
   }
 
   Future<void> claimBirthdayReward() async {
-    final authState = await ref.read(authProvider.future);
-    if (authState == null) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
 
     final tierService = TierService();
-    await tierService.claimBirthdayReward(authState.id);
+    await tierService.claimBirthdayReward(user.id);
     await refresh();
   }
 }
@@ -90,25 +90,25 @@ class TierProgress extends _$TierProgress {
 class RecentTierTransactions extends _$RecentTierTransactions {
   @override
   Future<List<TierTransaction>> build() async {
-    final authState = await ref.watch(authProvider.future);
+    final user = Supabase.instance.client.auth.currentUser;
 
-    if (authState == null) {
+    if (user == null) {
       return [];
     }
 
     final tierService = TierService();
-    return await tierService.getRecentTransactions(authState.id);
+    return await tierService.getRecentTransactions(user.id);
   }
 }
 
 @riverpod
 Future<bool> canClaimBirthdayReward(CanClaimBirthdayRewardRef ref) async {
-  final authState = await ref.watch(authProvider.future);
+  final user = Supabase.instance.client.auth.currentUser;
 
-  if (authState == null) {
+  if (user == null) {
     return false;
   }
 
   final tierService = TierService();
-  return await tierService.canClaimBirthdayReward(authState.id);
+  return await tierService.canClaimBirthdayReward(user.id);
 }

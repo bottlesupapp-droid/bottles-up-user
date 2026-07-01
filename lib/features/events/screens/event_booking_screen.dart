@@ -48,10 +48,23 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
       body: eventAsync.when(
         data: (eventWithClub) {
           if (eventWithClub == null) {
-            return const Center(child: Text('Event not found'));
+            return _buildEventUnavailableScreen(context, 'This event is no longer available.');
           }
 
-          // Allow re-booking - remove restriction
+          // Block booking on past or cancelled events
+          final isPast = eventWithClub.eventDate
+              .add(const Duration(hours: 3))
+              .isBefore(DateTime.now());
+          final isCancelled = eventWithClub.status == 'cancelled';
+
+          if (isPast || isCancelled) {
+            return _buildEventUnavailableScreen(
+              context,
+              isPast
+                  ? 'Bookings for this event are closed — the event has already taken place.'
+                  : 'This event has been cancelled and is no longer accepting bookings.',
+            );
+          }
 
           return _buildBookingFlow(context, eventWithClub, eventConfigAsync.value);
         },
@@ -63,6 +76,51 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const Gap(16),
               Text('Error loading event: $error', textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventUnavailableScreen(BuildContext context, String message) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.event_busy, size: 80, color: Colors.orange),
+              const Gap(24),
+              Text(
+                'Booking Unavailable',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const Gap(12),
+              Text(
+                message,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const Gap(32),
+              FilledButton.tonal(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
             ],
           ),
         ),
@@ -1410,8 +1468,7 @@ class _EventBookingScreenState extends ConsumerState<EventBookingScreen> {
                   );
                 }
               },
-              onPaymentFailed: () {
-                // Show error message but keep the booking record (it will remain in pending_payment status)
+              onPaymentFailed: () async {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

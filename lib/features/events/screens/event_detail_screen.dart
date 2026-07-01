@@ -853,7 +853,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> with Sing
               }
             }
           },
-          onPaymentFailed: () {
+          onPaymentFailed: () async {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

@@ -11,25 +11,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
-  // Disable runtime font fetching — fonts must be bundled or cached.
-  // Without this, GoogleFonts makes network calls on first launch which
-  // can cause a white screen if the device is offline or the CDN is slow.
-  GoogleFonts.config.allowRuntimeFetching = false;
+  // Allow runtime font fetching - fonts will be downloaded on first use
+  // TODO: Bundle Syne fonts in assets to avoid network calls
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   // Run app in error-handling zone
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Initialize Stripe with a placeholder key
-      // The actual key will be set dynamically from the edge function response
-      // This prevents initializing with potentially wrong environment variable key
+      // Initialize Stripe. The publishable key comes from dart-define; if not
+      // set at build time the payment service will set it later from the edge
+      // function response. urlScheme enables 3DS redirects back to the app on iOS.
+      // NOTE: merchantIdentifier (Apple Pay) is intentionally NOT set here —
+      // Apple Pay requires a registered merchant ID + com.apple.developer.in-app-payments
+      // entitlement. Until those are configured in Apple Developer Portal, setting
+      // merchantIdentifier causes internal Apple Pay validation to hang on iOS.
       try {
         Stripe.publishableKey = PaymentConfig.stripePublishableKey;
+        Stripe.urlScheme = 'bottlesup';
         await Stripe.instance.applySettings();
       } catch (e) {
-        // If environment variable key is not set or invalid, that's OK
-        // Payment service will set the correct key from edge function
+        // Key not provided at build time — payment service sets it dynamically.
         debugPrint('⚠️ Stripe initialization skipped: $e');
         debugPrint('Stripe will be initialized with key from payment intent');
       }

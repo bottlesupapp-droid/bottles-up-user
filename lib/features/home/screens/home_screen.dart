@@ -13,6 +13,7 @@ import '../models/club.dart';
 import '../services/location_service.dart';
 import '../providers/home_provider.dart';
 import '../providers/event_filter_provider.dart';
+import '../../../../core/ui/glass_kit.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 
 /// HomeScreen now fetches real data from Supabase instead of using hardcoded data.
@@ -146,7 +147,9 @@ class _HomeScreenInternalState extends ConsumerState<HomeScreenInternal> {
     final upcomingEventsAsync = ref.watch(upcomingEventsProvider);
     final liveEventsAsync = ref.watch(liveEventsProvider);
 
-    return Scaffold(
+    return AmbientGlowBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
@@ -450,6 +453,7 @@ class _HomeScreenInternalState extends ConsumerState<HomeScreenInternal> {
           ),
         ],
       ),
+    ),
     );
   }
 }

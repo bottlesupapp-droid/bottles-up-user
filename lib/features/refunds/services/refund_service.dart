@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/refund_request.dart';
 
@@ -97,14 +98,16 @@ class RefundService {
   // Upload attachment
   Future<String> uploadAttachment(String filePath) async {
     try {
-      final fileName = 'refund_${DateTime.now().millisecondsSinceEpoch}_${filePath.split('/').last}';
+      final userId = _supabase.auth.currentUser?.id ?? 'unknown';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'refunds/$userId/${ts}_${filePath.split('/').last}';
 
       await _supabase.storage
-          .from('refund-attachments')
-          .upload(fileName, filePath);
+          .from('media')
+          .upload(fileName, File(filePath));
 
       final url = _supabase.storage
-          .from('refund-attachments')
+          .from('media')
           .getPublicUrl(fileName);
 
       return url;

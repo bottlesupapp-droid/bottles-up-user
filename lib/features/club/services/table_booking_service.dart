@@ -279,7 +279,7 @@ class TableBookingService {
 
       final response = await _supabase
           .from('table_bookings')
-          .select('*, club_tables(name, club_id), clubs(name)')
+          .select('*, club_tables(name, club_id, clubs(name))')
           .eq('user_id', user.id)
           .order('created_at', ascending: false);
 

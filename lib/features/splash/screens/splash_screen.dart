@@ -36,15 +36,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _checkAuthAndNavigate() async {
     if (_hasNavigated) return;
 
+    debugPrint('🚀 [SPLASH-1] Checking auth and navigating...');
+
     // If the deep link handler already navigated away from splash (e.g. payment
     // return), bail out — we must not override that navigation.
     final currentLocation = appRouter.routerDelegate.currentConfiguration.uri.path;
+    debugPrint('🚀 [SPLASH-2] Current location: $currentLocation');
     if (currentLocation != '/') {
       _hasNavigated = true;
       return;
     }
 
     final authState = ref.read(authStateProvider);
+    debugPrint('🚀 [SPLASH-3] Auth state: $authState');
     
     await authState.when(
       initial: () async {

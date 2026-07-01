@@ -1161,12 +1161,10 @@ class _ClubDetailScreenState extends ConsumerState<ClubDetailScreen> {
                                 // Pass actual table and bottles data
                                 selectedTable: selectedTable,
                                 selectedBottles: selectedBottles,
-                                onPaymentSuccess: () {
-                                  // Navigate back to home or show success
+                                onPaymentSuccess: () async {
                                   Navigator.of(context).popUntil((route) => route.isFirst);
                                 },
-                                onPaymentFailed: () {
-                                  // Show error message
+                                onPaymentFailed: () async {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Payment failed. Please try again.'),

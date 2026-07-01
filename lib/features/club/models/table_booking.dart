@@ -51,7 +51,7 @@ class TableBooking with _$TableBooking {
       // Related data
       tableName: data['club_tables']?['name'],
       clubId: data['club_tables']?['club_id'] ?? data['clubs']?['id'],
-      clubName: data['clubs']?['name'],
+      clubName: data['club_tables']?['clubs']?['name'] ?? data['clubs']?['name'],
     );
   }
 }

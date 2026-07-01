@@ -1,6 +1,10 @@
 import Flutter
 import UIKit
 
+// Plugin registration for a full Flutter app that uses FlutterSceneDelegate.
+// FlutterSceneDelegate.scene(_:willConnectTo:options:) creates the implicit engine;
+// FlutterImplicitEngineDelegate.didInitializeImplicitFlutterEngine is then called
+// so we can register plugins into the correct plugin registry.
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(

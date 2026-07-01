@@ -97,12 +97,12 @@ class PhotoUploadService {
 
       // Upload to storage
       await _supabase.storage
-          .from('photos')
+          .from('media')
           .upload(path, compressed);
 
       // Get public URL
       final url = _supabase.storage
-          .from('photos')
+          .from('media')
           .getPublicUrl(path);
 
       // Save photo record
