@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.bottlesupuser"
+    namespace = "com.btlup.pop"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         // Production-ready Application ID
-        applicationId = "com.bottlesupuser"
+        applicationId = "com.btlup.pop"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
 
