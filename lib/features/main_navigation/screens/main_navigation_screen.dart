@@ -5,7 +5,6 @@ import '../../home/screens/home_screen.dart';
 import '../../events/screens/event_discovery_screen.dart';
 import '../../bookings/screens/my_bookings_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../messaging/screens/conversations_screen.dart';
 import '../providers/nav_index_provider.dart';
 import '../../../../core/ui/glass_kit.dart';
 
@@ -31,7 +30,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     ScrollController(), // Feed
     ScrollController(), // Discover
     ScrollController(), // Book
-    ScrollController(), // Messages
     ScrollController(), // Profile
   ];
 
@@ -117,9 +115,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       case 2:
         return BookingsScreenWrapper(scrollController: _scrollControllers[2]); // Book
       case 3:
-        return MessagingScreenWrapper(scrollController: _scrollControllers[3]); // Messages
-      case 4:
-        return ProfileScreenWrapper(scrollController: _scrollControllers[4]); // Profile
+        return ProfileScreenWrapper(scrollController: _scrollControllers[3]); // Profile
       default:
         return HomeScreenWrapper(scrollController: _scrollControllers[0]);
     }
@@ -145,7 +141,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               _buildScreen(1),
               _buildScreen(2),
               _buildScreen(3),
-              _buildScreen(4),
             ],
           ),
           // Floating glass nav bar
@@ -173,11 +168,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     icon: Ionicons.ticket_outline,
                     activeIcon: Ionicons.ticket,
                     label: 'Book',
-                  ),
-                  GlassNavItem(
-                    icon: Ionicons.chatbubble_outline,
-                    activeIcon: Ionicons.chatbubble,
-                    label: 'Messages',
                   ),
                   GlassNavItem(
                     icon: Ionicons.person_outline,
@@ -247,19 +237,5 @@ class ProfileScreenWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProfileScreenInternal(scrollController: scrollController);
-  }
-}
-
-class MessagingScreenWrapper extends StatelessWidget {
-  final ScrollController scrollController;
-
-  const MessagingScreenWrapper({
-    super.key,
-    required this.scrollController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ConversationsScreen(scrollController: scrollController);
   }
 }

@@ -9,9 +9,6 @@ import 'package:bottles_up_user/features/events/screens/event_detail_screen.dart
 import 'package:bottles_up_user/features/location/screens/location_permission_screen.dart';
 import 'package:bottles_up_user/features/location/screens/manual_location_entry_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/chat_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/new_direct_message_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/new_group_screen.dart';
 import 'package:bottles_up_user/features/notifications/screens/notification_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/orders_screen.dart';
@@ -22,17 +19,8 @@ import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
 import 'package:bottles_up_user/features/table_selection/screens/table_selection_screen.dart';
 import 'package:bottles_up_user/features/venues/screens/venue_discovery_screen.dart';
 import 'package:bottles_up_user/features/venues/screens/venue_detail_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_inquiry_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_comparison_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_chat_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_polls_screen.dart';
-import 'package:bottles_up_user/features/events/screens/announcements_screen.dart';
-import 'package:bottles_up_user/features/events/screens/ticket_transfer_screen.dart';
 import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
 import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
-import 'package:bottles_up_user/features/loyalty/screens/loyalty_dashboard_screen.dart';
-import 'package:bottles_up_user/features/loyalty/screens/tier_status_screen.dart';
-import 'package:bottles_up_user/features/loyalty/screens/reward_redemption_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -309,21 +297,6 @@ final appRouter = GoRouter(
         );
       },
     ),
-    GoRoute(
-      path: '/messaging/chat/:conversationId',
-      builder: (context, state) {
-        final conversationId = state.pathParameters['conversationId']!;
-        return ChatScreen(conversationId: conversationId);
-      },
-    ),
-    GoRoute(
-      path: '/messaging/new-direct',
-      builder: (context, state) => const NewDirectMessageScreen(),
-    ),
-    GoRoute(
-      path: '/messaging/new-group',
-      builder: (context, state) => const NewGroupScreen(),
-    ),
     // Venue routes
     GoRoute(
       path: '/venues',
@@ -335,66 +308,6 @@ final appRouter = GoRouter(
         final venueId = state.pathParameters['id']!;
         return VenueDetailScreen(venueId: venueId);
       },
-    ),
-    GoRoute(
-      path: '/venues/:id/inquiry',
-      builder: (context, state) {
-        final venueId = state.pathParameters['id']!;
-        final venueName = state.uri.queryParameters['venueName'] ?? 'Venue';
-        return VenueInquiryScreen(
-          venueId: venueId,
-          venueName: venueName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/venues/compare',
-      builder: (context, state) {
-        final venueIdsParam = state.uri.queryParameters['venueIds'] ?? '';
-        final venueIds = venueIdsParam.split(',').where((id) => id.isNotEmpty).toList();
-        return VenueComparisonScreen(venueIds: venueIds);
-      },
-    ),
-    // Event feature routes
-    GoRoute(
-      path: '/events/:id/chat',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Chat';
-        return EventChatScreen(
-          eventId: eventId,
-          eventName: eventName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/events/:id/polls',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Polls';
-        return EventPollsScreen(
-          eventId: eventId,
-          eventName: eventName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/events/:id/announcements',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event';
-        final isHost = state.uri.queryParameters['isHost'] == 'true';
-        return AnnouncementsScreen(
-          eventId: eventId,
-          eventName: eventName,
-          isHost: isHost,
-        );
-      },
-    ),
-    // Ticket transfer route
-    GoRoute(
-      path: '/ticket-transfers',
-      builder: (context, state) => const TicketTransferScreen(),
     ),
     // Ticket detail route
     GoRoute(
@@ -461,19 +374,6 @@ final appRouter = GoRouter(
           metadata: {'session_id': sessionId},
         );
       },
-    ),
-    // Loyalty & rewards
-    GoRoute(
-      path: '/loyalty',
-      builder: (context, state) => const LoyaltyDashboardScreen(),
-    ),
-    GoRoute(
-      path: '/loyalty/tiers',
-      builder: (context, state) => const TierStatusScreen(),
-    ),
-    GoRoute(
-      path: '/loyalty/rewards',
-      builder: (context, state) => const RewardRedemptionScreen(),
     ),
   ],
 );

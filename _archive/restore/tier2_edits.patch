@@ -1,0 +1,228 @@
+diff --git a/lib/features/main_navigation/screens/main_navigation_screen.dart b/lib/features/main_navigation/screens/main_navigation_screen.dart
+index 841bc56..ca080ae 100644
+--- a/lib/features/main_navigation/screens/main_navigation_screen.dart
++++ b/lib/features/main_navigation/screens/main_navigation_screen.dart
+@@ -5,7 +5,6 @@ import '../../home/screens/home_screen.dart';
+ import '../../events/screens/event_discovery_screen.dart';
+ import '../../bookings/screens/my_bookings_screen.dart';
+ import '../../profile/screens/profile_screen.dart';
+-import '../../messaging/screens/conversations_screen.dart';
+ import '../providers/nav_index_provider.dart';
+ import '../../../../core/ui/glass_kit.dart';
+ 
+@@ -31,7 +30,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
+     ScrollController(), // Feed
+     ScrollController(), // Discover
+     ScrollController(), // Book
+-    ScrollController(), // Messages
+     ScrollController(), // Profile
+   ];
+ 
+@@ -117,9 +115,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
+       case 2:
+         return BookingsScreenWrapper(scrollController: _scrollControllers[2]); // Book
+       case 3:
+-        return MessagingScreenWrapper(scrollController: _scrollControllers[3]); // Messages
+-      case 4:
+-        return ProfileScreenWrapper(scrollController: _scrollControllers[4]); // Profile
++        return ProfileScreenWrapper(scrollController: _scrollControllers[3]); // Profile
+       default:
+         return HomeScreenWrapper(scrollController: _scrollControllers[0]);
+     }
+@@ -145,7 +141,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
+               _buildScreen(1),
+               _buildScreen(2),
+               _buildScreen(3),
+-              _buildScreen(4),
+             ],
+           ),
+           // Floating glass nav bar
+@@ -174,11 +169,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
+                     activeIcon: Ionicons.ticket,
+                     label: 'Book',
+                   ),
+-                  GlassNavItem(
+-                    icon: Ionicons.chatbubble_outline,
+-                    activeIcon: Ionicons.chatbubble,
+-                    label: 'Messages',
+-                  ),
+                   GlassNavItem(
+                     icon: Ionicons.person_outline,
+                     activeIcon: Ionicons.person,
+@@ -249,17 +239,3 @@ class ProfileScreenWrapper extends StatelessWidget {
+     return ProfileScreenInternal(scrollController: scrollController);
+   }
+ }
+-
+-class MessagingScreenWrapper extends StatelessWidget {
+-  final ScrollController scrollController;
+-
+-  const MessagingScreenWrapper({
+-    super.key,
+-    required this.scrollController,
+-  });
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    return ConversationsScreen(scrollController: scrollController);
+-  }
+-}
+\ No newline at end of file
+diff --git a/lib/features/profile/screens/profile_screen.dart b/lib/features/profile/screens/profile_screen.dart
+index cd1678f..802e497 100644
+--- a/lib/features/profile/screens/profile_screen.dart
++++ b/lib/features/profile/screens/profile_screen.dart
+@@ -310,13 +310,6 @@ class ProfileScreenInternal extends ConsumerWidget {
+                   onTap: () => context.push('/profile/orders'),
+                 ),
+                 const Divider(height: 1),
+-                ListTile(
+-                  leading: const Icon(Iconsax.star),
+-                  title: const Text('Loyalty & Rewards'),
+-                  trailing: const Icon(Icons.arrow_forward_ios, size: 20),
+-                  onTap: () => context.push('/loyalty'),
+-                ),
+-                const Divider(height: 1),
+                 ListTile(
+                   leading: const Icon(Iconsax.card),
+                   title: const Text('Payment History'),
+diff --git a/lib/routing/app_router.dart b/lib/routing/app_router.dart
+index de928ac..8df1997 100644
+--- a/lib/routing/app_router.dart
++++ b/lib/routing/app_router.dart
+@@ -9,9 +9,6 @@ import 'package:bottles_up_user/features/events/screens/event_detail_screen.dart
+ import 'package:bottles_up_user/features/location/screens/location_permission_screen.dart';
+ import 'package:bottles_up_user/features/location/screens/manual_location_entry_screen.dart';
+ import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
+-import 'package:bottles_up_user/features/messaging/screens/chat_screen.dart';
+-import 'package:bottles_up_user/features/messaging/screens/new_direct_message_screen.dart';
+-import 'package:bottles_up_user/features/messaging/screens/new_group_screen.dart';
+ import 'package:bottles_up_user/features/notifications/screens/notification_screen.dart';
+ import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
+ import 'package:bottles_up_user/features/profile/screens/orders_screen.dart';
+@@ -22,17 +19,8 @@ import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
+ import 'package:bottles_up_user/features/table_selection/screens/table_selection_screen.dart';
+ import 'package:bottles_up_user/features/venues/screens/venue_discovery_screen.dart';
+ import 'package:bottles_up_user/features/venues/screens/venue_detail_screen.dart';
+-import 'package:bottles_up_user/features/venues/screens/venue_inquiry_screen.dart';
+-import 'package:bottles_up_user/features/venues/screens/venue_comparison_screen.dart';
+-import 'package:bottles_up_user/features/events/screens/event_chat_screen.dart';
+-import 'package:bottles_up_user/features/events/screens/event_polls_screen.dart';
+-import 'package:bottles_up_user/features/events/screens/announcements_screen.dart';
+-import 'package:bottles_up_user/features/events/screens/ticket_transfer_screen.dart';
+ import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
+ import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
+-import 'package:bottles_up_user/features/loyalty/screens/loyalty_dashboard_screen.dart';
+-import 'package:bottles_up_user/features/loyalty/screens/tier_status_screen.dart';
+-import 'package:bottles_up_user/features/loyalty/screens/reward_redemption_screen.dart';
+ import 'package:flutter/material.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:supabase_flutter/supabase_flutter.dart';
+@@ -309,21 +297,6 @@ final appRouter = GoRouter(
+         );
+       },
+     ),
+-    GoRoute(
+-      path: '/messaging/chat/:conversationId',
+-      builder: (context, state) {
+-        final conversationId = state.pathParameters['conversationId']!;
+-        return ChatScreen(conversationId: conversationId);
+-      },
+-    ),
+-    GoRoute(
+-      path: '/messaging/new-direct',
+-      builder: (context, state) => const NewDirectMessageScreen(),
+-    ),
+-    GoRoute(
+-      path: '/messaging/new-group',
+-      builder: (context, state) => const NewGroupScreen(),
+-    ),
+     // Venue routes
+     GoRoute(
+       path: '/venues',
+@@ -336,66 +309,6 @@ final appRouter = GoRouter(
+         return VenueDetailScreen(venueId: venueId);
+       },
+     ),
+-    GoRoute(
+-      path: '/venues/:id/inquiry',
+-      builder: (context, state) {
+-        final venueId = state.pathParameters['id']!;
+-        final venueName = state.uri.queryParameters['venueName'] ?? 'Venue';
+-        return VenueInquiryScreen(
+-          venueId: venueId,
+-          venueName: venueName,
+-        );
+-      },
+-    ),
+-    GoRoute(
+-      path: '/venues/compare',
+-      builder: (context, state) {
+-        final venueIdsParam = state.uri.queryParameters['venueIds'] ?? '';
+-        final venueIds = venueIdsParam.split(',').where((id) => id.isNotEmpty).toList();
+-        return VenueComparisonScreen(venueIds: venueIds);
+-      },
+-    ),
+-    // Event feature routes
+-    GoRoute(
+-      path: '/events/:id/chat',
+-      builder: (context, state) {
+-        final eventId = state.pathParameters['id']!;
+-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Chat';
+-        return EventChatScreen(
+-          eventId: eventId,
+-          eventName: eventName,
+-        );
+-      },
+-    ),
+-    GoRoute(
+-      path: '/events/:id/polls',
+-      builder: (context, state) {
+-        final eventId = state.pathParameters['id']!;
+-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Polls';
+-        return EventPollsScreen(
+-          eventId: eventId,
+-          eventName: eventName,
+-        );
+-      },
+-    ),
+-    GoRoute(
+-      path: '/events/:id/announcements',
+-      builder: (context, state) {
+-        final eventId = state.pathParameters['id']!;
+-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event';
+-        final isHost = state.uri.queryParameters['isHost'] == 'true';
+-        return AnnouncementsScreen(
+-          eventId: eventId,
+-          eventName: eventName,
+-          isHost: isHost,
+-        );
+-      },
+-    ),
+-    // Ticket transfer route
+-    GoRoute(
+-      path: '/ticket-transfers',
+-      builder: (context, state) => const TicketTransferScreen(),
+-    ),
+     // Ticket detail route
+     GoRoute(
+       path: '/tickets/:id',
+@@ -462,18 +375,5 @@ final appRouter = GoRouter(
+         );
+       },
+     ),
+-    // Loyalty & rewards
+-    GoRoute(
+-      path: '/loyalty',
+-      builder: (context, state) => const LoyaltyDashboardScreen(),
+-    ),
+-    GoRoute(
+-      path: '/loyalty/tiers',
+-      builder: (context, state) => const TierStatusScreen(),
+-    ),
+-    GoRoute(
+-      path: '/loyalty/rewards',
+-      builder: (context, state) => const RewardRedemptionScreen(),
+-    ),
+   ],
+ );
