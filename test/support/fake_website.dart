@@ -28,8 +28,6 @@ typedef FunctionHandler = ({int status, Object? body}) Function(Map<String, dyna
 /// A pretend BottlesUp website: the real Supabase client talks to it over HTTP, so a test sees exactly the requests the app makes (the address, the filters, the body) and decides
 /// what comes back. Tables answer with the rows a test put in them; the filters are NOT applied (a test checks the request carried them).
 class FakeWebsite {
-  FakeWebsite();
-
   final Map<String, List<Map<String, dynamic>>> tables = {};
   final Map<String, FunctionHandler> functions = {};
   final List<TableRequest> tableRequests = [];
@@ -39,7 +37,19 @@ class FakeWebsite {
   int? failAllWith;
   bool networkDown = false;
 
-  late final SupabaseClient client = SupabaseClient('https://site.test', 'anon-key', httpClient: MockClient(_handle));
+  /// Made when the pretend website is, because a call to a website function hands its JSON to a separate isolate: that has to start outside a widget test's fake clock
+  /// (build the website in `setUp`), and a test then lets the calls finish with [settleCalls].
+  late final SupabaseClient client;
+
+  FakeWebsite() {
+    client = SupabaseClient(
+      'https://site.test',
+      'anon-key',
+      httpClient: MockClient(_handle),
+      // The client's token-refresh clock would still be ticking when a screen test ends.
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+    );
+  }
 
   List<TableRequest> forTable(String table) => [
         for (final r in tableRequests)
@@ -87,22 +97,26 @@ Map<String, dynamic> eventRow({
   String? end = '2099-10-25T05:00:00Z',
   List<Map<String, dynamic>>? tiers,
   String status = 'published',
+  String? cover = 'https://img.example/cover.jpg',
+  String? category = 'Nightlife',
+  String venue = 'Club A',
+  List<Object> lineup = const ['DJ One', {'name': 'DJ Two'}],
 }) =>
     {
       'id': id,
       'title': title,
       'description': 'A big night out.',
-      'venue_name': 'Club A',
+      'venue_name': venue,
       'address': '1 King St W, Toronto',
       'start_date': start,
       'end_date': end,
-      'cover_image_url': 'https://img.example/cover.jpg',
+      'cover_image_url': cover,
       'banner_image_url': null,
       'gallery': <String>[],
-      'category': 'Nightlife',
+      'category': category,
       'slug': 'friday-night',
       'venue_id': 'v1',
-      'lineup': ['DJ One', {'name': 'DJ Two'}],
+      'lineup': lineup,
       'good_to_know': ['19+', 'ID required'],
       'organizer_name': 'Night Co',
       'organizer_bio': null,

@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/site_event.dart';
 import '../models/ticket_order.dart';
+import '../services/account_service.dart';
 import '../services/my_tickets_service.dart';
 import '../services/site_events_service.dart';
 import '../services/ticket_checkout_service.dart';
@@ -13,6 +15,7 @@ final siteClientProvider = Provider<SupabaseClient>((ref) => Supabase.instance.c
 final siteEventsServiceProvider = Provider<SiteEventsService>((ref) => SiteEventsService(ref.watch(siteClientProvider)));
 final ticketCheckoutServiceProvider = Provider<TicketCheckoutService>((ref) => TicketCheckoutService(ref.watch(siteClientProvider)));
 final myTicketsServiceProvider = Provider<MyTicketsService>((ref) => MyTicketsService(ref.watch(siteClientProvider)));
+final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
 
 /// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
 final upcomingEventsProvider = FutureProvider.autoDispose<List<SiteEvent>>((ref) => ref.watch(siteEventsServiceProvider).upcoming());
@@ -52,4 +55,23 @@ final accountProvider = FutureProvider.autoDispose<Account?>((ref) async {
     // The profile only prefills the form; the person can type their details.
   }
   return Account(email: email, name: name.trim(), phone: phone.trim());
+});
+
+/// Opens an address outside the app: in the phone's own browser, or in a browser view on top of the app ([inApp], for paying, so the person comes straight back). Returns whether
+/// anything could open it. Replaced in tests.
+typedef OpenUrl = Future<bool> Function(Uri uri, {bool inApp});
+
+final urlOpenerProvider = Provider<OpenUrl>((ref) {
+  return (uri, {bool inApp = false}) async {
+    try {
+      if (await launchUrl(uri, mode: inApp ? LaunchMode.inAppBrowserView : LaunchMode.externalApplication)) return true;
+    } catch (_) {
+      // try the other way below
+    }
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  };
 });

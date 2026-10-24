@@ -1,4 +1,5 @@
 import 'package:bottles_up_user/site/models/checkout.dart';
+import 'package:bottles_up_user/site/services/account_service.dart';
 import 'package:bottles_up_user/site/services/my_tickets_service.dart';
 import 'package:bottles_up_user/site/services/site_events_service.dart';
 import 'package:bottles_up_user/site/services/ticket_checkout_service.dart';
@@ -179,6 +180,26 @@ void main() {
       await expectLater(MyTicketsService(site.client).requestEntryCode('o1'), throwsA(isA<SiteException>().having((e) => e.message, 'message', 'Ticket has already been used')));
       site.functions['request-ticket-otp'] = (b) => (status: 500, body: {'error': 'Email provider failed to send'});
       await expectLater(MyTicketsService(site.client).requestEntryCode('o1'), throwsA(isA<SiteException>().having((e) => e.message, 'message', 'We could not send your entry code. Check your connection and try again.')));
+    });
+  });
+
+  group('account', () {
+    test('deleting the account asks the website\'s delete-account function, sending nothing about who (the website reads that from the session)', () async {
+      site.functions['delete-account'] = (b) => (status: 200, body: {'success': true});
+      await AccountService(site.client).deleteAccount();
+      expect(site.forFunction('delete-account').single.body, isEmpty);
+    });
+
+    test('a refusal is a plain sentence and nothing else happens; so is a dropped connection', () async {
+      site.functions['delete-account'] = (b) => (status: 500, body: {'error': 'Failed to delete account'});
+      await expectLater(AccountService(site.client).deleteAccount(), throwsA(isA<SiteException>().having((e) => e.message, 'message', 'We could not delete your account. Check your connection and try again.')));
+      site.networkDown = true;
+      await expectLater(AccountService(site.client).deleteAccount(), throwsA(isA<SiteException>()));
+    });
+
+    test('an answer that does not say it worked is not taken as deleted', () async {
+      site.functions['delete-account'] = (b) => (status: 200, body: {'ok': 1});
+      await expectLater(AccountService(site.client).deleteAccount(), throwsA(isA<SiteException>()));
     });
   });
 }

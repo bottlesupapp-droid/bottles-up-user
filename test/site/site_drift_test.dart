@@ -123,6 +123,14 @@ void main() {
       expect(ts, contains("req.headers.get('Authorization')"));
     });
 
+    test('the delete account function takes no body, finds the person from the session, and answers success: true', () {
+      final ts = readFunction('delete-account');
+      expect(ts, contains("req.headers.get('Authorization')"));
+      expect(ts, contains('callerClient.auth.getUser()'));
+      expect(ts, isNot(contains('req.json()')));
+      expect(ts, contains('success: true'));
+    });
+
     test('the website\'s own rules for names are not stricter than the app\'s', () {
       // The website only requires a name and an e-mail; the app asks for a little more, which can only make an order less likely to be refused.
       final ts = readFunction('site-create-checkout-session');
