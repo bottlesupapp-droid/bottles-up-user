@@ -11,13 +11,33 @@ import '../../../site/rules/ticket_rules.dart';
 import '../../../site/site_error.dart';
 import '../../../site/when.dart';
 
-/// What the payment screen needs to follow a payment that was started.
-class PaymentWaitArgs {
-  const PaymentWaitArgs({required this.eventId, required this.tierId, required this.eventTitle, required this.start, required this.startedAt});
+/// What was being paid for.
+enum PaymentKind { tickets, table }
 
-  final String eventId;
-  final String tierId;
-  final String eventTitle;
+/// What the payment screen needs to follow a payment that was started: for tickets, the event and ticket type (so the order can be found if the website did not say which payment it
+/// was); for a table, the venue.
+class PaymentWaitArgs {
+  const PaymentWaitArgs({required String this.eventId, required String this.tierId, required String eventTitle, required this.start, required this.startedAt})
+      : kind = PaymentKind.tickets,
+        title = eventTitle,
+        backPath = '/events/$eventId';
+
+  const PaymentWaitArgs.table({required String venueId, required String venueName, required this.start, required this.startedAt})
+      : kind = PaymentKind.table,
+        eventId = null,
+        tierId = null,
+        title = 'your table at $venueName',
+        backPath = '/venues/$venueId';
+
+  final PaymentKind kind;
+  final String? eventId;
+  final String? tierId;
+
+  /// What to call it: the event, or "your table at Club A".
+  final String title;
+
+  /// Where "back" goes: the event or the venue.
+  final String backPath;
   final CheckoutStart start;
   final DateTime startedAt;
 }

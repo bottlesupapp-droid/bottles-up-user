@@ -11,6 +11,8 @@ import 'package:bottles_up_user/features/profile/screens/privacy_policy_screen.d
 import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen.dart';
 import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
+import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
+import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
@@ -235,6 +237,19 @@ final List<RouteBase> appRoutes = [
   GoRoute(
     path: '/events/:id/tickets/:tierId',
     builder: (context, state) => TicketPurchaseScreen(eventId: state.pathParameters['id']!, tierId: state.pathParameters['tierId']!),
+  ),
+  GoRoute(
+    path: '/venues/:id',
+    builder: (context, state) => VenueScreen(venueId: state.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/venues/:id/tables/:tableId/book',
+    builder: (context, state) => TableBookingScreen(
+      venueId: state.pathParameters['id']!,
+      tableId: state.pathParameters['tableId']!,
+      dateKey: state.uri.queryParameters['date'],
+      slotId: state.uri.queryParameters['slot'],
+    ),
   ),
   GoRoute(
     path: '/payment',

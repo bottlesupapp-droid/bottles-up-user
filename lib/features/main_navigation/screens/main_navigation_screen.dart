@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../discover/screens/events_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../tables/screens/tables_screen.dart';
 import '../../tickets_site/screens/my_tickets_screen.dart';
 import '../providers/nav_index_provider.dart';
 import 'package:bottles_up_user/core/ui/glass_kit.dart';
@@ -27,6 +28,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   
   final List<ScrollController> _scrollControllers = [
     ScrollController(), // Events
+    ScrollController(), // Tables
     ScrollController(), // My tickets
     ScrollController(), // Profile
   ];
@@ -106,12 +108,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   Widget _buildScreen(int index) {
     switch (index) {
-      case 0:
-        return EventsScreen(scrollController: _scrollControllers[0]);
-      case 1:
-        return MyTicketsScreen(scrollController: _scrollControllers[1]);
+      case MainTab.events:
+        return EventsScreen(scrollController: _scrollControllers[MainTab.events]);
+      case MainTab.tables:
+        return TablesScreen(scrollController: _scrollControllers[MainTab.tables]);
+      case MainTab.tickets:
+        return MyTicketsScreen(scrollController: _scrollControllers[MainTab.tickets]);
       default:
-        return ProfileScreenWrapper(scrollController: _scrollControllers[2]);
+        return ProfileScreenWrapper(scrollController: _scrollControllers[MainTab.profile]);
     }
   }
 
@@ -131,9 +135,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           IndexedStack(
             index: _currentIndex,
             children: [
-              _buildScreen(0),
-              _buildScreen(1),
-              _buildScreen(2),
+              _buildScreen(MainTab.events),
+              _buildScreen(MainTab.tables),
+              _buildScreen(MainTab.tickets),
+              _buildScreen(MainTab.profile),
             ],
           ),
           // Floating glass nav bar
@@ -151,6 +156,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     icon: Ionicons.compass_outline,
                     activeIcon: Ionicons.compass,
                     label: 'Events',
+                  ),
+                  GlassNavItem(
+                    icon: Ionicons.wine_outline,
+                    activeIcon: Ionicons.wine,
+                    label: 'Tables',
                   ),
                   GlassNavItem(
                     icon: Ionicons.ticket_outline,

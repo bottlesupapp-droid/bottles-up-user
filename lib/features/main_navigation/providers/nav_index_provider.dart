@@ -1,6 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// The tabs of the main screen, by index.
+abstract final class MainTab {
+  static const int events = 0;
+  static const int tables = 1;
+  static const int tickets = 2;
+  static const int profile = 3;
+}
+
 /// Controls which bottom-nav tab is currently selected.
-/// Other screens can write to this provider to switch tabs programmatically.
-/// Index: 0=Feed, 1=Discover, 2=Book(Bookings), 3=Messages, 4=Profile
-final mainNavIndexProvider = StateProvider<int>((ref) => 0);
+/// Other screens can write to this provider to switch tabs programmatically (see [MainTab]).
+final mainNavIndexProvider = StateProvider<int>((ref) => MainTab.events);

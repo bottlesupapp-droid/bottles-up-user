@@ -1,4 +1,6 @@
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
+import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
+import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
@@ -20,6 +22,9 @@ void main() {
     site = FakeWebsite();
     site.tables['site_events'] = [eventRow(cover: null)];
     site.tables['site_orders'] = [orderRow()];
+    site.tables['site_venues'] = [venueRow()];
+    site.rpcs['get_unavailable_table_types'] = (b) => (status: 200, body: <String>[]);
+    site.rpcs['public_venue_refund_policy'] = (b) => (status: 200, body: <Object>[]);
   });
 
   /// The app's own routes, without the sign-in redirect (that needs the app's session).
@@ -61,6 +66,34 @@ void main() {
     expect([screen.eventId, screen.tierId], ['e1', 't1']);
   });
 
+  testWidgets('/venues/:id opens that venue', (tester) async {
+    await openAt(tester, '/venues/v1');
+    expect(find.byType(VenueScreen), findsOneWidget);
+    expect(site.forTable('site_venues').single.query['id'], 'eq.v1');
+  });
+
+  testWidgets('/venues/:id/tables/:tableId/book carries the table, the night and the time into the booking', (tester) async {
+    await openAt(tester, '/venues/v1/tables/tt1/book?date=2026-10-30&slot=s1');
+    final screen = tester.widget<TableBookingScreen>(find.byType(TableBookingScreen));
+    expect([screen.venueId, screen.tableId, screen.dateKey, screen.slotId], ['v1', 'tt1', '2026-10-30', 's1']);
+  });
+
+  testWidgets('booking a table on the venue page goes to the booking with the night and time in the address', (tester) async {
+    final router = await openAt(tester, '/venues/v1');
+    // The venue takes Friday bookings; pick the first night offered.
+    final chips = find.byWidgetPredicate((w) => w is ChoiceChip && '${w.key}'.contains('night-'));
+    expect(chips, findsWidgets);
+    await tester.tap(chips.first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('book-tt1')));
+    await tester.tap(find.byKey(const Key('book-tt1')));
+    await tester.pumpAndSettle();
+    final screen = tester.widget<TableBookingScreen>(find.byType(TableBookingScreen));
+    expect([screen.venueId, screen.tableId, screen.slotId], ['v1', 'tt1', 's1']);
+    expect(screen.dateKey, matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
+    expect(router.routerDelegate.currentConfiguration.last.matchedLocation, startsWith('/venues/v1/tables/tt1/book'));
+  });
+
   testWidgets('/tickets/:id opens that ticket', (tester) async {
     await openAt(tester, '/tickets/o1');
     expect(find.byType(TicketScreen), findsOneWidget);
@@ -92,7 +125,7 @@ void main() {
     }
 
     walk(appRoutes, '');
-    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/payment', '/tickets/:id']));
+    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id']));
     for (final gone in ['/checkout', '/checkout-success', '/events/:id/book', '/table-selection/:clubId', '/location-permission', '/location/manual-entry', '/profile/orders', '/notifications']) {
       expect(paths, isNot(contains(gone)), reason: gone);
     }

@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../site/models/checkout.dart';
+import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
+import '../../../site/rules/table_rules.dart';
 import '../../../site/when.dart';
 import '../../main_navigation/providers/nav_index_provider.dart';
 import '../widgets/ticket_qr.dart';
@@ -34,6 +36,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
   Timer? _timer;
   _Phase _phase = _Phase.waiting;
   PaidTicket? _ticket;
+  PaidBooking? _booking;
   String? _hint;
   bool _checking = false;
   late final DateTime _began;
@@ -78,9 +81,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
       final sessionId = a.start.sessionId;
       if (sessionId != null) {
         status = await ref.read(ticketCheckoutServiceProvider).status(sessionId);
-      } else {
+      } else if (a.kind == PaymentKind.tickets) {
         // The website did not say which payment it was: look for the order this person made just now.
-        final order = await ref.read(myTicketsServiceProvider).latestFor(eventId: a.eventId, tierId: a.tierId, since: a.startedAt);
+        final order = await ref.read(myTicketsServiceProvider).latestFor(eventId: a.eventId!, tierId: a.tierId!, since: a.startedAt);
         if (order != null && order.isPaid) {
           status = PaymentStatus(
             PaymentState.paid,
@@ -100,6 +103,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
         } else {
           status = const PaymentStatus(PaymentState.waiting);
         }
+      } else {
+        // A table booking can only be followed by its payment id.
+        status = const PaymentStatus(PaymentState.waiting);
       }
       if (!mounted) return;
       switch (status.state) {
@@ -109,6 +115,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
           setState(() {
             _phase = _Phase.paid;
             _ticket = status.ticket;
+            _booking = status.booking;
             _hint = null;
           });
         case PaymentState.failed:
@@ -136,13 +143,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
   void _viewTickets() {
     final go = widget.onViewTickets ??
         (c) {
-          ref.read(mainNavIndexProvider.notifier).state = 1;
+          ref.read(mainNavIndexProvider.notifier).state = MainTab.tickets;
           c.go('/home');
         };
     go(context);
   }
 
-  void _back() => (widget.onBackToEvent ?? (c) => c.go('/events/${widget.args.eventId}'))(context);
+  void _back() => (widget.onBackToEvent ?? (c) => c.go(widget.args.backPath))(context);
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +179,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
         const SizedBox(height: 20),
         Text('Waiting for your payment', style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        Text('Pay for ${widget.args.eventTitle} on the page that opened. This screen updates by itself as soon as it goes through.', key: const Key('payment-explained'), textAlign: TextAlign.center),
+        Text('Pay for ${widget.args.title} on the page that opened. This screen updates by itself as soon as it goes through.', key: const Key('payment-explained'), textAlign: TextAlign.center),
         if (_hint != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_hint!, key: const Key('payment-hint'), style: TextStyle(color: theme.colorScheme.error), textAlign: TextAlign.center)),
         const SizedBox(height: 24),
         FilledButton(key: const Key('payment-check'), onPressed: _checking ? null : _check, child: const Text('I have paid')),
@@ -183,6 +190,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
   }
 
   Widget _paid(ThemeData theme) {
+    if (_booking != null) return _paidTable(theme, _booking!);
     final t = _ticket!;
     return SingleChildScrollView(
       child: Column(
@@ -201,6 +209,44 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
           if (t.customerEmail.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('We also sent it to ${t.customerEmail}.', style: theme.textTheme.bodySmall)),
           const SizedBox(height: 20),
           FilledButton(key: const Key('view-tickets'), onPressed: _viewTickets, child: const Text('View my tickets')),
+        ],
+      ),
+    );
+  }
+
+  Widget _paidTable(ThemeData theme, PaidBooking b) {
+    String money(int cents) => formatMoney(cents, currency: b.currency);
+    final night = b.bookingDate;
+    Widget line(String label, String value, String key, {bool bold = false}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [Expanded(child: Text(label, style: bold ? theme.textTheme.titleSmall : null)), Text(value, key: Key(key), style: bold ? theme.textTheme.titleSmall : null)]),
+        );
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle, size: 56, color: Colors.green, key: Key('payment-done')),
+          const SizedBox(height: 12),
+          Text('Your table is booked!', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(b.venueName, key: const Key('paid-venue'), style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+          Text('${b.tableName} · ${b.guestCount} ${b.guestCount == 1 ? 'guest' : 'guests'}', key: const Key('paid-table')),
+          if (night != null) Text('${formatDay(night)} · Arrival ${b.startTime.isEmpty ? '' : formatSlotTime(b.startTime)}', key: const Key('paid-arrival')),
+          const SizedBox(height: 20),
+          TicketQr(code: b.confirmationCode),
+          const SizedBox(height: 4),
+          Text('Show this at the door.', style: theme.textTheme.bodySmall),
+          const SizedBox(height: 16),
+          line('Table', money(b.depositCents), 'paid-deposit'),
+          for (final x in b.bottles) line('${x.name}${x.size == null ? '' : ' (${x.size})'} × ${x.quantity}${x.paymentStatus == 'due_at_venue' ? ' · pay at the club' : ''}', money(x.lineTotalCents), 'paid-bottle'),
+          if (b.discountCents > 0) line('Promo code', '-${money(b.discountCents)}', 'paid-discount'),
+          if (b.taxCents > 0) line('Tax', money(b.taxCents), 'paid-tax'),
+          if (b.feeCents > 0) line('BottlesUp fee', money(b.feeCents), 'paid-fee'),
+          const Divider(),
+          line(b.dueAtVenueCents > 0 ? 'Paid now' : 'Total paid', money(b.paidNowCents), 'paid-now', bold: true),
+          if (b.dueAtVenueCents > 0) line('To pay at the club', money(b.dueAtVenueCents), 'paid-due', bold: true),
+          if (b.customerEmail.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('We also sent it to ${b.customerEmail}.', style: theme.textTheme.bodySmall)),
+          const SizedBox(height: 20),
+          FilledButton(key: const Key('view-bookings'), onPressed: _viewTickets, child: const Text('View my bookings')),
         ],
       ),
     );

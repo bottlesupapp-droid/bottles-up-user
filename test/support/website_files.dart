@@ -7,6 +7,21 @@ const String websiteMissing = 'the website repo is not checked out next to this 
 
 String readFunction(String name) => File('${website.path}/supabase/functions/$name/index.ts').readAsStringSync();
 
+/// A file inside the website's functions folder that is not a function of its own (`_shared/bookingNight.ts`).
+String readFunctionFile(String relative) => File('${website.path}/supabase/functions/$relative').readAsStringSync();
+
+/// The columns the website's own TypeScript types give a table (`src/types/database.ts`). Some columns exist in production but in no migration of the repository (they were made by
+/// hand); the website's code and types still use them, which is the evidence they are there.
+Set<String> typedColumns(String table) {
+  final src = File('${website.path}/src/types/database.ts').readAsStringSync();
+  final m = RegExp('\\n      $table: \\{\\n        Row: \\{([\\s\\S]*?)\\n        \\}').firstMatch(src);
+  if (m == null) return {};
+  return {
+    for (final line in m.group(1)!.split('\n'))
+      if (RegExp(r'^\s+([a-z_][a-z0-9_]*):').firstMatch(line) case final c?) c.group(1)!,
+  };
+}
+
 List<File> _migrations() {
   final files = Directory('${website.path}/supabase/migrations').listSync().whereType<File>().where((f) => f.path.endsWith('.sql')).toList()..sort((a, b) => a.path.compareTo(b.path));
   return files;

@@ -23,6 +23,14 @@ class FunctionRequest {
   final Map<String, String> headers;
 }
 
+/// What the app asked a database function (RPC) to do.
+class RpcRequest {
+  RpcRequest(this.name, this.body);
+
+  final String name;
+  final Map<String, dynamic> body;
+}
+
 typedef FunctionHandler = ({int status, Object? body}) Function(Map<String, dynamic> body);
 
 /// A pretend BottlesUp website: the real Supabase client talks to it over HTTP, so a test sees exactly the requests the app makes (the address, the filters, the body) and decides
@@ -30,6 +38,10 @@ typedef FunctionHandler = ({int status, Object? body}) Function(Map<String, dyna
 class FakeWebsite {
   final Map<String, List<Map<String, dynamic>>> tables = {};
   final Map<String, FunctionHandler> functions = {};
+
+  /// Database functions the app calls with `rpc` (`/rest/v1/rpc/<name>`).
+  final Map<String, FunctionHandler> rpcs = {};
+  final List<RpcRequest> rpcRequests = [];
   final List<TableRequest> tableRequests = [];
   final List<FunctionRequest> functionRequests = [];
 
@@ -56,6 +68,11 @@ class FakeWebsite {
           if (r.table == table) r,
       ];
 
+  List<RpcRequest> forRpc(String name) => [
+        for (final r in rpcRequests)
+          if (r.name == name) r,
+      ];
+
   List<FunctionRequest> forFunction(String name) => [
         for (final r in functionRequests)
           if (r.name == name) r,
@@ -67,6 +84,16 @@ class FakeWebsite {
   Future<http.Response> _handle(http.Request request) async {
     if (networkDown) throw http.ClientException('network down');
     final segments = request.url.pathSegments;
+    if (segments.length >= 4 && segments[0] == 'rest' && segments[1] == 'v1' && segments[2] == 'rpc') {
+      final name = segments[3];
+      final decoded = request.body.isEmpty ? <String, dynamic>{} : Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+      rpcRequests.add(RpcRequest(name, decoded));
+      if (failAllWith != null) return _json(request, failAllWith!, {'message': 'failed'});
+      final handler = rpcs[name];
+      if (handler == null) return _json(request, 404, {'message': 'no such function $name'});
+      final r = handler(decoded);
+      return _json(request, r.status, r.body);
+    }
     if (segments.length >= 3 && segments[0] == 'rest' && segments[1] == 'v1') {
       final table = segments[2];
       Object? body;
@@ -178,5 +205,139 @@ Map<String, dynamic> orderRow({
         'start_date': eventStart,
         'end_date': eventEnd,
         'cover_image_url': null,
+      },
+    };
+
+Map<String, dynamic> venueRow({
+  String id = 'v1',
+  String name = 'Club A',
+  String mode = 'pay_ahead',
+  bool credit = false,
+  int taxBps = 1300,
+  String? start,
+  String? end,
+  List<Map<String, dynamic>>? tables,
+  List<Map<String, dynamic>>? slots,
+  String? cover,
+}) =>
+    {
+      'id': id,
+      'name': name,
+      'slug': 'club-a',
+      'description': 'The best room in town.',
+      'address': '1 King St W, Toronto',
+      'cover_image_url': cover,
+      'gallery': <String>[],
+      'category': 'Club',
+      'phone': '416-555-0199',
+      'website_url': null,
+      'hours_note': 'Thu to Sat, 10pm to 3am',
+      'dress_code': 'Smart casual',
+      'capacity': 400,
+      'music_genres': 'House, Hip hop',
+      'tax_rate_bps': taxBps,
+      'show_bottle_images': true,
+      'bottle_payment_mode': mode,
+      'deposit_is_credit': credit,
+      'booking_start_date': start,
+      'booking_end_date': end,
+      'site_table_types': tables ?? [tableTypeRow(venueId: id)],
+      'site_venue_time_slots': slots ?? [slotRow(venueId: id)],
+    };
+
+Map<String, dynamic> tableTypeRow({
+  String id = 'tt1',
+  String venueId = 'v1',
+  String name = 'Booth 1',
+  int maxGuests = 6,
+  int minSpend = 50000,
+  int deposit = 10000,
+  int inventory = 1,
+  String mode = 'flat',
+  int? rate,
+  int? minHours,
+  String? floorId,
+  double? x,
+  double? y,
+  int sort = 0,
+}) =>
+    {
+      'id': id,
+      'venue_id': venueId,
+      'name': name,
+      'description': 'Right by the DJ.',
+      'max_guests': maxGuests,
+      'min_guests': null,
+      'min_spend_cents': minSpend,
+      'deposit_cents': deposit,
+      'currency': 'cad',
+      'inventory_count': inventory,
+      'image_url': null,
+      'badge_label': null,
+      'is_featured': false,
+      'floor_id': floorId,
+      'pos_x': x,
+      'pos_y': y,
+      'width': x == null ? null : 10.0,
+      'height': y == null ? null : 8.0,
+      'pricing_mode': mode,
+      'hourly_rate_cents': rate,
+      'min_hours': minHours,
+      'table_view': null,
+      'privacy_level': null,
+      'seating_type': null,
+      'amenities': null,
+      'policy_note': null,
+      'sort_order': sort,
+    };
+
+/// A Friday (5) at 10pm unless said otherwise. 0 = Sunday ... 6 = Saturday.
+Map<String, dynamic> slotRow({String id = 's1', String venueId = 'v1', int day = 5, String time = '22:00:00', String? label}) =>
+    {'id': id, 'venue_id': venueId, 'day_of_week': day, 'start_time': time, 'label': label};
+
+Map<String, dynamic> bottleRow({String id = 'b1', String venueId = 'v1', String name = 'Grey Goose', String? size = '1.75L', int price = 25000, bool available = true, bool soldOut = false, int sort = 0}) => {
+      'id': id,
+      'venue_id': venueId,
+      'name': name,
+      'size': size,
+      'description': null,
+      'price_cents': price,
+      'currency': 'cad',
+      'category': 'Vodka',
+      'image_url': null,
+      'is_available': available,
+      'is_sold_out': soldOut,
+      'sort_order': sort,
+    };
+
+Map<String, dynamic> floorRow({String id = 'f1', String venueId = 'v1', String label = 'Main floor', int sort = 0}) =>
+    {'id': id, 'venue_id': venueId, 'label': label, 'image_url': 'https://img.example/floor.png', 'sort_order': sort};
+
+/// What `site-booking-status` answers for a paid table booking.
+Map<String, dynamic> paidBookingAnswer({String code = 'TB-ABCD2345', int deposit = 10000, int bottles = 0, int due = 0, int paid = 11300}) => {
+      'status': 'paid',
+      'booking': {
+        'confirmationCode': code,
+        'customerName': 'Dana Lee',
+        'customerEmail': 'dana@example.com',
+        'guestCount': 4,
+        'tableTypeName': 'Booth 1',
+        'venueName': 'Club A',
+        'bookingDate': '2099-11-07',
+        'startTime': '22:00:00',
+        'depositCents': deposit,
+        'bottleSubtotalCents': bottles,
+        'taxCents': 1300,
+        'bottlesupFeeCents': 0,
+        'discountCents': 0,
+        'totalCents': paid + due,
+        'paidNowCents': paid,
+        'dueAtVenueCents': due,
+        'currency': 'cad',
+        'bottles': bottles == 0
+            ? <Object>[]
+            : [
+                {'name': 'Grey Goose', 'size': '1.75L', 'quantity': 1, 'unitPriceCents': bottles, 'lineTotalCents': bottles, 'paymentStatus': due > 0 ? 'due_at_venue' : 'paid'},
+              ],
       },
     };

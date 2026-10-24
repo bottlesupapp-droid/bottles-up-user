@@ -214,4 +214,75 @@ void main() {
       expect(find.byKey(const Key('payment-waiting')), findsOneWidget);
     });
   });
+
+  group('paying for a table', () {
+    PaymentWaitArgs tableArgs({String? sessionId = 'cs_test_tbl1'}) => PaymentWaitArgs.table(venueId: 'v1', venueName: 'Club A', start: CheckoutStart(url: payPage, sessionId: sessionId), startedAt: DateTime.utc(2099, 10, 20, 12));
+
+    testWidgets('says what is being paid for and goes back to the venue', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: {'status': 'pending'});
+      await open(tester, args: tableArgs());
+      expect(textOf(tester, 'payment-explained'), startsWith('Pay for your table at Club A on the page that opened.'));
+      final back = <String>[];
+      await pumpSite(tester, PaymentScreen(args: tableArgs(), onBackToEvent: (c) => back.add(tableArgs().backPath)), site: site, settle: false);
+      await tester.tap(find.byKey(const Key('payment-cancel')));
+      expect(back, ['/venues/v1']);
+    });
+
+    testWidgets('shows the confirmation only once the website says the table is booked: the code as a QR, where and when, and what was paid', (tester) async {
+      var calls = 0;
+      site.functions['site-booking-status'] = (b) => ++calls < 2 ? (status: 200, body: {'status': 'pending'}) : (status: 200, body: paidBookingAnswer());
+      await open(tester, args: tableArgs());
+      await tick(tester);
+      expect(find.byKey(const Key('payment-done')), findsNothing);
+      expect(site.forFunction('site-booking-status').single.body, {'session_id': 'cs_test_tbl1'});
+      await tick(tester);
+      expect(find.byKey(const Key('payment-done')), findsOneWidget);
+      expect(find.text('Your table is booked!'), findsOneWidget);
+      expect(textOf(tester, 'paid-venue'), 'Club A');
+      expect(textOf(tester, 'paid-table'), 'Booth 1 · 4 guests');
+      expect(textOf(tester, 'paid-arrival'), 'Sat, Nov 7 · Arrival 10:00 PM');
+      expect(tester.widget<TicketQr>(find.byType(TicketQr)).code, 'TB-ABCD2345');
+      expect(textOf(tester, 'paid-deposit'), '\$100.00');
+      expect(textOf(tester, 'paid-tax'), '\$13.00');
+      expect(textOf(tester, 'paid-now'), '\$113.00');
+      expect(find.byKey(const Key('paid-due')), findsNothing);
+      expect(find.textContaining('We also sent it to dana@example.com'), findsOneWidget);
+    });
+
+    testWidgets('bottles left for the club are listed as such, with what is still owed there', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: paidBookingAnswer(bottles: 25000, due: 25000));
+      await open(tester, args: tableArgs());
+      await tick(tester);
+      expect(find.textContaining('Grey Goose (1.75L) × 1 · pay at the club'), findsOneWidget);
+      expect(textOf(tester, 'paid-now'), '\$113.00');
+      expect(textOf(tester, 'paid-due'), '\$250.00');
+      expect(find.text('Paid now'), findsOneWidget);
+      expect(find.text('To pay at the club'), findsOneWidget);
+    });
+
+    testWidgets('View my bookings goes to the bookings', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: paidBookingAnswer());
+      await open(tester, args: tableArgs());
+      await tick(tester);
+      await tester.tap(find.byKey(const Key('view-bookings')));
+      expect(viewedTickets, 1);
+    });
+
+    testWidgets('a payment the website did not name cannot be looked up for a table, so it keeps waiting and never invents a booking', (tester) async {
+      site.tables['site_orders'] = [orderRow()];
+      await open(tester, args: tableArgs(sessionId: null));
+      await tick(tester);
+      await tick(tester);
+      expect(find.byKey(const Key('payment-waiting')), findsOneWidget);
+      expect(site.forTable('site_orders'), isEmpty);
+      expect(site.forFunction('site-booking-status'), isEmpty);
+    });
+
+    testWidgets('a table payment that failed says so, like a ticket', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: {'status': 'failed'});
+      await open(tester, args: tableArgs());
+      await tick(tester);
+      expect(find.byKey(const Key('payment-failed')), findsOneWidget);
+    });
+  });
 }

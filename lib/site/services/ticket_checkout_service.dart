@@ -17,12 +17,12 @@ class TicketCheckoutService {
     throw const FormatException('the website answered with something that is not an object');
   }
 
-  /// Previews a promo code for tickets of an event at a venue, for a subtotal. The website re-checks it when the order is made.
-  Future<PromoCheck> checkPromo({required String code, required int subtotalCents, String? venueId}) async {
+  /// Previews a promo code for tickets (or, with [appliesTo] `tables`, for a table booking) at a venue, for a subtotal. The website re-checks it when the order is made.
+  Future<PromoCheck> checkPromo({required String code, required int subtotalCents, String? venueId, String appliesTo = 'tickets'}) async {
     try {
       return parsePromoCheck(await _call('validate-promo-code', {
         'code': code.trim(),
-        'applies_to': 'tickets',
+        'applies_to': appliesTo,
         if (venueId != null) 'venue_id': venueId,
         'subtotal_cents': subtotalCents,
       }));

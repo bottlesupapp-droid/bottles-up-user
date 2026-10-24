@@ -1,10 +1,9 @@
+import '../read.dart';
 import '../when.dart';
 
-int? _int(Object? v) => v is num ? v.toInt() : int.tryParse('$v');
-String? _text(Object? v) {
-  final s = v is String ? v.trim() : null;
-  return s == null || s.isEmpty ? null : s;
-}
+int? _int(Object? v) => readInt(v);
+String? _text(Object? v) => readText(v);
+DateTime? _day(Object? v) => readDay(v);
 
 /// What the website said about a promo code the person typed (`validate-promo-code`). The website works the discount out again when the order is made: this is only a preview.
 class PromoCheck {
@@ -89,11 +88,68 @@ class PaidTicket {
   final int discountCents;
 }
 
+/// A paid table booking, from the `booking` the website's `site-booking-status` sends: the confirmation code (the QR the door scans), when, where, and what was paid and what is left
+/// for the club.
+class PaidBooking {
+  const PaidBooking({
+    required this.confirmationCode,
+    required this.guestCount,
+    required this.tableName,
+    required this.venueName,
+    required this.bookingDate,
+    required this.startTime,
+    required this.currency,
+    required this.depositCents,
+    required this.bottleSubtotalCents,
+    required this.taxCents,
+    required this.feeCents,
+    required this.discountCents,
+    required this.totalCents,
+    required this.paidNowCents,
+    required this.dueAtVenueCents,
+    required this.customerEmail,
+    this.bottles = const [],
+  });
+
+  final String confirmationCode;
+  final int guestCount;
+  final String tableName;
+  final String venueName;
+
+  /// The day the guests arrive.
+  final DateTime? bookingDate;
+
+  /// "22:00:00".
+  final String startTime;
+  final String currency;
+  final int depositCents;
+  final int bottleSubtotalCents;
+  final int taxCents;
+  final int feeCents;
+  final int discountCents;
+  final int totalCents;
+  final int paidNowCents;
+  final int dueAtVenueCents;
+  final String customerEmail;
+  final List<PaidBottle> bottles;
+}
+
+class PaidBottle {
+  const PaidBottle({required this.name, required this.size, required this.quantity, required this.lineTotalCents, required this.paymentStatus});
+
+  final String name;
+  final String? size;
+  final int quantity;
+  final int lineTotalCents;
+  final String? paymentStatus;
+}
+
 class PaymentStatus {
-  const PaymentStatus(this.state, {this.ticket});
+  const PaymentStatus(this.state, {this.ticket, this.booking});
 
   final PaymentState state;
   final PaidTicket? ticket;
+  final PaidBooking? booking;
 }
 
 /// The answer of `site-booking-status` for an order of tickets. `paid` carries the ticket; `pending` (or anything not yet paid) means keep waiting; `failed` and `not_found` are final.
@@ -119,7 +175,47 @@ PaymentStatus parsePaymentStatus(Map<String, dynamic> row) {
         );
       }
     }
-    // Paid but the ticket is not ready yet: keep waiting rather than show an empty ticket.
+    final b = row['booking'];
+    if (b is Map) {
+      final code = _text(b['confirmationCode']);
+      if (code != null) {
+        final bottles = <PaidBottle>[
+          if (b['bottles'] is List)
+            for (final x in b['bottles'] as List)
+              if (x is Map && _text(x['name']) != null)
+                PaidBottle(
+                  name: _text(x['name'])!,
+                  size: _text(x['size']),
+                  quantity: _int(x['quantity']) ?? 1,
+                  lineTotalCents: _int(x['lineTotalCents']) ?? 0,
+                  paymentStatus: _text(x['paymentStatus']),
+                ),
+        ];
+        return PaymentStatus(
+          PaymentState.paid,
+          booking: PaidBooking(
+            confirmationCode: code,
+            guestCount: _int(b['guestCount']) ?? 1,
+            tableName: _text(b['tableTypeName']) ?? 'Table',
+            venueName: _text(b['venueName']) ?? '',
+            bookingDate: _day(b['bookingDate']),
+            startTime: _text(b['startTime']) ?? '',
+            currency: _text(b['currency']) ?? 'cad',
+            depositCents: _int(b['depositCents']) ?? 0,
+            bottleSubtotalCents: _int(b['bottleSubtotalCents']) ?? 0,
+            taxCents: _int(b['taxCents']) ?? 0,
+            feeCents: _int(b['bottlesupFeeCents']) ?? 0,
+            discountCents: _int(b['discountCents']) ?? 0,
+            totalCents: _int(b['totalCents']) ?? 0,
+            paidNowCents: _int(b['paidNowCents']) ?? 0,
+            dueAtVenueCents: _int(b['dueAtVenueCents']) ?? 0,
+            customerEmail: _text(b['customerEmail']) ?? '',
+            bottles: bottles,
+          ),
+        );
+      }
+    }
+    // Paid but the ticket or confirmation is not ready yet: keep waiting rather than show an empty one.
     return const PaymentStatus(PaymentState.waiting);
   }
   if (status == 'failed' || status == 'cancelled') return const PaymentStatus(PaymentState.failed);
