@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../discover/screens/events_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../tables/screens/tables_screen.dart';
-import '../../tickets_site/screens/my_tickets_screen.dart';
+import '../../bookings_site/screens/bookings_tab.dart';
 import '../providers/nav_index_provider.dart';
 import 'package:bottles_up_user/core/ui/glass_kit.dart';
 
@@ -112,8 +112,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         return EventsScreen(scrollController: _scrollControllers[MainTab.events]);
       case MainTab.tables:
         return TablesScreen(scrollController: _scrollControllers[MainTab.tables]);
-      case MainTab.tickets:
-        return MyTicketsScreen(scrollController: _scrollControllers[MainTab.tickets]);
+      case MainTab.bookings:
+        return BookingsTab(scrollController: _scrollControllers[MainTab.bookings]);
       default:
         return ProfileScreenWrapper(scrollController: _scrollControllers[MainTab.profile]);
     }
@@ -137,7 +137,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             children: [
               _buildScreen(MainTab.events),
               _buildScreen(MainTab.tables),
-              _buildScreen(MainTab.tickets),
+              _buildScreen(MainTab.bookings),
               _buildScreen(MainTab.profile),
             ],
           ),
@@ -165,7 +165,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   GlassNavItem(
                     icon: Ionicons.ticket_outline,
                     activeIcon: Ionicons.ticket,
-                    label: 'My tickets',
+                    label: 'Bookings',
                   ),
                   GlassNavItem(
                     icon: Ionicons.person_outline,

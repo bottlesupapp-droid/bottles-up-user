@@ -341,3 +341,73 @@ Map<String, dynamic> paidBookingAnswer({String code = 'TB-ABCD2345', int deposit
               ],
       },
     };
+
+/// A row of `site_table_bookings` as the customer's own read returns it, with the table, venue and time embedded.
+Map<String, dynamic> bookingRow({
+  String id = 'bk1',
+  String status = 'paid',
+  String? code = 'TB-ABCD2345',
+  int guests = 4,
+  String date = '2099-11-06',
+  String time = '22:00:00',
+  String? slotLabel,
+  int deposit = 10000,
+  int bottles = 0,
+  int tax = 1300,
+  int fee = 0,
+  int discount = 0,
+  int total = 11300,
+  int paid = 11300,
+  String tableName = 'Booth 1',
+  String venueName = 'Club A',
+  String? checkedIn,
+  String? cancelledAt,
+  String? cancelReason,
+  String created = '2099-10-20T12:00:00Z',
+  int? hours,
+  String choice = 'pay_ahead',
+}) =>
+    {
+      'id': id,
+      'status': status,
+      'confirmation_code': code,
+      'guest_count': guests,
+      'hours': hours,
+      'booking_date': date,
+      'venue_id': 'v1',
+      'deposit_cents': deposit,
+      'bottle_subtotal_cents': bottles,
+      'tax_cents': tax,
+      'bottlesup_fee_cents': fee,
+      'discount_cents': discount,
+      'amount_total_cents': total,
+      'amount_paid_cents': paid,
+      'currency': 'cad',
+      'bottle_payment_choice': choice,
+      'checked_in_at': checkedIn,
+      'cancelled_at': cancelledAt,
+      'cancellation_reason': cancelReason,
+      'created_at': created,
+      'site_table_types': {'name': tableName},
+      'site_venues': {'name': venueName, 'address': '1 King St W, Toronto'},
+      'site_venue_time_slots': {'start_time': time, 'label': slotLabel},
+    };
+
+Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose', String? size = '1.75L', int qty = 1, int unit = 25000, String payment = 'paid', bool addon = false, String? cancelledAt}) => {
+      'id': id,
+      'bottle_name': name,
+      'size': size,
+      'quantity': qty,
+      'unit_price_cents': unit,
+      'line_total_cents': unit * qty,
+      'payment_status': payment,
+      'is_addon': addon,
+      'cancelled_at': cancelledAt,
+      'created_at': '2099-10-20T12:01:00Z',
+    };
+
+Map<String, dynamic> clubPaymentRow({String id = 'cp1', String token = 'tok-1', int billed = 25000, int paid = 25000, String method = 'debit'}) =>
+    {'id': id, 'confirm_token': token, 'billed_amount_cents': billed, 'amount_paid_cents': paid, 'payment_method': method};
+
+Map<String, dynamic> bookingRefundRow({String type = 'full', int amount = 11300, String reason = 'Cancelled by the guest', String at = '2099-10-25T10:00:00Z'}) =>
+    {'refund_type': type, 'amount_cents': amount, 'reason': reason, 'recorded_at': at};

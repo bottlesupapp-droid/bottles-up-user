@@ -2,6 +2,7 @@ import 'dart:ui' show Offset, Rect, Size;
 
 import 'package:intl/intl.dart';
 
+import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../money.dart';
 
@@ -239,3 +240,12 @@ Rect hotspotRect(TableType t, Size size, {double minSide = 30}) {
   final height = h < minSide ? minSide : h;
   return Rect.fromCenter(center: Offset(cx, cy), width: width, height: height);
 }
+
+/// The night a booking belongs to: the day before the arrival for an after-midnight time (a table booked for 1:00 AM Saturday is part of Friday night), otherwise the arrival day.
+DateTime nightOf(DateTime arrival, String? startTime) {
+  final d = DateTime(arrival.year, arrival.month, arrival.day);
+  return startTime != null && isAfterMidnightSlot(startTime) ? DateTime(d.year, d.month, d.day - 1) : d;
+}
+
+/// "Fri, Oct 30 · 10:00 PM": when a booking's guests arrive, or just the day when the time is not known.
+String bookingWhen(TableBooking b) => b.startTime == null ? DateFormat('EEE, MMM d').format(b.bookingDate) : '${DateFormat('EEE, MMM d').format(b.bookingDate)} · ${formatSlotTime(b.startTime!)}';

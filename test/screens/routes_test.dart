@@ -1,4 +1,5 @@
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
+import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
@@ -94,6 +95,17 @@ void main() {
     expect(router.routerDelegate.currentConfiguration.last.matchedLocation, startsWith('/venues/v1/tables/tt1/book'));
   });
 
+  testWidgets('/bookings/:id opens that table booking', (tester) async {
+    site.tables['site_table_bookings'] = [bookingRow()];
+    site.tables['site_table_booking_bottles'] = [];
+    site.tables['site_table_booking_club_payments'] = [];
+    site.tables['site_table_booking_refunds'] = [];
+    await openAt(tester, '/bookings/bk1');
+    expect(find.byType(TableBookingDetailScreen), findsOneWidget);
+    expect(find.byKey(const Key('booking-detail')), findsOneWidget);
+    expect(site.forTable('site_table_bookings').first.query['id'], 'eq.bk1');
+  });
+
   testWidgets('/tickets/:id opens that ticket', (tester) async {
     await openAt(tester, '/tickets/o1');
     expect(find.byType(TicketScreen), findsOneWidget);
@@ -125,7 +137,7 @@ void main() {
     }
 
     walk(appRoutes, '');
-    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id']));
+    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id', '/bookings/:id']));
     for (final gone in ['/checkout', '/checkout-success', '/events/:id/book', '/table-selection/:clubId', '/location-permission', '/location/manual-entry', '/profile/orders', '/notifications']) {
       expect(paths, isNot(contains(gone)), reason: gone);
     }

@@ -13,6 +13,8 @@ Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`.
 - [x] Delete account through the website's `delete-account` function.
 - [x] Three tabs (Events, My tickets, Profile); 112 old files archived (`_archive/`, Tier 4); 14 unused packages dropped (no location or push permissions left to explain to the stores).
 - [x] Android release has the INTERNET permission; iOS bundle ID `com.btlup.pop`.
+- [x] **B2. My bookings (24 Oct, 356 tests; never run on a phone):** the third tab is now Bookings, with Tickets | Tables. Tables lists the guest's table bookings (coming up, past, cancelled and refunded) and opens a detail page with the QR (the confirmation code), where and when, the line-by-line cost, bottles (marked when left to pay at the club), what is still owed at the club, club payments waiting for the guest's confirmation, and refunds. It reads the customer's own rows through the policies production has (see "Production pull" below).
+- [x] **Production pull (24 Oct):** read-only, with the Supabase CLI; `docs/production_snapshot/` has every column of the 16 tables the app reads, the 44 policies on them and the status values in use; `test/site/production_drift_test.dart` compares the app with it. Findings in `docs/production_snapshot/README.md`.
 - [x] **B1. VIP table booking (24 Oct, 299 tests; never run on a phone):** Tables tab (venues, search), venue page (details, next bookable nights or any date, arrival times, live availability, floor plan, tables), three-step booking (your table, bottles with the pay-now / pay-at-club choice, review with refund terms and promo code), hosted Stripe page, and the confirmation (code as a QR, what was paid, what is owed at the club) on the shared payment screen. Design and the website rules it copies: `docs/TABLE_BOOKING_PLAN.md`.
 
 ## A. Decisions and information needed from the user
@@ -30,8 +32,8 @@ Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`.
 ### B1. VIP table booking: DONE 24 Oct (see "Done" above)
 Left over from it, none blocking: the hourly table has no upper limit on the website, the app offers up to 12 hours; `min_guests` is only where the guest stepper starts (the website does not enforce it); bottle sign text (`bottle_sign_text`) and the website's table detail page (photos, amenities, view) are not in the app; the floor plan cannot be zoomed (the list below it has every table).
 
-### B2. My bookings
-- [ ] A bookings view of the buyer's table bookings (status, date, table, deposit, bottles, club payment).
+### B2. My bookings: DONE 24 Oct (see "Done" above)
+Left over from it: the confirmation of a club payment is only pointed out ("use the link in the email"), not done in the app (that is B3); phone sign-ups see no bookings (below); bottle service status (awaiting prep, ready, served) is not shown.
 
 ### B3. After purchase
 - [ ] Add bottles to a booking (`add-table-booking-bottles`) and order by code (`order-bottles-by-code`).
@@ -79,7 +81,10 @@ Store listing
 
 - [ ] Run on a real phone or the simulator (only when the user asks for a build). Checks: sign in, open an event, buy with a Stripe test card, see the ticket and QR in My tickets, scan it with the vendor door scanner, book a table, delete a test account.
 - [ ] Clear the 36 analyzer warnings left in the old login and theme code.
-- [ ] `supabase db pull`: some objects the app relies on exist only in production (`site_orders.discount_cents`, customer read policies on the table-booking tables).
+- [x] Read what production holds (24 Oct, `docs/production_snapshot/`). `supabase db pull` itself was not run (it needs Docker, which this machine does not have, and it writes a migration into the website repo).
+- [ ] **For the website, not the app:** three customer "read your own rows" policies (table bookings, booking bottles, bottle substitutions) exist only in production, in no file of the website repo; a database rebuilt from the repo shows customers none of their table bookings. `docs/production_snapshot/customer_read_policies.sql` has them for reference. Recommended: a website migration written `drop policy if exists` + `create policy`, which changes nothing in production. Needs the user's yes.
+- [ ] **Check the Supabase Auth setting "Confirm email" is ON** (Dashboard > Authentication > Providers > Email). The policies compare e-mail addresses and never look at confirmation; today it is harmless (1 of 84 accounts has an unconfirmed e-mail, matching no booking), but with the switch off anyone could read another person's bookings by signing up with their address.
+- [ ] **Phone sign-ups see nothing:** 6 accounts have no e-mail, so no booking or ticket matches them. Decide: ask for an e-mail after a phone sign-in, or look bookings up by phone.
 - [ ] Retire the old payment functions (`create-checkout-session`, `create-payment-intent`), still deployed and callable.
 - [ ] Optional website change: make `site-create-checkout-session` (and the table checkout) also return `session_id` and `order_id`. Needs a deploy.
 - [ ] Test both account-deletion paths with a test account.

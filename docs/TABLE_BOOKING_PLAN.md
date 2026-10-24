@@ -34,11 +34,11 @@ Tabs become **Events | Tables | My tickets | Profile** (indexes in `nav_index_pr
 
 ## Out of scope for this step
 
-My bookings list and detail (B2), adding bottles afterwards, guest tickets, cancel and refund request (B3, B4). The confirmation is shown right after payment and e-mailed by the website.
+Adding bottles afterwards, guest tickets, cancel and refund request (B3, B4). The confirmation is shown right after payment and e-mailed by the website. My bookings (the list and the detail page) was built after this, on 24 Oct (B2, `lib/features/bookings_site/`).
 
 ## Known risks
 
-- The customer read policies on `site_table_bookings` and friends are production-only, so B2 needs `supabase db pull` first. B1 does not read them.
+- The customer read policies on `site_table_bookings` and friends are production-only (read 24 Oct, `docs/production_snapshot/`); B2 relies on them.
 - `site-create-checkout-session` style: the table checkout answers only `{url}`; the session id is read out of the Stripe address, as for tickets.
 - A table is held for 10 minutes only after checkout starts; a person who leaves the Stripe page open longer loses it, and the website then refuses or the payment lands on a booking that is no longer held. The website decides; the app shows what the website says.
 

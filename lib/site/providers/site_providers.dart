@@ -3,9 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/site_event.dart';
+import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
+import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
 import '../services/site_events_service.dart';
 import '../services/table_checkout_service.dart';
@@ -20,6 +22,7 @@ final ticketCheckoutServiceProvider = Provider<TicketCheckoutService>((ref) => T
 final myTicketsServiceProvider = Provider<MyTicketsService>((ref) => MyTicketsService(ref.watch(siteClientProvider)));
 final venuesServiceProvider = Provider<VenuesService>((ref) => VenuesService(ref.watch(siteClientProvider)));
 final tableCheckoutServiceProvider = Provider<TableCheckoutService>((ref) => TableCheckoutService(ref.watch(siteClientProvider)));
+final myBookingsServiceProvider = Provider<MyBookingsService>((ref) => MyBookingsService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
 
 /// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
@@ -60,6 +63,12 @@ class AvailabilityQuery {
   @override
   int get hashCode => Object.hash(venueId, night, slotId);
 }
+
+/// The person's table bookings (paid, cancelled or refunded).
+final myTableBookingsProvider = FutureProvider.autoDispose<List<TableBooking>>((ref) => ref.watch(myBookingsServiceProvider).bookings());
+
+/// One booking with its bottles, club payments and refunds.
+final tableBookingProvider = FutureProvider.autoDispose.family<TableBooking?, String>((ref, id) => ref.watch(myBookingsServiceProvider).booking(id));
 
 final myTicketOrdersProvider = FutureProvider.autoDispose<List<TicketOrder>>((ref) => ref.watch(myTicketsServiceProvider).orders());
 

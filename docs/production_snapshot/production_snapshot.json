@@ -1,0 +1,2323 @@
+{
+ "pulled_at": "2026-10-24",
+ "how": "Read-only SELECTs on pg_policies, information_schema.columns and has_column_privilege, run with the Supabase CLI (db query --linked). Nothing was changed. supabase db pull itself needs Docker, which this machine does not have.",
+ "tables_with_rls": [
+  "guest_tickets",
+  "profiles",
+  "site_booking_moves",
+  "site_booking_seating",
+  "site_bottles",
+  "site_content",
+  "site_orders",
+  "site_outbox",
+  "site_refund_policies",
+  "site_refund_requests",
+  "site_table_blocks",
+  "site_table_booking_bottle_substitutions",
+  "site_table_booking_bottles",
+  "site_table_booking_club_payments",
+  "site_table_booking_refunds",
+  "site_table_bookings",
+  "site_table_types",
+  "site_venue_floors",
+  "site_venue_time_slots",
+  "site_venues"
+ ],
+ "status_values": {
+  "site_table_bookings.status": [
+   "cancelled",
+   "paid",
+   "pending"
+  ],
+  "site_table_bookings.fulfillment_status": [
+   "completed",
+   "confirmed"
+  ],
+  "site_table_bookings.bottle_payment_choice": [
+   "pay_ahead",
+   "pay_at_club"
+  ],
+  "site_table_booking_bottles.payment_status": [
+   "due_at_venue",
+   "paid"
+  ],
+  "site_table_booking_bottles.service_status": [
+   "awaiting_prep",
+   "picked_up",
+   "preparing",
+   "ready",
+   "served"
+  ],
+  "site_table_booking_club_payments.customer_confirmation_status": [
+   "pending"
+  ],
+  "site_table_booking_club_payments.payment_method": [
+   "debit"
+  ]
+ },
+ "columns": {
+  "profiles": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "name",
+    "type": "text",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "email",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "phone_number",
+    "type": "text",
+    "nullable": true,
+    "pos": 4
+   },
+   {
+    "name": "age",
+    "type": "integer",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "avatar_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "is_admin",
+    "type": "boolean",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "role",
+    "type": "text",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "verified",
+    "type": "boolean",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "username",
+    "type": "text",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "bio",
+    "type": "text",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "city",
+    "type": "text",
+    "nullable": true,
+    "pos": 14
+   },
+   {
+    "name": "social_links",
+    "type": "jsonb",
+    "nullable": false,
+    "pos": 15
+   },
+   {
+    "name": "profile_completed_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 16
+   }
+  ],
+  "promo_codes": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "code",
+    "type": "text",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "description",
+    "type": "text",
+    "nullable": true,
+    "pos": 3
+   },
+   {
+    "name": "discount_type",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "discount_value",
+    "type": "numeric",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "applies_to",
+    "type": "text",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "max_uses",
+    "type": "integer",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "used_count",
+    "type": "integer",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "min_purchase_cents",
+    "type": "integer",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "starts_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "expires_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "is_active",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 14
+   }
+  ],
+  "site_bottles": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "name",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "size",
+    "type": "text",
+    "nullable": true,
+    "pos": 4
+   },
+   {
+    "name": "description",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "price_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "currency",
+    "type": "text",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "category",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "image_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "is_available",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "is_sold_out",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "stock_quantity",
+    "type": "integer",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "sort_order",
+    "type": "integer",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 14
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 15
+   }
+  ],
+  "site_content": [
+   {
+    "name": "id",
+    "type": "integer",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "contact_email",
+    "type": "text",
+    "nullable": true,
+    "pos": 2
+   },
+   {
+    "name": "contact_phone",
+    "type": "text",
+    "nullable": true,
+    "pos": 3
+   },
+   {
+    "name": "address",
+    "type": "text",
+    "nullable": true,
+    "pos": 4
+   },
+   {
+    "name": "social_instagram",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "social_twitter",
+    "type": "text",
+    "nullable": true,
+    "pos": 6
+   },
+   {
+    "name": "social_facebook",
+    "type": "text",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "social_linkedin",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "footer_tagline",
+    "type": "text",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "hero_headline",
+    "type": "text",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "hero_subtext",
+    "type": "text",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "payments_mode",
+    "type": "text",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "bottlesup_fee_bps",
+    "type": "integer",
+    "nullable": false,
+    "pos": 14
+   }
+  ],
+  "site_events": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "title",
+    "type": "text",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "description",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "venue_name",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "address",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "start_date",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "end_date",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "cover_image_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "gallery",
+    "type": "ARRAY",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "category",
+    "type": "text",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "status",
+    "type": "text",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "capacity",
+    "type": "integer",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 14
+   },
+   {
+    "name": "slug",
+    "type": "text",
+    "nullable": true,
+    "pos": 15
+   },
+   {
+    "name": "banner_image_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "show_ticket_count",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 17
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "lineup",
+    "type": "jsonb",
+    "nullable": false,
+    "pos": 19
+   },
+   {
+    "name": "good_to_know",
+    "type": "ARRAY",
+    "nullable": false,
+    "pos": 20
+   },
+   {
+    "name": "organizer_name",
+    "type": "text",
+    "nullable": true,
+    "pos": 21
+   },
+   {
+    "name": "organizer_bio",
+    "type": "text",
+    "nullable": true,
+    "pos": 22
+   },
+   {
+    "name": "organizer_verified",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 23
+   },
+   {
+    "name": "organizer_instagram",
+    "type": "text",
+    "nullable": true,
+    "pos": 24
+   },
+   {
+    "name": "organizer_email",
+    "type": "text",
+    "nullable": true,
+    "pos": 25
+   },
+   {
+    "name": "organizer_avatar_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 26
+   },
+   {
+    "name": "org_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 27
+   }
+  ],
+  "site_orders": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "event_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "tier_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "customer_name",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "customer_email",
+    "type": "text",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "customer_phone",
+    "type": "text",
+    "nullable": true,
+    "pos": 6
+   },
+   {
+    "name": "quantity",
+    "type": "integer",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "amount_total_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "currency",
+    "type": "text",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "stripe_checkout_session_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "stripe_payment_intent_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "status",
+    "type": "text",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "ticket_code",
+    "type": "text",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "ticket_sent_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 14
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 15
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 16
+   },
+   {
+    "name": "checked_in_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "checked_in_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "promo_code_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 19
+   },
+   {
+    "name": "discount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 20
+   },
+   {
+    "name": "is_non_transferable",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 21
+   },
+   {
+    "name": "access_code_verified",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 22
+   },
+   {
+    "name": "access_code_verified_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 23
+   },
+   {
+    "name": "sale_channel",
+    "type": "text",
+    "nullable": false,
+    "pos": 24
+   },
+   {
+    "name": "door_payment_method",
+    "type": "text",
+    "nullable": true,
+    "pos": 25
+   },
+   {
+    "name": "door_reference",
+    "type": "text",
+    "nullable": true,
+    "pos": 26
+   },
+   {
+    "name": "sold_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 27
+   },
+   {
+    "name": "door_client_key",
+    "type": "text",
+    "nullable": true,
+    "pos": 28
+   }
+  ],
+  "site_table_booking_bottle_substitutions": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "bottle_line_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "booking_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "reason",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "replacement_bottle_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "replacement_bottle_name",
+    "type": "text",
+    "nullable": true,
+    "pos": 6
+   },
+   {
+    "name": "replacement_size",
+    "type": "text",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "replacement_unit_price_cents",
+    "type": "integer",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "price_diff_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "status",
+    "type": "text",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "confirm_token",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "requested_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "requested_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "responded_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 14
+   }
+  ],
+  "site_table_booking_bottles": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "booking_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "bottle_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 3
+   },
+   {
+    "name": "bottle_name",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "size",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "unit_price_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "quantity",
+    "type": "integer",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "line_total_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "is_addon",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "added_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "payment_status",
+    "type": "text",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "stripe_checkout_session_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "service_status",
+    "type": "text",
+    "nullable": false,
+    "pos": 14
+   },
+   {
+    "name": "cancelled_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 15
+   },
+   {
+    "name": "cancelled_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "cancellation_reason",
+    "type": "text",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "delivered_quantity",
+    "type": "integer",
+    "nullable": false,
+    "pos": 18
+   }
+  ],
+  "site_table_booking_club_payments": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "booking_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "billed_amount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "amount_paid_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "payment_method",
+    "type": "text",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "split_breakdown",
+    "type": "jsonb",
+    "nullable": true,
+    "pos": 6
+   },
+   {
+    "name": "pos_reference",
+    "type": "text",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "receipt_photo_path",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "recorded_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "recorded_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "confirm_token",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "customer_confirmation_status",
+    "type": "text",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "customer_confirmed_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "dispute_reason",
+    "type": "text",
+    "nullable": true,
+    "pos": 14
+   },
+   {
+    "name": "dispute_evidence_path",
+    "type": "text",
+    "nullable": true,
+    "pos": 15
+   },
+   {
+    "name": "customer_notified_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "payer_name",
+    "type": "text",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "payer_email",
+    "type": "text",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "manager_verified_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 19
+   },
+   {
+    "name": "manager_verified_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 20
+   },
+   {
+    "name": "manager_verified_note",
+    "type": "text",
+    "nullable": true,
+    "pos": 21
+   },
+   {
+    "name": "corrects_payment_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 22
+   },
+   {
+    "name": "bottle_subtotal_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 23
+   },
+   {
+    "name": "discount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 24
+   },
+   {
+    "name": "tax_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 25
+   },
+   {
+    "name": "gratuity_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 26
+   },
+   {
+    "name": "receipt_photo_hash",
+    "type": "text",
+    "nullable": true,
+    "pos": 27
+   },
+   {
+    "name": "device_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 28
+   },
+   {
+    "name": "missing_receipt_reason",
+    "type": "text",
+    "nullable": true,
+    "pos": 29
+   }
+  ],
+  "site_table_booking_refunds": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "booking_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "bottle_line_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 3
+   },
+   {
+    "name": "refund_type",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "amount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "reason",
+    "type": "text",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "stripe_refund_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 7
+   },
+   {
+    "name": "pos_reference",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "receipt_photo_path",
+    "type": "text",
+    "nullable": true,
+    "pos": 9
+   },
+   {
+    "name": "recorded_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "recorded_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 11
+   }
+  ],
+  "site_table_bookings": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "table_type_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "time_slot_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "booking_date",
+    "type": "date",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "customer_name",
+    "type": "text",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "customer_email",
+    "type": "text",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "customer_phone",
+    "type": "text",
+    "nullable": true,
+    "pos": 8
+   },
+   {
+    "name": "guest_count",
+    "type": "integer",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "amount_total_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "currency",
+    "type": "text",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "stripe_checkout_session_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "stripe_payment_intent_id",
+    "type": "text",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "status",
+    "type": "text",
+    "nullable": false,
+    "pos": 14
+   },
+   {
+    "name": "confirmation_code",
+    "type": "text",
+    "nullable": true,
+    "pos": 15
+   },
+   {
+    "name": "confirmation_sent_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "checked_in_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "checked_in_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 19
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 20
+   },
+   {
+    "name": "hours",
+    "type": "integer",
+    "nullable": true,
+    "pos": 21
+   },
+   {
+    "name": "deposit_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 22
+   },
+   {
+    "name": "bottle_subtotal_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 23
+   },
+   {
+    "name": "tax_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 24
+   },
+   {
+    "name": "bottlesup_fee_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 25
+   },
+   {
+    "name": "fulfillment_status",
+    "type": "text",
+    "nullable": false,
+    "pos": 26
+   },
+   {
+    "name": "promo_code_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 27
+   },
+   {
+    "name": "discount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 28
+   },
+   {
+    "name": "bottle_sign_text",
+    "type": "text",
+    "nullable": true,
+    "pos": 29
+   },
+   {
+    "name": "cancellation_reason",
+    "type": "text",
+    "nullable": true,
+    "pos": 30
+   },
+   {
+    "name": "cancelled_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 31
+   },
+   {
+    "name": "cancelled_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 32
+   },
+   {
+    "name": "amount_paid_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 33
+   },
+   {
+    "name": "bottle_payment_choice",
+    "type": "text",
+    "nullable": false,
+    "pos": 34
+   },
+   {
+    "name": "reconciled_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 35
+   },
+   {
+    "name": "reconciled_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 36
+   },
+   {
+    "name": "reconciliation_override_reason",
+    "type": "text",
+    "nullable": true,
+    "pos": 37
+   },
+   {
+    "name": "closeout_requested_at",
+    "type": "timestamp with time zone",
+    "nullable": true,
+    "pos": 38
+   },
+   {
+    "name": "closeout_requested_by",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 39
+   },
+   {
+    "name": "included_admissions",
+    "type": "integer",
+    "nullable": true,
+    "pos": 40
+   },
+   {
+    "name": "deposit_terms",
+    "type": "jsonb",
+    "nullable": true,
+    "pos": 41
+   },
+   {
+    "name": "refund_policy",
+    "type": "jsonb",
+    "nullable": true,
+    "pos": 42
+   },
+   {
+    "name": "staff_discount_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 43
+   }
+  ],
+  "site_table_types": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "name",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "description",
+    "type": "text",
+    "nullable": true,
+    "pos": 4
+   },
+   {
+    "name": "max_guests",
+    "type": "integer",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "min_spend_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "deposit_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "currency",
+    "type": "text",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "inventory_count",
+    "type": "integer",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "image_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 10
+   },
+   {
+    "name": "sort_order",
+    "type": "integer",
+    "nullable": false,
+    "pos": 11
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 12
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 13
+   },
+   {
+    "name": "badge_label",
+    "type": "text",
+    "nullable": true,
+    "pos": 14
+   },
+   {
+    "name": "is_featured",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 15
+   },
+   {
+    "name": "floor_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "pos_x",
+    "type": "numeric",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "pos_y",
+    "type": "numeric",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "width",
+    "type": "numeric",
+    "nullable": true,
+    "pos": 19
+   },
+   {
+    "name": "height",
+    "type": "numeric",
+    "nullable": true,
+    "pos": 20
+   },
+   {
+    "name": "min_guests",
+    "type": "integer",
+    "nullable": true,
+    "pos": 21
+   },
+   {
+    "name": "pricing_mode",
+    "type": "text",
+    "nullable": false,
+    "pos": 22
+   },
+   {
+    "name": "hourly_rate_cents",
+    "type": "integer",
+    "nullable": true,
+    "pos": 23
+   },
+   {
+    "name": "min_hours",
+    "type": "integer",
+    "nullable": true,
+    "pos": 24
+   },
+   {
+    "name": "table_view",
+    "type": "text",
+    "nullable": true,
+    "pos": 25
+   },
+   {
+    "name": "privacy_level",
+    "type": "text",
+    "nullable": true,
+    "pos": 26
+   },
+   {
+    "name": "seating_type",
+    "type": "text",
+    "nullable": true,
+    "pos": 27
+   },
+   {
+    "name": "amenities",
+    "type": "text",
+    "nullable": true,
+    "pos": 28
+   },
+   {
+    "name": "policy_note",
+    "type": "text",
+    "nullable": true,
+    "pos": 29
+   },
+   {
+    "name": "included_admissions",
+    "type": "integer",
+    "nullable": true,
+    "pos": 30
+   }
+  ],
+  "site_ticket_tiers": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "event_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "name",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "price_cents",
+    "type": "integer",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "currency",
+    "type": "text",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "capacity",
+    "type": "integer",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "sold_count",
+    "type": "integer",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "is_non_transferable",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "requires_access_code",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 11
+   }
+  ],
+  "site_venue_floors": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "label",
+    "type": "text",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "image_url",
+    "type": "text",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "sort_order",
+    "type": "integer",
+    "nullable": false,
+    "pos": 5
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 6
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 7
+   }
+  ],
+  "site_venue_time_slots": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "venue_id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "day_of_week",
+    "type": "integer",
+    "nullable": false,
+    "pos": 3
+   },
+   {
+    "name": "start_time",
+    "type": "time without time zone",
+    "nullable": false,
+    "pos": 4
+   },
+   {
+    "name": "label",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 6
+   }
+  ],
+  "site_venues": [
+   {
+    "name": "id",
+    "type": "uuid",
+    "nullable": false,
+    "pos": 1
+   },
+   {
+    "name": "name",
+    "type": "text",
+    "nullable": false,
+    "pos": 2
+   },
+   {
+    "name": "slug",
+    "type": "text",
+    "nullable": true,
+    "pos": 3
+   },
+   {
+    "name": "description",
+    "type": "text",
+    "nullable": true,
+    "pos": 4
+   },
+   {
+    "name": "address",
+    "type": "text",
+    "nullable": true,
+    "pos": 5
+   },
+   {
+    "name": "cover_image_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 6
+   },
+   {
+    "name": "gallery",
+    "type": "ARRAY",
+    "nullable": false,
+    "pos": 7
+   },
+   {
+    "name": "status",
+    "type": "text",
+    "nullable": false,
+    "pos": 8
+   },
+   {
+    "name": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 9
+   },
+   {
+    "name": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": false,
+    "pos": 10
+   },
+   {
+    "name": "booking_start_date",
+    "type": "date",
+    "nullable": true,
+    "pos": 11
+   },
+   {
+    "name": "booking_end_date",
+    "type": "date",
+    "nullable": true,
+    "pos": 12
+   },
+   {
+    "name": "category",
+    "type": "text",
+    "nullable": true,
+    "pos": 13
+   },
+   {
+    "name": "phone",
+    "type": "text",
+    "nullable": true,
+    "pos": 14
+   },
+   {
+    "name": "website_url",
+    "type": "text",
+    "nullable": true,
+    "pos": 15
+   },
+   {
+    "name": "hours_note",
+    "type": "text",
+    "nullable": true,
+    "pos": 16
+   },
+   {
+    "name": "dress_code",
+    "type": "text",
+    "nullable": true,
+    "pos": 17
+   },
+   {
+    "name": "capacity",
+    "type": "integer",
+    "nullable": true,
+    "pos": 18
+   },
+   {
+    "name": "music_genres",
+    "type": "text",
+    "nullable": true,
+    "pos": 19
+   },
+   {
+    "name": "tax_rate_bps",
+    "type": "integer",
+    "nullable": false,
+    "pos": 20
+   },
+   {
+    "name": "show_bottle_images",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 21
+   },
+   {
+    "name": "bottle_payment_mode",
+    "type": "text",
+    "nullable": false,
+    "pos": 22
+   },
+   {
+    "name": "deposit_is_credit",
+    "type": "boolean",
+    "nullable": false,
+    "pos": 23
+   },
+   {
+    "name": "org_id",
+    "type": "uuid",
+    "nullable": true,
+    "pos": 24
+   },
+   {
+    "name": "deposit_terms",
+    "type": "jsonb",
+    "nullable": true,
+    "pos": 25
+   },
+   {
+    "name": "time_zone",
+    "type": "text",
+    "nullable": true,
+    "pos": 26
+   }
+  ]
+ },
+ "column_privileges_note": "authenticated may select every column of the five table-booking tables; so may anon, but no policy lets anon see a row",
+ "column_privileges": {
+  "site_table_booking_bottle_substitutions": {
+   "authenticated_select": "all columns",
+   "anon_select": "all columns (rows are protected by policies only)"
+  },
+  "site_table_booking_bottles": {
+   "authenticated_select": "all columns",
+   "anon_select": "all columns (rows are protected by policies only)"
+  },
+  "site_table_booking_club_payments": {
+   "authenticated_select": "all columns",
+   "anon_select": "all columns (rows are protected by policies only)"
+  },
+  "site_table_booking_refunds": {
+   "authenticated_select": "all columns",
+   "anon_select": "all columns (rows are protected by policies only)"
+  },
+  "site_table_bookings": {
+   "authenticated_select": "all columns",
+   "anon_select": "all columns (rows are protected by policies only)"
+  }
+ },
+ "policies": [
+  {
+   "table": "guest_tickets",
+   "name": "admins read guest tickets",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": ""
+  },
+  {
+   "table": "profiles",
+   "name": "Users can insert own profile",
+   "cmd": "INSERT",
+   "roles": "{public}",
+   "using": "",
+   "check": "(auth.uid() = id)"
+  },
+  {
+   "table": "profiles",
+   "name": "Users can insert their own profile",
+   "cmd": "INSERT",
+   "roles": "{public}",
+   "using": "",
+   "check": "(auth.uid() = id)"
+  },
+  {
+   "table": "profiles",
+   "name": "Users can update own profile",
+   "cmd": "UPDATE",
+   "roles": "{public}",
+   "using": "(auth.uid() = id)",
+   "check": ""
+  },
+  {
+   "table": "profiles",
+   "name": "Users can update their own profile",
+   "cmd": "UPDATE",
+   "roles": "{public}",
+   "using": "(auth.uid() = id)",
+   "check": ""
+  },
+  {
+   "table": "profiles",
+   "name": "Users can view own profile",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(auth.uid() = id)",
+   "check": ""
+  },
+  {
+   "table": "profiles",
+   "name": "Users can view their own profile",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(auth.uid() = id)",
+   "check": ""
+  },
+  {
+   "table": "profiles",
+   "name": "profiles: admin full access",
+   "cmd": "ALL",
+   "roles": "{authenticated}",
+   "using": "is_admin()",
+   "check": "is_admin()"
+  },
+  {
+   "table": "promo_codes",
+   "name": "promo_codes: admin full access",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_bottles",
+   "name": "admins manage bottles",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_bottles",
+   "name": "public read available bottles for published venues",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(is_cms_admin() OR (is_available AND (NOT is_sold_out) AND (EXISTS ( SELECT 1 FROM site_venues v WHERE ((v.id = site_bottles.venue_id) AND (v.status = 'published'::text))))))",
+   "check": ""
+  },
+  {
+   "table": "site_content",
+   "name": "admins update site content",
+   "cmd": "UPDATE",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_content",
+   "name": "public read site content",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "true",
+   "check": ""
+  },
+  {
+   "table": "site_events",
+   "name": "admins manage events",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_events",
+   "name": "members read their events",
+   "cmd": "SELECT",
+   "roles": "{authenticated}",
+   "using": "can_access_event(id)",
+   "check": ""
+  },
+  {
+   "table": "site_events",
+   "name": "public read published events",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((status = 'published'::text) OR is_cms_admin())",
+   "check": ""
+  },
+  {
+   "table": "site_orders",
+   "name": "admins read orders",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": ""
+  },
+  {
+   "table": "site_orders",
+   "name": "admins update orders",
+   "cmd": "UPDATE",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_orders",
+   "name": "users read own orders by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (lower(customer_email) = lower(auth.email())))",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_bottle_substitutions",
+   "name": "admins manage bottle substitutions",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_booking_bottle_substitutions",
+   "name": "users read own bottle substitutions by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (EXISTS ( SELECT 1 FROM site_table_bookings b WHERE ((b.id = site_table_booking_bottle_substitutions.booking_id) AND (lower(b.customer_email) = lower(auth.email()))))))",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_bottles",
+   "name": "admins delete booking bottles",
+   "cmd": "DELETE",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_bottles",
+   "name": "admins manage booking bottles",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_booking_bottles",
+   "name": "admins read booking bottles",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_bottles",
+   "name": "users read own booking bottles by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (EXISTS ( SELECT 1 FROM site_table_bookings b WHERE ((b.id = site_table_booking_bottles.booking_id) AND (lower(b.customer_email) = lower(auth.email()))))))",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_club_payments",
+   "name": "admins manage club payments",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_booking_club_payments",
+   "name": "users read own club payments by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (EXISTS ( SELECT 1 FROM site_table_bookings b WHERE ((b.id = site_table_booking_club_payments.booking_id) AND (lower(b.customer_email) = lower(auth.email()))))))",
+   "check": ""
+  },
+  {
+   "table": "site_table_booking_refunds",
+   "name": "admins manage refunds",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_booking_refunds",
+   "name": "users read own refunds by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (EXISTS ( SELECT 1 FROM site_table_bookings b WHERE ((b.id = site_table_booking_refunds.booking_id) AND (lower(b.customer_email) = lower(auth.email()))))))",
+   "check": ""
+  },
+  {
+   "table": "site_table_bookings",
+   "name": "admins delete non-financial table bookings",
+   "cmd": "DELETE",
+   "roles": "{public}",
+   "using": "(is_cms_admin() AND (status = ANY (ARRAY['pending'::text, 'failed'::text, 'cancelled'::text])))",
+   "check": ""
+  },
+  {
+   "table": "site_table_bookings",
+   "name": "admins read table bookings",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": ""
+  },
+  {
+   "table": "site_table_bookings",
+   "name": "admins update table bookings",
+   "cmd": "UPDATE",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_bookings",
+   "name": "users read own table bookings by verified email",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((auth.role() = 'authenticated'::text) AND (lower(customer_email) = lower(auth.email())))",
+   "check": ""
+  },
+  {
+   "table": "site_table_types",
+   "name": "admins manage table types",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_table_types",
+   "name": "public read table types for published venues",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(is_cms_admin() OR (EXISTS ( SELECT 1 FROM site_venues v WHERE ((v.id = site_table_types.venue_id) AND (v.status = 'published'::text)))))",
+   "check": ""
+  },
+  {
+   "table": "site_ticket_tiers",
+   "name": "admins manage tiers",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_ticket_tiers",
+   "name": "public read tiers for published events",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(is_cms_admin() OR (EXISTS ( SELECT 1 FROM site_events e WHERE ((e.id = site_ticket_tiers.event_id) AND (e.status = 'published'::text)))))",
+   "check": ""
+  },
+  {
+   "table": "site_venue_floors",
+   "name": "admins manage floors",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_venue_floors",
+   "name": "public read floors for published venues",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(is_cms_admin() OR (EXISTS ( SELECT 1 FROM site_venues v WHERE ((v.id = site_venue_floors.venue_id) AND (v.status = 'published'::text)))))",
+   "check": ""
+  },
+  {
+   "table": "site_venue_time_slots",
+   "name": "admins manage time slots",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_venue_time_slots",
+   "name": "public read time slots for published venues",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "(is_cms_admin() OR (EXISTS ( SELECT 1 FROM site_venues v WHERE ((v.id = site_venue_time_slots.venue_id) AND (v.status = 'published'::text)))))",
+   "check": ""
+  },
+  {
+   "table": "site_venues",
+   "name": "admins manage venues",
+   "cmd": "ALL",
+   "roles": "{public}",
+   "using": "is_cms_admin()",
+   "check": "is_cms_admin()"
+  },
+  {
+   "table": "site_venues",
+   "name": "members read their venues",
+   "cmd": "SELECT",
+   "roles": "{authenticated}",
+   "using": "can_access_venue(id)",
+   "check": ""
+  },
+  {
+   "table": "site_venues",
+   "name": "public read published venues",
+   "cmd": "SELECT",
+   "roles": "{public}",
+   "using": "((status = 'published'::text) OR is_cms_admin())",
+   "check": ""
+  }
+ ]
+}

@@ -112,6 +112,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
         case PaymentState.paid:
           _timer?.cancel();
           ref.invalidate(myTicketOrdersProvider);
+          ref.invalidate(myTableBookingsProvider);
           setState(() {
             _phase = _Phase.paid;
             _ticket = status.ticket;
@@ -143,7 +144,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
   void _viewTickets() {
     final go = widget.onViewTickets ??
         (c) {
-          ref.read(mainNavIndexProvider.notifier).state = MainTab.tickets;
+          ref.read(bookingsSegmentProvider.notifier).state = widget.args.kind == PaymentKind.table ? BookingsSegment.tables : BookingsSegment.tickets;
+          ref.read(mainNavIndexProvider.notifier).state = MainTab.bookings;
           c.go('/home');
         };
     go(context);
@@ -275,13 +277,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
         const SizedBox(height: 12),
         Text('We have not seen your payment yet', key: const Key('payment-stalled'), style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
         const SizedBox(height: 6),
-        const Text('If you paid, your tickets will appear in My tickets within a minute or two, and we will email them. If you did not pay, you can try again.', textAlign: TextAlign.center),
+        const Text('If you paid, it will appear in Bookings within a minute or two, and we will email it. If you did not pay, you can try again.', textAlign: TextAlign.center),
         const SizedBox(height: 20),
         FilledButton(key: const Key('payment-check-again'), onPressed: () {
           setState(() => _phase = _Phase.waiting);
           _check();
         }, child: const Text('Check again')),
-        TextButton(key: const Key('payment-my-tickets'), onPressed: _viewTickets, child: const Text('Go to My tickets')),
+        TextButton(key: const Key('payment-my-tickets'), onPressed: _viewTickets, child: const Text('Go to my bookings')),
         TextButton(key: const Key('payment-back'), onPressed: _back, child: const Text('Back to the event')),
       ],
     );

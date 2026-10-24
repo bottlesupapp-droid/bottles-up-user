@@ -4,6 +4,7 @@ import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/reset_password_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/signup_screen.dart';
+import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
@@ -255,6 +256,10 @@ final List<RouteBase> appRoutes = [
     path: '/payment',
     redirect: (context, state) => state.extra is PaymentWaitArgs ? null : '/home',
     builder: (context, state) => PaymentScreen(args: state.extra as PaymentWaitArgs),
+  ),
+  GoRoute(
+    path: '/bookings/:id',
+    builder: (context, state) => TableBookingDetailScreen(bookingId: state.pathParameters['id']!),
   ),
   GoRoute(
     path: '/tickets/:id',

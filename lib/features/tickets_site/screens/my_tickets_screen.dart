@@ -10,20 +10,21 @@ import '../../../site/when.dart';
 
 /// My tickets (a tab): the tickets bought with this account's e-mail, on the website or in this app. Upcoming first, then past and refunded. Tapping one shows the QR code.
 class MyTicketsScreen extends ConsumerWidget {
-  const MyTicketsScreen({super.key, this.scrollController, this.onOpen, DateTime? now}) : _now = now;
+  const MyTicketsScreen({super.key, this.scrollController, this.onOpen, DateTime? now, this.embedded = false}) : _now = now;
 
   final ScrollController? scrollController;
   final void Function(BuildContext context, TicketOrder order)? onOpen;
   final DateTime? _now;
+
+  /// Shown inside the Bookings tab, which has the title and the safe area already.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orders = ref.watch(myTicketOrdersProvider);
     final theme = Theme.of(context);
     final now = _now ?? DateTime.now();
-    return SafeArea(
-      bottom: false,
-      child: orders.when(
+    final body = orders.when(
         skipLoadingOnRefresh: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => LoadFailed(message: error is SiteException ? error.message : loadFailedMessage('your tickets'), onRetry: () => ref.invalidate(myTicketOrdersProvider)),
@@ -40,10 +41,12 @@ class MyTicketsScreen extends ConsumerWidget {
               key: const Key('my-tickets'),
               controller: scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+              padding: EdgeInsets.fromLTRB(16, embedded ? 4 : 16, 16, 120),
               children: [
-                Text('My tickets', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 12),
+                if (!embedded) ...[
+                  Text('My tickets', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                ],
                 if (all.isEmpty)
                   const SizedBox(height: 420, child: EmptyState(icon: Icons.confirmation_number_outlined, title: 'No tickets yet', text: 'Tickets you buy appear here, with the QR code to show at the door.'))
                 else ...[
@@ -62,8 +65,8 @@ class MyTicketsScreen extends ConsumerWidget {
             ),
           );
         },
-      ),
-    );
+      );
+    return embedded ? body : SafeArea(bottom: false, child: body);
   }
 
   void _open(BuildContext context, TicketOrder o) => (onOpen ?? (c, order) => c.push('/tickets/${order.id}'))(context, o);

@@ -1,10 +1,14 @@
+import 'package:bottles_up_user/features/main_navigation/providers/nav_index_provider.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/widgets/ticket_qr.dart';
 import 'package:bottles_up_user/site/models/checkout.dart';
+import 'package:bottles_up_user/site/providers/site_providers.dart';
 import 'package:bottles_up_user/site/when.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../support/fake_website.dart';
 import '../support/pump_site.dart';
@@ -152,7 +156,7 @@ void main() {
       await tick(tester);
     }
     expect(find.byKey(const Key('payment-stalled')), findsOneWidget);
-    expect(find.textContaining('If you paid, your tickets will appear in My tickets'), findsOneWidget);
+    expect(find.textContaining('If you paid, it will appear in Bookings'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('payment-my-tickets')));
     expect(viewedTickets, 1);
@@ -266,6 +270,35 @@ void main() {
       await tick(tester);
       await tester.tap(find.byKey(const Key('view-bookings')));
       expect(viewedTickets, 1);
+    });
+
+    testWidgets('by default, View my bookings opens the Bookings tab on the tables, and for tickets on the tickets', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: paidBookingAnswer());
+      late ProviderContainer container;
+      Future<void> run(PaymentWaitArgs args) async {
+        final router = GoRouter(routes: [
+          GoRoute(path: '/', builder: (c, s) => PaymentScreen(args: args, interval: const Duration(seconds: 1))),
+          GoRoute(path: '/home', builder: (c, s) => const Scaffold(body: Text('home', key: Key('home')))),
+        ]);
+        tester.view.physicalSize = const Size(800, 2200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ));
+        await tester.pump();
+        await tick(tester);
+        await tester.tap(find.byKey(const Key('view-bookings')));
+        await tester.pumpAndSettle();
+      }
+
+      container = ProviderContainer(overrides: [siteClientProvider.overrideWithValue(site.client)]);
+      addTearDown(container.dispose);
+      await run(tableArgs());
+      expect(find.byKey(const Key('home')), findsOneWidget);
+      expect(container.read(mainNavIndexProvider), MainTab.bookings);
+      expect(container.read(bookingsSegmentProvider), BookingsSegment.tables);
     });
 
     testWidgets('a payment the website did not name cannot be looked up for a table, so it keeps waiting and never invents a booking', (tester) async {
