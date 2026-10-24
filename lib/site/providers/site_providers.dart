@@ -1,0 +1,55 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/site_event.dart';
+import '../models/ticket_order.dart';
+import '../services/my_tickets_service.dart';
+import '../services/site_events_service.dart';
+import '../services/ticket_checkout_service.dart';
+
+/// The one connection to BottlesUp's project. Replaced in tests with a client that talks to a pretend website.
+final siteClientProvider = Provider<SupabaseClient>((ref) => Supabase.instance.client);
+
+final siteEventsServiceProvider = Provider<SiteEventsService>((ref) => SiteEventsService(ref.watch(siteClientProvider)));
+final ticketCheckoutServiceProvider = Provider<TicketCheckoutService>((ref) => TicketCheckoutService(ref.watch(siteClientProvider)));
+final myTicketsServiceProvider = Provider<MyTicketsService>((ref) => MyTicketsService(ref.watch(siteClientProvider)));
+
+/// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
+final upcomingEventsProvider = FutureProvider.autoDispose<List<SiteEvent>>((ref) => ref.watch(siteEventsServiceProvider).upcoming());
+
+/// One event with its ticket types.
+final eventProvider = FutureProvider.autoDispose.family<SiteEvent?, String>((ref, id) => ref.watch(siteEventsServiceProvider).event(id));
+
+/// The signed-in person's paid and refunded orders of tickets.
+final myTicketOrdersProvider = FutureProvider.autoDispose<List<TicketOrder>>((ref) => ref.watch(myTicketsServiceProvider).orders());
+
+/// Who is buying: the account's own name, e-mail address and phone, to put on the order. The e-mail is the signed-in account's verified address, because the database shows a person
+/// only the orders made with that address.
+class Account {
+  const Account({required this.email, this.name = '', this.phone = ''});
+
+  final String email;
+  final String name;
+  final String phone;
+}
+
+final accountProvider = FutureProvider.autoDispose<Account?>((ref) async {
+  final db = ref.watch(siteClientProvider);
+  final user = db.auth.currentUser;
+  final email = user?.email;
+  if (user == null || email == null || email.isEmpty) return null;
+  var name = (user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '').toString();
+  var phone = '';
+  try {
+    final row = await db.from('profiles').select().eq('id', user.id).maybeSingle();
+    if (row != null) {
+      final n = row['name'] ?? row['full_name'];
+      if (n is String && n.trim().isNotEmpty) name = n;
+      final p = row['phone'] ?? row['phone_number'];
+      if (p is String && p.trim().isNotEmpty) phone = p;
+    }
+  } catch (_) {
+    // The profile only prefills the form; the person can type their details.
+  }
+  return Account(email: email, name: name.trim(), phone: phone.trim());
+});

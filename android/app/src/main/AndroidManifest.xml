@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network access. Flutter only adds this to debug and profile builds, so without it a RELEASE build cannot reach Supabase or the payment page and nothing works. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Location permissions commented out to avoid Play Store flags -->
     <!-- <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> -->
     <!-- <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /> -->
