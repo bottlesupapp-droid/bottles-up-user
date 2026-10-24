@@ -13,6 +13,8 @@ Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`.
 - [x] Delete account through the website's `delete-account` function.
 - [x] Three tabs (Events, My tickets, Profile); 112 old files archived (`_archive/`, Tier 4); 14 unused packages dropped (no location or push permissions left to explain to the stores).
 - [x] Android release has the INTERNET permission; iOS bundle ID `com.btlup.pop`.
+- [x] **B3 and B4, after purchase, built 25 Oct as "My Night" (never run on a phone):** a table booking's page now has Entry, Reservation, Guests (invite by name and e-mail, each guest gets their own QR by e-mail, send again), Payments (club payments to confirm or report, refunds, the venue's terms, ask for a refund), Orders (bottles with payment and service status, order more through Stripe or at the club, bottle replacements to approve or decline) and Getting there (directions, call), plus share and Book again. Cancelling a booking is staff-only on the website, so a guest asks for a refund instead. Guests are invited by e-mail only (no username or phone lookup exists).
+- [x] **Plan items from the client's PDF that fit the existing backend (25 Oct):** Tonight and This weekend filters on Events, "Book a table" on an event page (opens the venue on the event's night), minimum spend and deposit-credit wording and included entry passes before paying, directions and share on the ticket page, a booking opens straight after checkout, BottlesUp spelled consistently, the invented privacy text replaced by the website's page. The whole plan against what exists: `docs/USER_APP_PLAN_STATUS.md` (read it first: production has no social tables at all).
 - [x] **B2. My bookings (24 Oct, 356 tests; never run on a phone):** the third tab is now Bookings, with Tickets | Tables. Tables lists the guest's table bookings (coming up, past, cancelled and refunded) and opens a detail page with the QR (the confirmation code), where and when, the line-by-line cost, bottles (marked when left to pay at the club), what is still owed at the club, club payments waiting for the guest's confirmation, and refunds. It reads the customer's own rows through the policies production has (see "Production pull" below).
 - [x] **Production pull (24 Oct):** read-only, with the Supabase CLI; `docs/production_snapshot/` has every column of the 16 tables the app reads, the 44 policies on them and the status values in use; `test/site/production_drift_test.dart` compares the app with it. Findings in `docs/production_snapshot/README.md`.
 - [x] **B1. VIP table booking (24 Oct, 299 tests; never run on a phone):** Tables tab (venues, search), venue page (details, next bookable nights or any date, arrival times, live availability, floor plan, tables), three-step booking (your table, bottles with the pay-now / pay-at-club choice, review with refund terms and promo code), hosted Stripe page, and the confirmation (code as a QR, what was paid, what is owed at the club) on the shared payment screen. Design and the website rules it copies: `docs/TABLE_BOOKING_PLAN.md`.
@@ -35,22 +37,18 @@ Left over from it, none blocking: the hourly table has no upper limit on the web
 ### B2. My bookings: DONE 24 Oct (see "Done" above)
 Left over from it: the confirmation of a club payment is only pointed out ("use the link in the email"), not done in the app (that is B3); phone sign-ups see no bookings (below); bottle service status (awaiting prep, ready, served) is not shown.
 
-### B3. After purchase
-- [ ] Add bottles to a booking (`add-table-booking-bottles`) and order by code (`order-bottles-by-code`).
-- [ ] Approve or decline a bottle substitution (`respond-bottle-substitution`, `confirm-bottle-addon`).
-- [ ] Cancel a booking (`cancel-table-booking`).
-- [ ] Request a refund (`guest_request_refund`).
-
-### B4. Guest tickets
-- [ ] Send and manage tickets for the people in a booking (`manage-guest-tickets`).
-
-### B5. Ticket refund request
-- [ ] A way for buyers to ask for a refund on event tickets.
+### B3. After purchase: DONE 25 Oct (see "Done" above)
+### B4. Guest tickets: DONE 25 Oct, by e-mail only
+### B5. Ticket refund request: there is no website function for it
+The website only has a refund request for table bookings (`guest_request_refund`). A ticket buyer has no way to ask in the app until the website gets one.
 
 ### B6. Profile and settings
 - [ ] Edit profile and avatar still use the old `profiles` and `media` tables: move to the site schema or keep deliberately.
 - [ ] Review the Settings screen for legacy leftovers.
-- [ ] Replace the hard-coded Privacy and Terms screens with the website's pages.
+- [x] Privacy opens the website's page (25 Oct). Terms still shows text nobody at the client wrote: needs A6.
+
+### B8. The client's social plan (new 25 Oct, needs decisions)
+`docs/USER_APP_PLAN_STATUS.md`. Production has no social tables, so Home, Create, Inbox, profiles, Members Only, the professional marketplace, venue hire, referrals and creator income are all new backend work plus new screens. Needs the user's decision on whether the first store release is booking-only (the plan's own phase 1) and on the social backend (who owns the tables, media storage, moderation, terms).
 
 ### B7. Notifications
 - [ ] Push and in-app, if A5 is yes.
@@ -90,6 +88,6 @@ Store listing
 - [ ] Test both account-deletion paths with a test account.
 - [ ] Merge `feat/site-schema`; move the submodule pointer in the monorepo.
 
-## E. Not planned for v1
+## E. Not in the first store release unless the user says otherwise
 
-Location and maps, loyalty, messaging, ticket transfer and resale, venue comparison, and anything waiting on the client's open decisions (ambassadors and Event Leads, ticket discounts as a product, SMS).
+Location and maps, loyalty, ticket transfer and resale, venue comparison, and everything in the client's plan that needs a backend that does not exist (feed, stories, reels, Members Only, customer inbox, professional bookings, venue hire, referrals, subscriptions, creator income, rankings, jobs): see `docs/USER_APP_PLAN_STATUS.md`. The old app's messaging, loyalty and social code is in `_archive/` (Tier 1 and 2); it reads the old tables, which hold none of the website's data, so it is a reference, not a head start.

@@ -503,4 +503,47 @@ void main() {
       expect(textOf(tester, 'booking-problem'), 'That date has passed.');
     });
   });
+
+  group('what the deposit means', () {
+    testWidgets('where the deposit counts toward the minimum spend it says how much is left to spend at the venue', (tester) async {
+      venue(credit: true);
+      await open(tester);
+      await toReview(tester);
+      expect(textOf(tester, 'min-spend-note'), 'This table has a minimum spend of ${m(50000)}. Your ${m(10000)} deposit counts toward it, so ${m(40000)} is left to spend at the venue.');
+    });
+
+    testWidgets('where it does not count it says so', (tester) async {
+      await open(tester);
+      await toReview(tester);
+      expect(textOf(tester, 'min-spend-note'), 'This table has a minimum spend of ${m(50000)}, spent at the venue. Your ${m(10000)} deposit does not count toward it.');
+    });
+
+    testWidgets('a deposit bigger than the minimum leaves nothing, never a negative', (tester) async {
+      venue(credit: true);
+      site.tables['site_venues'] = [
+        venueRow(credit: true, tables: [tableTypeRow(id: 'tt1', minSpend: 8000, deposit: 10000)], slots: [slotRow(id: 's1')]),
+      ];
+      await open(tester);
+      await toReview(tester);
+      expect(textOf(tester, 'min-spend-note'), contains('so ${m(0)} is left to spend'));
+    });
+
+    testWidgets('an hourly table has no minimum spend note, and no included passes means no passes note', (tester) async {
+      await open(tester, table: 'tt2');
+      await toReview(tester);
+      expect(find.byKey(const Key('min-spend-note')), findsNothing);
+      expect(find.byKey(const Key('passes-note')), findsNothing);
+    });
+
+    testWidgets('included entry passes are explained, and that seating is not passes', (tester) async {
+      site.tables['site_venues'] = [
+        venueRow(tables: [
+          {...tableTypeRow(id: 'tt1', maxGuests: 10), 'included_admissions': 4}
+        ], slots: [slotRow(id: 's1')]),
+      ];
+      await open(tester);
+      await toReview(tester);
+      expect(textOf(tester, 'passes-note'), 'Includes 4 entry passes. Your table seating 10 does not mean 10 passes.');
+    });
+  });
 }

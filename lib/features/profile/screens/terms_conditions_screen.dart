@@ -38,14 +38,14 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               'Introduction',
-              'Welcome to Bottles Up. These terms and conditions ("Terms") govern your use of our mobile application and services. By accessing or using our app, you agree to be bound by these Terms.',
+              'Welcome to BottlesUp. These terms and conditions ("Terms") govern your use of our mobile application and services. By accessing or using our app, you agree to be bound by these Terms.',
             ),
 
             // Acceptance of Terms
             _buildSection(
               context,
               'Acceptance of Terms',
-              'By downloading, installing, or using the Bottles Up app, you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree to these Terms, please do not use our app.',
+              'By downloading, installing, or using the BottlesUp app, you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree to these Terms, please do not use our app.',
             ),
 
             // Age Requirements
@@ -110,7 +110,7 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               'Intellectual Property',
-              'The Bottles Up app and its content are protected by copyright, trademark, and other intellectual property laws. You may not:\n\n'
+              'The BottlesUp app and its content are protected by copyright, trademark, and other intellectual property laws. You may not:\n\n'
               '• Copy, modify, or distribute our content without permission\n'
               '• Use our trademarks or logos without authorization\n'
               '• Reverse engineer or attempt to extract source code\n'
@@ -135,7 +135,7 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               'Venue Relationships',
-              'Bottles Up acts as a platform connecting users with venues. We are not responsible for:\n\n'
+              'BottlesUp acts as a platform connecting users with venues. We are not responsible for:\n\n'
               '• Venue operations, service quality, or safety\n'
               '• Disputes between users and venues\n'
               '• Venue closure, cancellations, or changes\n'
@@ -147,7 +147,7 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               'Limitation of Liability',
-              'To the maximum extent permitted by law, Bottles Up shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or use, arising out of your use of the app.',
+              'To the maximum extent permitted by law, BottlesUp shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or use, arising out of your use of the app.',
             ),
 
             // Disclaimers
@@ -166,7 +166,7 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               'Indemnification',
-              'You agree to indemnify and hold harmless Bottles Up and its affiliates from any claims, damages, losses, or expenses arising from your use of the app, violation of these Terms, or infringement of any rights of another party.',
+              'You agree to indemnify and hold harmless BottlesUp and its affiliates from any claims, damages, losses, or expenses arising from your use of the app, violation of these Terms, or infringement of any rights of another party.',
             ),
 
             // Termination

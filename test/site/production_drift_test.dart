@@ -46,7 +46,7 @@ void main() {
 
   test('every column the app reads exists in production, in every table it reads', () async {
     final site = FakeWebsite();
-    for (final t in ['site_events', 'site_orders', 'site_venues', 'site_venue_floors', 'site_bottles', 'site_table_bookings', 'site_table_booking_bottles', 'site_table_booking_club_payments', 'site_table_booking_refunds']) {
+    for (final t in ['site_events', 'site_orders', 'site_venues', 'site_venue_floors', 'site_bottles', 'site_table_bookings', 'site_table_booking_bottles', 'site_table_booking_club_payments', 'site_table_booking_refunds', 'site_table_booking_bottle_substitutions']) {
       site.tables[t] = [];
     }
     site.tables['site_content'] = [];
@@ -89,6 +89,7 @@ void main() {
     expectColumns('site_table_booking_bottles', plain(site.forTable('site_table_booking_bottles').single.query['select']!));
     expectColumns('site_table_booking_club_payments', plain(site.forTable('site_table_booking_club_payments').single.query['select']!));
     expectColumns('site_table_booking_refunds', plain(site.forTable('site_table_booking_refunds').single.query['select']!));
+    expectColumns('site_table_booking_bottle_substitutions', plain(site.forTable('site_table_booking_bottle_substitutions').single.query['select']!));
   });
 
   test('the columns the app filters and sorts on exist too', () {
@@ -96,6 +97,7 @@ void main() {
     expectColumns('site_table_booking_bottles', {'booking_id', 'payment_status', 'created_at'});
     expectColumns('site_table_booking_club_payments', {'booking_id', 'customer_confirmation_status'});
     expectColumns('site_table_booking_refunds', {'booking_id', 'recorded_at'});
+    expectColumns('site_table_booking_bottle_substitutions', {'booking_id', 'status', 'requested_at'});
     expectColumns('site_venues', {'status'});
     expectColumns('site_bottles', {'venue_id', 'is_available', 'is_sold_out', 'sort_order'});
     expectColumns('site_venue_floors', {'venue_id', 'sort_order'});

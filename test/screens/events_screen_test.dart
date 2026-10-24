@@ -113,4 +113,73 @@ void main() {
     await pumpSite(tester, const Scaffold(body: EventsScreen()), site: site);
     expect(find.byKey(const Key('event-live')), findsOneWidget);
   });
+
+  group('by date', () {
+    // A Wednesday at noon, on the phone's own clock, far enough ahead that the events are still to come whenever this runs.
+    final wednesday = () {
+      var d = DateTime(2099, 10, 1);
+      while (d.weekday != DateTime.wednesday) {
+        d = DateTime(d.year, d.month, d.day + 1);
+      }
+      return d;
+    }();
+    final now = DateTime(wednesday.year, wednesday.month, wednesday.day, 12);
+    String at(int dayOffset, int hour) => DateTime(wednesday.year, wednesday.month, wednesday.day + dayOffset, hour).toUtc().toIso8601String();
+
+    void events() {
+      site.tables['site_events'] = [
+        eventRow(id: 'today', title: 'Wednesday Night', cover: null, start: at(0, 22), end: at(1, 4)),
+        eventRow(id: 'fri', title: 'Friday Night', cover: null, start: at(2, 23), end: at(3, 5)),
+        eventRow(id: 'sat', title: 'Saturday Night', cover: null, start: at(3, 23), end: at(4, 5)),
+        eventRow(id: 'next', title: 'Next Friday', cover: null, start: at(9, 23), end: at(10, 5)),
+      ];
+    }
+
+    Future<void> openAt(WidgetTester tester) => pumpSite(tester, Scaffold(body: EventsScreen(now: now)), site: site);
+
+    testWidgets('Tonight shows only what is on tonight', (tester) async {
+      events();
+      await openAt(tester);
+      await tester.tap(find.byKey(const Key('when-tonight')));
+      await tester.pump();
+      expect(find.byKey(const Key('event-today')), findsOneWidget);
+      expect(find.byKey(const Key('event-fri')), findsNothing);
+    });
+
+    testWidgets('This weekend shows Friday, Saturday and Sunday nights, not the weekend after', (tester) async {
+      events();
+      await openAt(tester);
+      await tester.tap(find.byKey(const Key('when-weekend')));
+      await tester.pump();
+      expect(find.byKey(const Key('event-fri')), findsOneWidget);
+      expect(find.byKey(const Key('event-sat')), findsOneWidget);
+      expect(find.byKey(const Key('event-today')), findsNothing);
+      expect(find.byKey(const Key('event-next')), findsNothing);
+    });
+
+    testWidgets('Any date brings everything back, and a date filter works with the search', (tester) async {
+      events();
+      await openAt(tester);
+      await tester.tap(find.byKey(const Key('when-weekend')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('events-search')), 'saturday');
+      await tester.pump();
+      expect(find.byKey(const Key('event-sat')), findsOneWidget);
+      expect(find.byKey(const Key('event-fri')), findsNothing);
+      await tester.enterText(find.byKey(const Key('events-search')), '');
+      await tester.tap(find.byKey(const Key('when-any')));
+      await tester.pump();
+      for (final id in ['today', 'fri', 'sat', 'next']) {
+        expect(find.byKey(Key('event-$id')), findsOneWidget, reason: id);
+      }
+    });
+
+    testWidgets('nothing tonight says so, and the filter can be cleared', (tester) async {
+      site.tables['site_events'] = [eventRow(id: 'next', cover: null, start: at(9, 23), end: at(10, 5))];
+      await openAt(tester);
+      await tester.tap(find.byKey(const Key('when-tonight')));
+      await tester.pump();
+      expect(find.text('Nothing matches'), findsOneWidget);
+    });
+  });
 }

@@ -4,6 +4,7 @@ import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/reset_password_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/signup_screen.dart';
+import 'package:bottles_up_user/features/bookings_site/screens/add_bottles_screen.dart';
 import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
@@ -241,7 +242,7 @@ final List<RouteBase> appRoutes = [
   ),
   GoRoute(
     path: '/venues/:id',
-    builder: (context, state) => VenueScreen(venueId: state.pathParameters['id']!),
+    builder: (context, state) => VenueScreen(venueId: state.pathParameters['id']!, initialNight: state.uri.queryParameters['night']),
   ),
   GoRoute(
     path: '/venues/:id/tables/:tableId/book',
@@ -260,6 +261,12 @@ final List<RouteBase> appRoutes = [
   GoRoute(
     path: '/bookings/:id',
     builder: (context, state) => TableBookingDetailScreen(bookingId: state.pathParameters['id']!),
+    routes: [
+      GoRoute(
+        path: 'bottles',
+        builder: (context, state) => AddBottlesScreen(bookingId: state.pathParameters['id']!),
+      ),
+    ],
   ),
   GoRoute(
     path: '/tickets/:id',

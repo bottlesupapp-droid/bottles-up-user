@@ -25,3 +25,9 @@ Uri eventPageUri(String eventId, {String? origin}) => Uri.parse('${origin ?? sit
 
 /// The website's privacy policy.
 Uri privacyPolicyUri({String? origin}) => Uri.parse('${origin ?? siteUrl}/privacy-policy');
+
+/// The website's page for a venue.
+Uri venuePageUri(String venueId, {String? origin}) => Uri.parse('${origin ?? siteUrl}/venues/${Uri.encodeComponent(venueId)}');
+
+/// A map search for an address, which opens in the phone's maps (or the browser).
+Uri mapsSearchUri(String address) => Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': address});

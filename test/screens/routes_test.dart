@@ -1,4 +1,5 @@
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
+import 'package:bottles_up_user/features/bookings_site/screens/add_bottles_screen.dart';
 import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
@@ -29,7 +30,7 @@ void main() {
   });
 
   /// The app's own routes, without the sign-in redirect (that needs the app's session).
-  Future<GoRouter> openAt(WidgetTester tester, String location, {Object? extra}) async {
+  Future<GoRouter> openAt(WidgetTester tester, String location, {Object? extra, bool settle = true}) async {
     final router = GoRouter(initialLocation: location, initialExtra: extra, routes: appRoutes);
     tester.view.physicalSize = const Size(800, 2200);
     tester.view.devicePixelRatio = 1;
@@ -41,7 +42,13 @@ void main() {
       ],
       child: MaterialApp.router(routerConfig: router),
     ));
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+      await settleCalls(tester);
+      await settleCalls(tester);
+    }
     return router;
   }
 
@@ -100,10 +107,22 @@ void main() {
     site.tables['site_table_booking_bottles'] = [];
     site.tables['site_table_booking_club_payments'] = [];
     site.tables['site_table_booking_refunds'] = [];
-    await openAt(tester, '/bookings/bk1');
+    site.tables['site_table_booking_bottle_substitutions'] = [];
+    site.functions['manage-guest-tickets'] = (b) => (status: 200, body: rosterAnswer());
+    await openAt(tester, '/bookings/bk1', settle: false);
     expect(find.byType(TableBookingDetailScreen), findsOneWidget);
     expect(find.byKey(const Key('booking-detail')), findsOneWidget);
     expect(site.forTable('site_table_bookings').first.query['id'], 'eq.bk1');
+  });
+
+  testWidgets('/bookings/:id/bottles opens the order of more bottles for that booking', (tester) async {
+    site.tables['site_table_bookings'] = [bookingRow()];
+    for (final t in ['site_table_booking_bottles', 'site_table_booking_club_payments', 'site_table_booking_refunds', 'site_table_booking_bottle_substitutions', 'site_bottles']) {
+      site.tables[t] = [];
+    }
+    await openAt(tester, '/bookings/bk1/bottles');
+    expect(find.byType(AddBottlesScreen), findsOneWidget);
+    expect(tester.widget<AddBottlesScreen>(find.byType(AddBottlesScreen)).bookingId, 'bk1');
   });
 
   testWidgets('/tickets/:id opens that ticket', (tester) async {
@@ -137,7 +156,7 @@ void main() {
     }
 
     walk(appRoutes, '');
-    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id', '/bookings/:id']));
+    expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id', '/bookings/:id', 'bottles']));
     for (final gone in ['/checkout', '/checkout-success', '/events/:id/book', '/table-selection/:clubId', '/location-permission', '/location/manual-entry', '/profile/orders', '/notifications']) {
       expect(paths, isNot(contains(gone)), reason: gone);
     }

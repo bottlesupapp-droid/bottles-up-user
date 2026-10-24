@@ -7,6 +7,7 @@ import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/venue.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
+import '../../../site/read.dart';
 import '../../../site/rules/table_rules.dart';
 import '../../../site/site_error.dart';
 import '../widgets/floor_plan.dart';
@@ -30,9 +31,12 @@ Future<DateTime?> pickNightWithCalendar(BuildContext context, Venue venue, DateT
 
 /// One venue: what it is, then the date and time, which tables are free for that night, the floor plan if it has one, and the tables to book.
 class VenueScreen extends ConsumerStatefulWidget {
-  const VenueScreen({super.key, required this.venueId, this.onBook, this.pickNight = pickNightWithCalendar, DateTime? now}) : _now = now;
+  const VenueScreen({super.key, required this.venueId, this.initialNight, this.onBook, this.pickNight = pickNightWithCalendar, DateTime? now}) : _now = now;
 
   final String venueId;
+
+  /// A night to start on, "yyyy-MM-dd" (an event's night, when the guest comes from an event). Used only when the venue takes bookings that night.
+  final String? initialNight;
 
   /// Where booking a table goes. The app opens the booking; tests give their own.
   final void Function(BuildContext context, Venue venue, TableType table, DateTime night, TimeSlot slot)? onBook;
@@ -47,6 +51,8 @@ class _VenueScreenState extends ConsumerState<VenueScreen> {
   DateTime? _night;
   String? _slotId;
   String? _floorId;
+  bool _startedOnNight = false;
+  String? _nightNote;
 
   DateTime get _today => widget._now ?? DateTime.now();
 
@@ -89,6 +95,20 @@ class _VenueScreenState extends ConsumerState<VenueScreen> {
 
   Widget _body(Venue venue) {
     final theme = Theme.of(context);
+    if (!_startedOnNight) {
+      _startedOnNight = true;
+      final wanted = readDay(widget.initialNight);
+      if (wanted != null) {
+        final block = nightBlock(venue, wanted, today: _today);
+        if (block == null) {
+          final slots = slotsOn(venue, wanted);
+          _night = wanted;
+          _slotId = slots.isEmpty ? null : slots.first.id;
+        } else {
+          _nightNote = block;
+        }
+      }
+    }
     final night = _night;
     final slots = night == null ? <TimeSlot>[] : slotsOn(venue, night);
     TimeSlot? slot;
@@ -145,6 +165,7 @@ class _VenueScreenState extends ConsumerState<VenueScreen> {
               const SizedBox(height: 20),
               Text('Pick a date and time', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
+              if (_nightNote != null && night == null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_nightNote!, key: const Key('night-note'), style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error))),
               if (!venue.isBookable)
                 Text('Table bookings are not open at this venue yet.', key: const Key('not-bookable'), style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant))
               else ...[
@@ -278,6 +299,7 @@ class _TableTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Up to ${table.maxGuests} guests', key: Key('table-guests-${table.id}')),
             if (table.description != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(table.description!, style: theme.textTheme.bodySmall)),
+            if (table.includedAdmissions != null && table.includedAdmissions! > 0) Padding(padding: const EdgeInsets.only(top: 2), child: Text('Includes ${table.includedAdmissions} entry ${table.includedAdmissions == 1 ? 'pass' : 'passes'}', key: Key('table-passes-${table.id}'), style: theme.textTheme.bodySmall)),
             if (extras.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(extras.join(' · '), style: theme.textTheme.bodySmall)),
             const SizedBox(height: 8),
             Row(

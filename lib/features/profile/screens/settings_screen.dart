@@ -199,7 +199,7 @@ class SettingsScreen extends ConsumerWidget {
       scheme: 'mailto',
       path: email,
       queryParameters: {
-        'subject': 'Settings Support - Bottles Up',
+        'subject': 'Settings Support - BottlesUp',
       },
     );
     await launchUrl(emailLaunchUri);

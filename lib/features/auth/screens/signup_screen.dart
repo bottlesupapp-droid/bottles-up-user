@@ -231,7 +231,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             // Logo or App Name
                             Center(
                               child: Text(
-                                'Bottles Up',
+                                'BottlesUp',
                                 style: GoogleFonts.syne(
                                   fontSize: 36,
                                   fontWeight: FontWeight.bold,

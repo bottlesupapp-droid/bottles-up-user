@@ -47,6 +47,9 @@ class FakeWebsite {
 
   /// Makes every request fail with this status (a dropped connection is [networkDown]).
   int? failAllWith;
+
+  /// Tables that answer with a failure while the others keep working.
+  final Set<String> failTables = {};
   bool networkDown = false;
 
   /// Made when the pretend website is, because a call to a website function hands its JSON to a separate isolate: that has to start outside a widget test's fake clock
@@ -99,7 +102,7 @@ class FakeWebsite {
       Object? body;
       if (request.body.isNotEmpty) body = jsonDecode(request.body);
       tableRequests.add(TableRequest(request.method, table, request.url.queryParameters, body));
-      if (failAllWith != null) return _json(request, failAllWith!, {'message': 'failed'});
+      if (failAllWith != null || failTables.contains(table)) return _json(request, failAllWith ?? 500, {'message': 'failed'});
       return _json(request, 200, tables[table] ?? const []);
     }
     if (segments.length >= 3 && segments[0] == 'functions' && segments[1] == 'v1') {
@@ -288,6 +291,7 @@ Map<String, dynamic> tableTypeRow({
       'seating_type': null,
       'amenities': null,
       'policy_note': null,
+      'included_admissions': null,
       'sort_order': sort,
     };
 
@@ -389,11 +393,11 @@ Map<String, dynamic> bookingRow({
       'cancellation_reason': cancelReason,
       'created_at': created,
       'site_table_types': {'name': tableName},
-      'site_venues': {'name': venueName, 'address': '1 King St W, Toronto'},
+      'site_venues': {'name': venueName, 'address': '1 King St W, Toronto', 'phone': '416-555-0199'},
       'site_venue_time_slots': {'start_time': time, 'label': slotLabel},
     };
 
-Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose', String? size = '1.75L', int qty = 1, int unit = 25000, String payment = 'paid', bool addon = false, String? cancelledAt}) => {
+Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose', String? size = '1.75L', int qty = 1, int unit = 25000, String payment = 'paid', bool addon = false, String? cancelledAt, String service = 'awaiting_prep', int delivered = 0}) => {
       'id': id,
       'bottle_name': name,
       'size': size,
@@ -403,6 +407,8 @@ Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose'
       'payment_status': payment,
       'is_addon': addon,
       'cancelled_at': cancelledAt,
+      'service_status': service,
+      'delivered_quantity': delivered,
       'created_at': '2099-10-20T12:01:00Z',
     };
 
@@ -411,3 +417,23 @@ Map<String, dynamic> clubPaymentRow({String id = 'cp1', String token = 'tok-1', 
 
 Map<String, dynamic> bookingRefundRow({String type = 'full', int amount = 11300, String reason = 'Cancelled by the guest', String at = '2099-10-25T10:00:00Z'}) =>
     {'refund_type': type, 'amount_cents': amount, 'reason': reason, 'recorded_at': at};
+
+/// A pending bottle replacement as the customer's own read returns it.
+Map<String, dynamic> substitutionRow({String id = 's1', String lineId = 'l1', String reason = 'Out of stock tonight', String name = 'Belvedere', String? size = '1.75L', int diff = 2000, String token = 'sub-tok-1', String status = 'pending'}) => {
+      'id': id,
+      'bottle_line_id': lineId,
+      'reason': reason,
+      'replacement_bottle_name': name,
+      'replacement_size': size,
+      'price_diff_cents': diff,
+      'status': status,
+      'confirm_token': token,
+    };
+
+/// What `manage-guest-tickets` answers to `list`.
+Map<String, dynamic> rosterAnswer({int max = 6, int remaining = 4, List<Map<String, dynamic>>? guests}) => {
+      'booking': {'customerName': 'Dana Lee', 'venueName': 'Club A', 'tableTypeName': 'Booth 1', 'maxGuests': max, 'remainingCapacity': remaining},
+      'guests': guests ?? [guestRow()],
+    };
+
+Map<String, dynamic> guestRow({String id = 'g1', String name = 'Sam Park', String email = 'sam@example.com', String? sent = '2099-10-21T10:00:00Z', String? checkedIn}) => {'id': id, 'guest_name': name, 'guest_email': email, 'ticket_sent_at': sent, 'checked_in_at': checkedIn};

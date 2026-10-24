@@ -110,3 +110,4 @@ lib/shared/widgets/custom_app_bar.dart
 lib/shared/widgets/shimmer_loading.dart
 lib/shared/widgets/widgets.dart
 lib/core/config/payment_config.dart
+lib/features/profile/screens/privacy_policy_screen.dart

@@ -301,6 +301,33 @@ void main() {
       expect(container.read(bookingsSegmentProvider), BookingsSegment.tables);
     });
 
+    testWidgets('after a table is paid, View my bookings opens that booking\'s own page, found by its confirmation code', (tester) async {
+      site.functions['site-booking-status'] = (b) => (status: 200, body: paidBookingAnswer(code: 'TB-ABCD2345'));
+      site.tables['site_table_bookings'] = [bookingRow(id: 'other', code: 'TB-OTHER111'), bookingRow(id: 'mine', code: 'TB-ABCD2345')];
+      final router = GoRouter(routes: [
+        GoRoute(path: '/', builder: (c, s) => PaymentScreen(args: tableArgs(), interval: const Duration(seconds: 1))),
+        GoRoute(path: '/home', builder: (c, s) => const Scaffold(body: Text('home', key: Key('home')))),
+        GoRoute(path: '/bookings/:id', builder: (c, s) => Scaffold(body: Text('booking ${s.pathParameters['id']}', key: const Key('booking-page')))),
+      ]);
+      tester.view.physicalSize = const Size(800, 2200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = ProviderContainer(overrides: [siteClientProvider.overrideWithValue(site.client)]);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(UncontrolledProviderScope(container: container, child: MaterialApp.router(routerConfig: router)));
+      await tester.pump();
+      await tick(tester);
+      await tester.tap(find.byKey(const Key('view-bookings')));
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      expect(textOf(tester, 'booking-page'), 'booking mine');
+      expect(container.read(bookingsSegmentProvider), BookingsSegment.tables);
+      // Back from the booking is the Bookings tab, not the payment.
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home')), findsOneWidget);
+    });
+
     testWidgets('a payment the website did not name cannot be looked up for a table, so it keeps waiting and never invents a booking', (tester) async {
       site.tables['site_orders'] = [orderRow()];
       await open(tester, args: tableArgs(sessionId: null));

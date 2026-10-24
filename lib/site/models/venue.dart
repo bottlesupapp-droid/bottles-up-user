@@ -105,6 +105,7 @@ class TableType {
     this.seatingType,
     this.amenities,
     this.policyNote,
+    this.includedAdmissions,
   });
 
   final String id;
@@ -133,6 +134,9 @@ class TableType {
   final String? seatingType;
   final String? amenities;
   final String? policyNote;
+
+  /// How many entry passes the table comes with, when the venue says (a table that seats ten does not automatically include ten passes).
+  final int? includedAdmissions;
   final int sortOrder;
 
   bool get isHourly => pricingMode == PricingMode.hourly;
@@ -189,6 +193,7 @@ TableType? parseTableType(Map<String, dynamic> row, {String? venueId}) {
     seatingType: readText(row['seating_type']),
     amenities: readText(row['amenities']),
     policyNote: readText(row['policy_note']),
+    includedAdmissions: readInt(row['included_admissions']),
     sortOrder: readInt(row['sort_order']) ?? 0,
   );
 }

@@ -20,9 +20,17 @@ void main() {
     site.tables['site_table_booking_bottles'] = [];
     site.tables['site_table_booking_club_payments'] = [];
     site.tables['site_table_booking_refunds'] = [];
+    site.tables['site_table_booking_bottle_substitutions'] = [];
+    site.functions['manage-guest-tickets'] = (b) => (status: 200, body: rosterAnswer());
+    site.rpcs['public_venue_refund_policy'] = (b) => (status: 200, body: <Object>[]);
   });
 
-  Future<void> open(WidgetTester tester, {String id = 'bk1'}) => pumpSite(tester, TableBookingDetailScreen(bookingId: id, now: DateTime(2099, 11, 1)), site: site);
+  /// The guest list is a call to a website function, which needs a little real time to finish: let it.
+  Future<void> open(WidgetTester tester, {String id = 'bk1'}) async {
+    await pumpSite(tester, TableBookingDetailScreen(bookingId: id, now: DateTime(2099, 11, 1)), site: site, settle: false);
+    await settleCalls(tester);
+    await settleCalls(tester);
+  }
 
   testWidgets('shows the code as a QR to show at the door, and where and when the guests arrive', (tester) async {
     site.tables['site_table_bookings'] = [bookingRow()];
@@ -71,7 +79,7 @@ void main() {
     await open(tester);
     expect(find.text('Grey Goose (1.75L) × 1 · pay at the club'), findsOneWidget);
     expect(textOf(tester, 'bd-line-bottle-l1-value'), m(25000));
-    expect(find.text('Don Julio × 2'), findsOneWidget);
+    expect(textOf(tester, 'bd-line-bottle-l2'), 'Don Julio × 2');
     expect(textOf(tester, 'bd-line-bottle-l2-value'), m(80000));
     expect(textOf(tester, 'bd-line-due-value'), m(25000));
   });
@@ -151,7 +159,8 @@ void main() {
     expect(textOf(tester, 'load-failed-message'), 'We could not load this booking. Check your connection and try again.');
     site.failAllWith = null;
     await tester.tap(find.byKey(const Key('load-failed-retry')));
-    await tester.pumpAndSettle();
+    await settleCalls(tester);
+    await settleCalls(tester);
     expect(find.byKey(const Key('booking-detail')), findsOneWidget);
   });
 }

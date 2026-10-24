@@ -15,7 +15,7 @@ void main() {
   group('a booking', () {
     test('is read with where, when and what it cost', () {
       final b = booking();
-      expect([b.id, b.status, b.confirmationCode, b.guestCount, b.tableName, b.venueName, b.venueAddress, b.startTime], ['bk1', BookingStatus.paid, 'TB-ABCD2345', 4, 'Booth 1', 'Club A', '1 King St W, Toronto', '22:00:00']);
+      expect([b.id, b.status, b.confirmationCode, b.guestCount, b.tableName, b.venueName, b.venueAddress, b.venuePhone, b.startTime], ['bk1', BookingStatus.paid, 'TB-ABCD2345', 4, 'Booth 1', 'Club A', '1 King St W, Toronto', '416-555-0199', '22:00:00']);
       expect(b.bookingDate, DateTime(2099, 11, 6));
       expect([b.depositCents, b.taxCents, b.totalCents, b.paidCents, b.currency], [10000, 1300, 11300, 11300, 'cad']);
       expect(b.arrival, DateTime(2099, 11, 6, 22));
@@ -103,7 +103,7 @@ void main() {
       expect(r.method, 'GET');
       expect(r.query['status'], 'in.("paid","refunded","cancelled")');
       expect(r.query['order'], startsWith('created_at.desc'));
-      expect(r.query['select'], allOf(contains('confirmation_code'), contains('amount_paid_cents'), contains('site_table_types(name)'), contains('site_venues(name,address)'), contains('site_venue_time_slots(start_time,label)')));
+      expect(r.query['select'], allOf(contains('confirmation_code'), contains('amount_paid_cents'), contains('site_table_types(name)'), contains('site_venues(name,address,phone)'), contains('site_venue_time_slots(start_time,label)')));
       expect(list.single.tableName, 'Booth 1');
     });
 
@@ -142,6 +142,20 @@ void main() {
     test('a failure reading one booking is a plain sentence', () async {
       site.failAllWith = 500;
       await expectLater(MyBookingsService(site.client).booking('bk1'), throwsA(isA<SiteException>().having((e) => e.message, 'message', 'We could not load this booking. Check your connection and try again.')));
+    });
+  });
+
+  group('where the venue has got to with a bottle', () {
+    String? label(String status) => parseBookingBottle(bottleLineRow(service: status))!.serviceLabel;
+
+    test('each status the venue uses has a plain label, and one the app does not know has none', () {
+      expect([label('awaiting_prep'), label('preparing'), label('ready'), label('picked_up'), label('served')], ['Order received', 'Being prepared', 'Ready', 'On the way', 'Delivered']);
+      expect(label('mystery'), isNull);
+      expect(parseBookingBottle({...bottleLineRow(), 'service_status': null})!.serviceLabel, isNull);
+    });
+
+    test('the quantity delivered so far is read', () {
+      expect(parseBookingBottle(bottleLineRow(qty: 3, delivered: 2))!.deliveredQuantity, 2);
     });
   });
 }
