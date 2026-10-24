@@ -5,8 +5,9 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../features/auth/providers/auth_provider.dart';
-import '../../../features/payment/screens/payment_history_screen.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../../../site/providers/site_providers.dart';
+import '../../../site/site_error.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -62,7 +63,7 @@ class ProfileScreenInternal extends ConsumerWidget {
           ),
         ),
         content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+          'Your account and sign-in will be permanently deleted and you will not be able to get them back. Records of payments already made are kept.',
         ),
         actions: [
           TextButton(
@@ -105,30 +106,30 @@ class ProfileScreenInternal extends ConsumerWidget {
 
   void _handleDeleteAccount(BuildContext context, WidgetRef ref) async {
     final shouldDelete = await _showDeleteAccountConfirmation(context);
-    if (shouldDelete) {
-      try {
-        await ref.read(authStateProvider.notifier).deleteAccount();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          context.go('/login');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete account: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+    if (!shouldDelete || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final service = ref.read(accountServiceProvider);
+    // Nothing else can be tapped while the website removes the account.
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const PopScope(canPop: false, child: Center(child: CircularProgressIndicator())),
+    );
+    String? problem;
+    try {
+      await service.deleteAccount();
+    } on SiteException catch (e) {
+      problem = e.message;
     }
+    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    if (problem != null) {
+      messenger.showSnackBar(SnackBar(content: Text(problem), backgroundColor: Colors.red));
+      return;
+    }
+    messenger.showSnackBar(const SnackBar(content: Text('Your account has been deleted.')));
+    router.go('/login');
   }
 
   String _getProfileImageUrl(User user) {
@@ -301,27 +302,6 @@ class ProfileScreenInternal extends ConsumerWidget {
                   title: const Text('Edit Profile'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 20),
                   onTap: () => context.push('/profile/edit'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Iconsax.clipboard_text),
-                  title: const Text('My Orders'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 20),
-                  onTap: () => context.push('/profile/orders'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Iconsax.card),
-                  title: const Text('Payment History'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 20),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PaymentHistoryScreen(),
-                      ),
-                    );
-                  },
                 ),
                 const Divider(height: 1),
                 ListTile(

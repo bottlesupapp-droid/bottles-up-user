@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../home/screens/home_screen.dart';
-import '../../events/screens/event_discovery_screen.dart';
-import '../../bookings/screens/my_bookings_screen.dart';
+import '../../discover/screens/events_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../tables/screens/tables_screen.dart';
+import '../../bookings_site/screens/bookings_tab.dart';
 import '../providers/nav_index_provider.dart';
-import '../../../../core/ui/glass_kit.dart';
+import 'package:bottles_up_user/core/ui/glass_kit.dart';
 
 // Replace the above import with Ionicons
 import 'package:ionicons/ionicons.dart';
@@ -27,9 +27,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   late Animation<Offset> _slideAnimation;
   
   final List<ScrollController> _scrollControllers = [
-    ScrollController(), // Feed
-    ScrollController(), // Discover
-    ScrollController(), // Book
+    ScrollController(), // Events
+    ScrollController(), // Tables
+    ScrollController(), // My tickets
     ScrollController(), // Profile
   ];
 
@@ -108,16 +108,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   Widget _buildScreen(int index) {
     switch (index) {
-      case 0:
-        return HomeScreenWrapper(scrollController: _scrollControllers[0]); // Feed
-      case 1:
-        return SearchScreenWrapper(scrollController: _scrollControllers[1]); // Discover
-      case 2:
-        return BookingsScreenWrapper(scrollController: _scrollControllers[2]); // Book
-      case 3:
-        return ProfileScreenWrapper(scrollController: _scrollControllers[3]); // Profile
+      case MainTab.events:
+        return EventsScreen(scrollController: _scrollControllers[MainTab.events]);
+      case MainTab.tables:
+        return TablesScreen(scrollController: _scrollControllers[MainTab.tables]);
+      case MainTab.bookings:
+        return BookingsTab(scrollController: _scrollControllers[MainTab.bookings]);
       default:
-        return HomeScreenWrapper(scrollController: _scrollControllers[0]);
+        return ProfileScreenWrapper(scrollController: _scrollControllers[MainTab.profile]);
     }
   }
 
@@ -137,10 +135,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           IndexedStack(
             index: _currentIndex,
             children: [
-              _buildScreen(0),
-              _buildScreen(1),
-              _buildScreen(2),
-              _buildScreen(3),
+              _buildScreen(MainTab.events),
+              _buildScreen(MainTab.tables),
+              _buildScreen(MainTab.bookings),
+              _buildScreen(MainTab.profile),
             ],
           ),
           // Floating glass nav bar
@@ -155,19 +153,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 onTap: _onTabTapped,
                 items: const [
                   GlassNavItem(
-                    icon: Ionicons.film_outline,
-                    activeIcon: Ionicons.film,
-                    label: 'Feed',
-                  ),
-                  GlassNavItem(
                     icon: Ionicons.compass_outline,
                     activeIcon: Ionicons.compass,
-                    label: 'Discover',
+                    label: 'Events',
+                  ),
+                  GlassNavItem(
+                    icon: Ionicons.wine_outline,
+                    activeIcon: Ionicons.wine,
+                    label: 'Tables',
                   ),
                   GlassNavItem(
                     icon: Ionicons.ticket_outline,
                     activeIcon: Ionicons.ticket,
-                    label: 'Book',
+                    label: 'Bookings',
                   ),
                   GlassNavItem(
                     icon: Ionicons.person_outline,
@@ -181,48 +179,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         ],
       ),
     );
-  }
-}
-
-class HomeScreenWrapper extends StatelessWidget {
-  final ScrollController scrollController;
-  
-  const HomeScreenWrapper({
-    super.key,
-    required this.scrollController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return HomeScreenInternal(scrollController: scrollController);
-  }
-}
-
-class SearchScreenWrapper extends StatelessWidget {
-  final ScrollController scrollController;
-
-  const SearchScreenWrapper({
-    super.key,
-    required this.scrollController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return EventDiscoveryScreenInternal(scrollController: scrollController);
-  }
-}
-
-class BookingsScreenWrapper extends StatelessWidget {
-  final ScrollController scrollController;
-
-  const BookingsScreenWrapper({
-    super.key,
-    required this.scrollController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MyBookingsScreenInternal(scrollController: scrollController);
   }
 }
 

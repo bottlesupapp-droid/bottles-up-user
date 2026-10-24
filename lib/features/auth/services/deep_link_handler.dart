@@ -26,7 +26,7 @@ class DeepLinkHandler {
       }
 
       if ((uri.scheme == 'http' || uri.scheme == 'https') &&
-          uri.host == 'bottlesupapp.com' &&
+          (uri.host == 'bottlesupapp.com' || uri.host == 'www.bottlesupapp.com') &&
           uri.path.contains('reset-password')) {
         isResetPasswordLink = true;
       }
@@ -44,33 +44,6 @@ class DeepLinkHandler {
         } else {
           _safeGo('/forgot-password');
           return true;
-        }
-      }
-
-      // Handle payment deep links
-      if (uri.scheme == 'bottlesup' && uri.host == 'payment') {
-        final path = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : '';
-        debugPrint('🔗 [DLH-4] Payment deep link — path segment: "$path"');
-
-        if (path == 'success') {
-          final sessionId = uri.queryParameters['session_id'] ?? '';
-          debugPrint('🔗 [DLH-5] Payment SUCCESS — session_id: "$sessionId"');
-
-          if (sessionId.isNotEmpty) {
-            debugPrint('🔗 [DLH-6] Calling _safeGo(/checkout-success?session_id=$sessionId)');
-            _safeGo('/checkout-success?session_id=$sessionId');
-            debugPrint('🔗 [DLH-7] _safeGo returned (navigation scheduled)');
-          } else {
-            debugPrint('🔗 [DLH-6b] No session_id, going to /home');
-            _safeGo('/home');
-          }
-          return true;
-        } else if (path == 'cancel') {
-          debugPrint('🔗 [DLH-4b] Payment CANCEL deep link');
-          _safeGo('/home');
-          return true;
-        } else {
-          debugPrint('⚠️ [DLH-4c] Unknown payment path: "$path"');
         }
       }
 

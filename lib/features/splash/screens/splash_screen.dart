@@ -1,6 +1,5 @@
 import 'package:bottles_up_user/features/auth/models/auth_state.dart';
 import 'package:bottles_up_user/features/auth/providers/auth_provider.dart';
-import 'package:bottles_up_user/features/location/services/location_service.dart';
 import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:bottles_up_user/shared/widgets/loading_indicator.dart';
 import 'package:flutter/material.dart';
@@ -67,17 +66,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       },
       authenticated: (user) async {
         _hasNavigated = true;
-
-        // Check if location screen should be shown
-        final locationService = ref.read(locationServiceProvider);
-        final shouldShowLocationScreen = await locationService.shouldShowLocationScreen();
-
         if (!mounted) return;
-        if (shouldShowLocationScreen) {
-          context.go('/location-permission');
-        } else {
-          context.go('/home');
-        }
+        context.go('/home');
       },
       unauthenticated: () async {
         _hasNavigated = true;

@@ -72,7 +72,32 @@ Non-Dart files that are risky to leave in the repo:
 | `CLEANUP_LIVE_CUSTOMERS.sql` | Deletes Stripe customer rows. Destructive if run by mistake. |
 | `CREATE_TEST_BOOKING.sql` | Test-data script with a personal email address hard-coded in it. |
 
-## What else changed outside this folder
+### Tier 4 — replaced by the site-based screens (24 Oct 2026) — 112 files
+
+The customer app now reads the website's `site_*` tables and calls the website's functions (see `lib/site/`). Everything the new three-tab app (Events, My tickets, Profile) no longer reaches from `lib/main.dart` moved here, with the screens that read the old tables (`events`, `events_bookings`, `table_bookings`, `clubs_with_categories`, `payment_transactions`) and the old payment code (`create-checkout-session`, Stripe's in-app payment sheet). The list is `MANIFEST_tier4_site_migration.txt`.
+
+| Original location | Files | Lines |
+|---|---:|---:|
+| `lib/features/events` | 27 | 11373 |
+| `lib/features/club` | 15 | 4990 |
+| `lib/features/home` | 26 | 4518 |
+| `lib/features/venues` | 10 | 4480 |
+| `lib/core` | 6 | 3399 |
+| `lib/features/payment` | 3 | 2347 |
+| `lib/features/location` | 7 | 1563 |
+| `lib/features/bookings` | 4 | 1557 |
+| `lib/features/notifications` | 7 | 1549 |
+| `lib/features/table_selection` | 1 | 609 |
+| `lib/features/profile` | 1 | 589 |
+| `lib/features/tickets` | 1 | 511 |
+| `lib/shared` | 3 | 303 |
+| `lib/common_widgets` | 1 | 79 |
+
+What changed outside this folder: `lib/routing/app_router.dart` (routes for the old booking, checkout, venue, table-selection, location, orders and notifications screens removed; the event, purchase, payment and ticket routes added), `lib/features/main_navigation/screens/main_navigation_screen.dart` (three tabs), `lib/features/splash/screens/splash_screen.dart` (no location step), `lib/features/auth/services/deep_link_handler.dart` (the old payment links), `lib/features/profile/screens/profile_screen.dart` (Orders and Payment history tiles removed; Delete account uses the website's `delete-account` function), `lib/main.dart` (Stripe's payment sheet is no longer set up) and `pubspec.yaml` (the packages only this code used: `flutter_stripe`, `geolocator`, `geocoding`, `firebase_core`, `firebase_messaging`, `flutter_local_notifications`, `fl_chart`, `table_calendar`, `shimmer`, `carousel_slider`, `font_awesome_flutter`, `smooth_page_indicator`, `path_provider`, `timeago`).
+
+Restoring a Tier 4 file also means putting back its route, its dependency in `pubspec.yaml`, and (for the booking flow) pointing it at the website's tables instead of the old ones; the old tables hold none of the website's data.
+
+## What else changed outside this folder (Tiers 1 to 3)
 
 These are the only code edits (everything else was a pure file move). `restore/tier2_edits.patch` reverses all of them.
 
