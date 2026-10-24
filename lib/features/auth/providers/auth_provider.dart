@@ -166,17 +166,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> signInWithPhone(String phoneNumber) async {
     try {
-      print('DEBUG [AuthNotifier.signInWithPhone]: Setting loading state');
       state = const AuthState.loading();
 
-      print('DEBUG [AuthNotifier.signInWithPhone]: Calling auth service');
       await _authService.signInWithPhone(phoneNumber);
 
       // OTP sent successfully, but user not authenticated yet
-      print('DEBUG [AuthNotifier.signInWithPhone]: OTP sent, setting unauthenticated state');
       state = const AuthState.unauthenticated();
     } catch (e) {
-      print('DEBUG [AuthNotifier.signInWithPhone]: Error occurred - $e');
       state = AuthState.error(e.toString());
     }
   }
@@ -186,26 +182,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String otp,
   }) async {
     try {
-      print('DEBUG [AuthNotifier.verifyPhoneOtp]: Setting loading state');
       state = const AuthState.loading();
 
-      print('DEBUG [AuthNotifier.verifyPhoneOtp]: Calling auth service to verify OTP');
       final response = await _authService.verifyPhoneOtp(
         phoneNumber: phoneNumber,
         otp: otp,
       );
 
-      print('DEBUG [AuthNotifier.verifyPhoneOtp]: Response received, user: ${response.user?.id}');
 
       if (response.user != null) {
-        print('DEBUG [AuthNotifier.verifyPhoneOtp]: Setting authenticated state');
         state = AuthState.authenticated(response.user!);
       } else {
-        print('DEBUG [AuthNotifier.verifyPhoneOtp]: No user in response, setting error state');
         state = const AuthState.error('Failed to verify OTP');
       }
     } catch (e) {
-      print('DEBUG [AuthNotifier.verifyPhoneOtp]: Error occurred - $e');
       state = AuthState.error(e.toString());
     }
   }
@@ -256,8 +246,9 @@ class Auth extends _$Auth {
     required String phoneNumber,
   }) async {
     state = const AsyncLoading();
-    
+
     try {
+      print('🔐 Starting signup for: $email');
       final authService = ref.read(authServiceProvider);
       final response = await authService.signUpWithProfile(
         name: name,
@@ -266,16 +257,22 @@ class Auth extends _$Auth {
         age: age,
         phoneNumber: phoneNumber,
       );
-      
+
+      print('🔐 Signup response received, user ID: ${response.user?.id}');
+
       // Check if signup was successful
       if (response.user?.id != null) {
         // Signup successful - user and profile created
+        print('✅ Signup successful!');
         state = const AsyncData(true);
       } else {
         // This shouldn't happen with our new flow, but handle it just in case
+        print('❌ Signup failed - no user ID');
         throw 'Signup completed but user verification failed. Please try logging in.';
       }
     } catch (error, stackTrace) {
+      print('❌ Signup error: $error');
+      print('Stack trace: $stackTrace');
       state = AsyncError(error, stackTrace);
     }
   }

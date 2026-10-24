@@ -1,70 +1,108 @@
+import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/scheduler.dart';
 
 class DeepLinkHandler {
   static final DeepLinkHandler _instance = DeepLinkHandler._internal();
   factory DeepLinkHandler() => _instance;
   DeepLinkHandler._internal();
 
-  /// Handle incoming deep link URLs
-  static bool handleDeepLink(String link, BuildContext context) {
+  /// Handle incoming deep link URLs.
+  ///
+  /// [context] is optional and only used for showing snackbars — navigation
+  /// always goes through [appRouter] directly so it works regardless of where
+  /// in the widget tree the caller lives (avoids "no GoRouter in scope" crash).
+  static bool handleDeepLink(String link, [BuildContext? context]) {
+    debugPrint('🔗 [DLH-1] handleDeepLink entry: $link');
     try {
-      print('DEBUG: Handling deep link: $link');
-      
       final uri = Uri.parse(link);
-      print('DEBUG: Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}, path: ${uri.path}');
-      print('DEBUG: Query parameters: ${uri.queryParameters}');
-      print('DEBUG: Fragment: ${uri.fragment}');
-      
+      debugPrint('🔗 [DLH-2] Parsed URI — scheme:${uri.scheme} host:${uri.host} path:${uri.path} query:${uri.queryParameters}');
+
       // Handle password reset deep links from multiple schemes
       bool isResetPasswordLink = false;
-      
-      // Check for bottlesup:// scheme
+
       if (uri.scheme == 'bottlesup' && uri.host == 'reset-password') {
         isResetPasswordLink = true;
       }
-      
-      // Check for http/https schemes with reset-password path
-      if ((uri.scheme == 'http' || uri.scheme == 'https') && 
-          uri.host == 'bottlesupapp.com' && 
+
+      if ((uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host == 'bottlesupapp.com' &&
           uri.path.contains('reset-password')) {
         isResetPasswordLink = true;
       }
-      
+
       if (isResetPasswordLink) {
-        // Extract tokens from both query parameters and fragments
+        debugPrint('🔗 [DLH-3] Identified as password reset link');
         final params = extractParams(uri);
-        print('DEBUG: Extracted params: $params');
-        
         final accessToken = params['access_token'] ?? '';
         final refreshToken = params['refresh_token'] ?? '';
         final type = params['type'] ?? '';
-        
-        print('DEBUG: access_token: ${accessToken.isNotEmpty ? "Found" : "Missing"}');
-        print('DEBUG: refresh_token: ${refreshToken.isNotEmpty ? "Found" : "Missing"}');
-        print('DEBUG: type: $type');
-        
+
         if (accessToken.isNotEmpty && type == 'recovery') {
-          print('DEBUG: Valid reset tokens found, navigating to reset screen');
-          
-          // Navigate to reset password screen with tokens
-          context.go('/reset-password?access_token=$accessToken&refresh_token=$refreshToken');
+          _safeGo('/reset-password?access_token=$accessToken&refresh_token=$refreshToken');
           return true;
         } else {
-          print('DEBUG: Invalid or missing tokens - access_token: $accessToken, type: $type');
-          // Show error and redirect to forgot password screen
-          context.go('/forgot-password');
+          _safeGo('/forgot-password');
           return true;
         }
       }
-      
-      // Handle other deep links (add more cases as needed)
-      print('DEBUG: Unhandled deep link: $link');
+
+      // Handle payment deep links
+      if (uri.scheme == 'bottlesup' && uri.host == 'payment') {
+        final path = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : '';
+        debugPrint('🔗 [DLH-4] Payment deep link — path segment: "$path"');
+
+        if (path == 'success') {
+          final sessionId = uri.queryParameters['session_id'] ?? '';
+          debugPrint('🔗 [DLH-5] Payment SUCCESS — session_id: "$sessionId"');
+
+          if (sessionId.isNotEmpty) {
+            debugPrint('🔗 [DLH-6] Calling _safeGo(/checkout-success?session_id=$sessionId)');
+            _safeGo('/checkout-success?session_id=$sessionId');
+            debugPrint('🔗 [DLH-7] _safeGo returned (navigation scheduled)');
+          } else {
+            debugPrint('🔗 [DLH-6b] No session_id, going to /home');
+            _safeGo('/home');
+          }
+          return true;
+        } else if (path == 'cancel') {
+          debugPrint('🔗 [DLH-4b] Payment CANCEL deep link');
+          _safeGo('/home');
+          return true;
+        } else {
+          debugPrint('⚠️ [DLH-4c] Unknown payment path: "$path"');
+        }
+      }
+
+      debugPrint('⚠️ [DLH-8] No handler matched for: $link');
       return false;
-      
-    } catch (e) {
-      print('DEBUG: Error handling deep link: $e');
+    } catch (e, stack) {
+      debugPrint('❌ [DLH-ERR] DeepLinkHandler error: $e');
+      debugPrint('❌ Stack: $stack');
       return false;
+    }
+  }
+
+  /// Navigate safely regardless of current frame phase.
+  static void _safeGo(String location) {
+    debugPrint('🔗 [NAV-1] _safeGo($location) — schedulerPhase: ${SchedulerBinding.instance.schedulerPhase}');
+    void doNav() {
+      debugPrint('🔗 [NAV-2] Executing appRouter.go($location)');
+      try {
+        appRouter.go(location);
+        debugPrint('🔗 [NAV-3] appRouter.go($location) completed');
+      } catch (e, stack) {
+        debugPrint('❌ [NAV-ERR] Navigation error for $location: $e');
+        debugPrint('❌ Stack: $stack');
+      }
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle ||
+        SchedulerBinding.instance.schedulerPhase == SchedulerPhase.postFrameCallbacks) {
+      doNav();
+    } else {
+      debugPrint('🔗 [NAV-1b] Deferring navigation to next frame');
+      SchedulerBinding.instance.addPostFrameCallback((_) => doNav());
     }
   }
 

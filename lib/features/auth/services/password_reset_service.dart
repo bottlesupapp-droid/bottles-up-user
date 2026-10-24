@@ -10,7 +10,6 @@ class PasswordResetService {
   /// Send password reset email with comprehensive error handling
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      print('DEBUG: PasswordResetService - Starting reset for: $email');
       
       // Validate email format first
       if (!_isValidEmail(email)) {
@@ -19,11 +18,9 @@ class PasswordResetService {
 
       // Check if user exists first (optional - some prefer not to reveal this)
       final userExists = await _checkIfUserExists(email);
-      print('DEBUG: User exists check: $userExists');
 
       // TEMPORARILY DISABLED - Skip user check and let Supabase handle it
       // This is more secure as it doesn't reveal if emails exist
-      print('DEBUG: Skipping user existence check - letting Supabase handle it');
 
       // Only proceed if user exists (COMMENTED OUT FOR TESTING)
       // if (!userExists) {
@@ -33,10 +30,8 @@ class PasswordResetService {
       // Send reset email
       await _supabase.auth.resetPasswordForEmail(email);
       
-      print('DEBUG: Password reset email request sent successfully');
       
     } on AuthException catch (e) {
-      print('DEBUG: AuthException: ${e.message} (Code: ${e.statusCode})');
       
       switch (e.statusCode) {
         case '422':
@@ -59,14 +54,11 @@ class PasswordResetService {
           throw 'Unable to send reset email: ${e.message}';
       }
     } on PostgrestException catch (e) {
-      print('DEBUG: PostgrestException: ${e.message}');
       throw 'Database error occurred. Please try again.';
     } on String catch (e) {
       // Re-throw our own error messages without modification
-      print('DEBUG: Custom error message: $e');
       rethrow;
     } catch (e) {
-      print('DEBUG: Unexpected error: $e');
       throw 'An unexpected error occurred. Please check your internet connection and try again.';
     }
   }
@@ -88,16 +80,13 @@ class PasswordResetService {
           .maybeSingle();
       
       if (profileResponse != null) {
-        print('DEBUG: User found in profiles table');
         return true;
       }
       
       // If not in profiles, we'll still try the reset to let Supabase handle it
-      print('DEBUG: User not found in profiles table');
       return false;
       
     } catch (e) {
-      print('DEBUG: Error checking user existence: $e');
       // Return true to proceed with reset attempt anyway (let Supabase handle it)
       return true;
     }
@@ -110,11 +99,9 @@ class PasswordResetService {
     String? refreshToken,
   }) async {
     try {
-      print('DEBUG: Updating password with tokens');
       
       // Check current session - Supabase should have set it automatically from the deep link
       final session = _supabase.auth.currentSession;
-      print('DEBUG: Current session: ${session != null ? "Active" : "None"}');
       
       if (session == null) {
         throw 'Reset session expired. Please request a new password reset link.';
@@ -129,10 +116,8 @@ class PasswordResetService {
         throw 'Failed to update password. Please try again.';
       }
       
-      print('DEBUG: Password updated successfully');
       
     } on AuthException catch (e) {
-      print('DEBUG: AuthException during password update: ${e.message}');
       
       switch (e.statusCode) {
         case '422':
@@ -145,7 +130,6 @@ class PasswordResetService {
           throw 'Failed to update password: ${e.message}';
       }
     } catch (e) {
-      print('DEBUG: Unexpected error during password update: $e');
       throw 'An unexpected error occurred. Please try again.';
     }
   }

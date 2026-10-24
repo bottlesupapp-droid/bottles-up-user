@@ -747,7 +747,7 @@ final tableBookingFormStateProvider = AutoDisposeNotifierProvider<
 );
 
 typedef _$TableBookingFormState = AutoDisposeNotifier<TableBookingFormData>;
-String _$rSVPSubmissionHash() => r'bbcf62df4bfe010cd889dd0a1f58116ddb862395';
+String _$rSVPSubmissionHash() => r'97ff9a7b693006afbe83eb5d1da389df063a784c';
 
 /// See also [RSVPSubmission].
 @ProviderFor(RSVPSubmission)

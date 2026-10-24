@@ -39,6 +39,14 @@
                 <data android:scheme="bottlesup" android:host="auth-callback" />
             </intent-filter>
 
+            <!-- Payment deep link intent filters for Stripe checkout -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="bottlesup" android:host="payment" />
+            </intent-filter>
+
             <!-- HTTP/HTTPS deep link intent filter for web fallback -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

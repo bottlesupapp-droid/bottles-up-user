@@ -1,4 +1,5 @@
 import 'package:bottles_up_user/features/events/models/event.dart';
+import 'package:bottles_up_user/features/bookings/providers/user_bookings_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/event_rsvp.dart';
 import '../services/event_booking_service.dart';
@@ -8,7 +9,7 @@ import '../providers/event_provider.dart';
 part 'event_booking_provider.g.dart';
 
 // Booking option state
-enum BookingOption { guestlist, table }
+enum BookingOption { guestlist, table, ticket }
 
 // Event booking state
 @riverpod
@@ -311,17 +312,15 @@ class RSVPSubmission extends _$RSVPSubmission {
         }
       } catch (emailError) {
         // Email failure shouldn't prevent successful RSVP
-        print('Email sending failed but RSVP was successful: $emailError');
       }
 
       // Invalidate related providers to refresh data
       ref.invalidate(userEventRSVPProvider);
+      ref.invalidate(userBookingsProvider);
 
       state = AsyncValue.data(rsvp);
     } catch (error, stackTrace) {
       // Log error details for debugging
-      print('RSVP Submission Error: $error');
-      print('Form Data: firstName="${formData.firstName}", lastName="${formData.lastName}", email="${formData.email}"');
       state = AsyncValue.error(error, stackTrace);
     }
   }
@@ -352,6 +351,7 @@ class TableBookingSubmission extends _$TableBookingSubmission {
 
       // Invalidate related providers to refresh data
       ref.invalidate(userEventTableBookingProvider);
+      ref.invalidate(userBookingsProvider);
 
       state = AsyncValue.data(booking);
     } catch (error, stackTrace) {

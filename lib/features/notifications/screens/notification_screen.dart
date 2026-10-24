@@ -34,17 +34,6 @@ class NotificationScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Iconsax.setting_2),
-            onPressed: () {
-              // TODO: Open notification settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Notification settings coming soon'),
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: notificationsAsync.when(

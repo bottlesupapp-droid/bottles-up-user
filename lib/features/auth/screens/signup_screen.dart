@@ -464,17 +464,42 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             ),
                             
                             const SizedBox(height: 24),
-                            
-                            SizedBox.shrink(),
-                            
+
+                            // Create Account Button
+                            ElevatedButton(
+                              onPressed: authState.isLoading ? null : _handleSignup,
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: authState.isLoading
+                                  ? LoadingAnimationWidget.inkDrop(
+                                      color: Colors.white,
+                                      size: 24,
+                                    )
+                                  : const Text('Create Account'),
+                            ),
+
                             if (authState.hasError) ...[
                               const SizedBox(height: 16),
-                              Text(
-                                'Signup failed. Please try again.',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
+                                child: Text(
+                                  authState.error?.toString() ?? 'Signup failed. Please try again.',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ],
                             

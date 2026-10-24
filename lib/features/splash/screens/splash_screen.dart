@@ -1,12 +1,12 @@
 import 'package:bottles_up_user/features/auth/models/auth_state.dart';
 import 'package:bottles_up_user/features/auth/providers/auth_provider.dart';
 import 'package:bottles_up_user/features/location/services/location_service.dart';
+import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:bottles_up_user/shared/widgets/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -36,7 +36,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _checkAuthAndNavigate() async {
     if (_hasNavigated) return;
 
+    debugPrint('🚀 [SPLASH-1] Checking auth and navigating...');
+
+    // If the deep link handler already navigated away from splash (e.g. payment
+    // return), bail out — we must not override that navigation.
+    final currentLocation = appRouter.routerDelegate.currentConfiguration.uri.path;
+    debugPrint('🚀 [SPLASH-2] Current location: $currentLocation');
+    if (currentLocation != '/') {
+      _hasNavigated = true;
+      return;
+    }
+
     final authState = ref.read(authStateProvider);
+    debugPrint('🚀 [SPLASH-3] Auth state: $authState');
     
     await authState.when(
       initial: () async {
@@ -55,11 +67,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       },
       authenticated: (user) async {
         _hasNavigated = true;
-        
+
         // Check if location screen should be shown
         final locationService = ref.read(locationServiceProvider);
         final shouldShowLocationScreen = await locationService.shouldShowLocationScreen();
-        
+
+        if (!mounted) return;
         if (shouldShowLocationScreen) {
           context.go('/location-permission');
         } else {
@@ -68,10 +81,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       },
       unauthenticated: () async {
         _hasNavigated = true;
+        if (!mounted) return;
         context.go('/login');
       },
       error: (error) async {
         _hasNavigated = true;
+        if (!mounted) return;
         context.go('/login');
       },
     );
@@ -110,11 +125,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             // App Name with custom font
             Text(
               'Bottles Up',
-              style: GoogleFonts.inter(
+              style: const TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              ).copyWith(color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(height: 24),
             // Loading indicator

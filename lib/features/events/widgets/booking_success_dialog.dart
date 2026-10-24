@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../models/event.dart';
 import '../models/event_rsvp.dart';
 import 'add_to_wallet_button.dart';
+import 'package:bottles_up_user/features/main_navigation/providers/nav_index_provider.dart';
 
 /// Dialog shown after successful table booking
 class BookingSuccessDialog extends ConsumerWidget {
@@ -146,8 +147,9 @@ class BookingSuccessDialog extends ConsumerWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  context.pop(); // Close dialog
-                  context.pop(); // Go back to previous screen
+                  // Switch to Bookings tab (index 2) and navigate home
+                  ref.read(mainNavIndexProvider.notifier).state = 2;
+                  context.go('/home');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,

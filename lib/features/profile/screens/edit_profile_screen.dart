@@ -112,7 +112,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
           final userId = state.user.id;
           final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final filePath = '$userId/$fileName';
+          final filePath = 'profiles/users/$userId/$fileName';
 
           debugPrint('Starting image upload...');
           debugPrint('User ID: $userId');
@@ -127,11 +127,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           // Delete old avatar if exists
           if (_currentAvatarUrl != null) {
             try {
-              final oldPath = _currentAvatarUrl!.split('/').last;
-              debugPrint('Deleting old avatar: $userId/$oldPath');
-              await Supabase.instance.client.storage
-                  .from('profile-pictures')
-                  .remove(['$userId/$oldPath']);
+              final uri = Uri.parse(_currentAvatarUrl!);
+              final segments = uri.pathSegments;
+              final mediaIdx = segments.indexOf('media');
+              if (mediaIdx != -1) {
+                final oldPath = segments.sublist(mediaIdx + 1).join('/');
+                debugPrint('Deleting old avatar: $oldPath');
+                await Supabase.instance.client.storage
+                    .from('media')
+                    .remove([oldPath]);
+              }
             } catch (e) {
               debugPrint('Error deleting old avatar: $e');
             }
@@ -140,7 +145,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           // Upload new image
           debugPrint('Uploading new image...');
           final uploadResult = await Supabase.instance.client.storage
-              .from('profile-pictures')
+              .from('media')
               .upload(
                 filePath,
                 imageFile,
@@ -154,7 +159,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
           // Get public URL
           final publicUrl = Supabase.instance.client.storage
-              .from('profile-pictures')
+              .from('media')
               .getPublicUrl(filePath);
 
           debugPrint('Public URL: $publicUrl');

@@ -1,0 +1,3 @@
+CLEANUP_LIVE_CUSTOMERS.sql
+CREATE_TEST_BOOKING.sql
+supabase/functions/run-migration/index.ts

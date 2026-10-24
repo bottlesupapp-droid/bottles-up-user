@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bottles_up_user/features/auth/screens/forgot_password_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
@@ -8,9 +9,6 @@ import 'package:bottles_up_user/features/events/screens/event_detail_screen.dart
 import 'package:bottles_up_user/features/location/screens/location_permission_screen.dart';
 import 'package:bottles_up_user/features/location/screens/manual_location_entry_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/chat_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/new_direct_message_screen.dart';
-import 'package:bottles_up_user/features/messaging/screens/new_group_screen.dart';
 import 'package:bottles_up_user/features/notifications/screens/notification_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/orders_screen.dart';
@@ -21,20 +19,84 @@ import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
 import 'package:bottles_up_user/features/table_selection/screens/table_selection_screen.dart';
 import 'package:bottles_up_user/features/venues/screens/venue_discovery_screen.dart';
 import 'package:bottles_up_user/features/venues/screens/venue_detail_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_inquiry_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_comparison_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_chat_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_polls_screen.dart';
-import 'package:bottles_up_user/features/events/screens/announcements_screen.dart';
-import 'package:bottles_up_user/features/events/screens/ticket_transfer_screen.dart';
 import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
 import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Routes that do not require authentication.
+const _publicRoutes = {
+  '/',
+  '/login',
+  '/signup',
+  '/phone-login',
+  '/forgot-password',
+  '/reset-password',
+  '/location-permission',
+  '/location/manual-entry',
+};
+
+// Refreshes the router whenever Supabase auth state changes.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  late final StreamSubscription<AuthState> _sub;
+
+  _AuthRefreshNotifier() {
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
+final _authRefreshNotifier = _AuthRefreshNotifier();
 
 final appRouter = GoRouter(
   initialLocation: '/',
-  debugLogDiagnostics: true,
+  refreshListenable: _authRefreshNotifier,
+  redirect: (context, state) {
+    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
+    final path = state.uri.path;
+
+    // Splash manages its own flow — leave it alone.
+    if (path == '/') return null;
+
+    final isPublic = _publicRoutes.any((r) => path == r || path.startsWith('$r/'));
+
+    if (!isLoggedIn && !isPublic) {
+      // Preserve the intended destination so we can redirect back after login.
+      final encoded = Uri.encodeComponent(state.uri.toString());
+      return '/login?redirect=$encoded';
+    }
+
+    if (isLoggedIn && (path == '/login' || path == '/signup' || path == '/phone-login')) {
+      return '/home';
+    }
+
+    return null;
+  },
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('Page not found: ${state.uri}'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => context.go('/home'),
+            child: const Text('Go Home'),
+          ),
+        ],
+      ),
+    ),
+  ),
   routes: [
     GoRoute(
       path: '/',
@@ -65,7 +127,6 @@ final appRouter = GoRouter(
 
         // Parse fragment parameters (Supabase uses fragments)
         if (state.uri.fragment.isNotEmpty) {
-          print('DEBUG: Processing fragment in router: ${state.uri.fragment}');
           final fragmentParts = state.uri.fragment.split('&');
           for (final part in fragmentParts) {
             final keyValue = part.split('=');
@@ -77,9 +138,6 @@ final appRouter = GoRouter(
 
         final accessToken = params['access_token'];
         final refreshToken = params['refresh_token'];
-
-        print(
-            'DEBUG: Router extracted - access_token: ${accessToken != null ? "present" : "missing"}');
 
         return ResetPasswordScreen(
           accessToken: accessToken,
@@ -216,9 +274,9 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/event-detail/:eventId',
+      path: '/events/:id/book',
       builder: (context, state) {
-        final eventId = state.pathParameters['eventId']!;
+        final eventId = state.pathParameters['id']!;
         return EventBookingScreen(eventId: eventId);
       },
     ),
@@ -239,21 +297,6 @@ final appRouter = GoRouter(
         );
       },
     ),
-    GoRoute(
-      path: '/messaging/chat/:conversationId',
-      builder: (context, state) {
-        final conversationId = state.pathParameters['conversationId']!;
-        return ChatScreen(conversationId: conversationId);
-      },
-    ),
-    GoRoute(
-      path: '/messaging/new-direct',
-      builder: (context, state) => const NewDirectMessageScreen(),
-    ),
-    GoRoute(
-      path: '/messaging/new-group',
-      builder: (context, state) => const NewGroupScreen(),
-    ),
     // Venue routes
     GoRoute(
       path: '/venues',
@@ -265,66 +308,6 @@ final appRouter = GoRouter(
         final venueId = state.pathParameters['id']!;
         return VenueDetailScreen(venueId: venueId);
       },
-    ),
-    GoRoute(
-      path: '/venues/:id/inquiry',
-      builder: (context, state) {
-        final venueId = state.pathParameters['id']!;
-        final venueName = state.uri.queryParameters['venueName'] ?? 'Venue';
-        return VenueInquiryScreen(
-          venueId: venueId,
-          venueName: venueName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/venues/compare',
-      builder: (context, state) {
-        final venueIdsParam = state.uri.queryParameters['venueIds'] ?? '';
-        final venueIds = venueIdsParam.split(',').where((id) => id.isNotEmpty).toList();
-        return VenueComparisonScreen(venueIds: venueIds);
-      },
-    ),
-    // Event feature routes
-    GoRoute(
-      path: '/events/:id/chat',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Chat';
-        return EventChatScreen(
-          eventId: eventId,
-          eventName: eventName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/events/:id/polls',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event Polls';
-        return EventPollsScreen(
-          eventId: eventId,
-          eventName: eventName,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/events/:id/announcements',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event';
-        final isHost = state.uri.queryParameters['isHost'] == 'true';
-        return AnnouncementsScreen(
-          eventId: eventId,
-          eventName: eventName,
-          isHost: isHost,
-        );
-      },
-    ),
-    // Ticket transfer route
-    GoRoute(
-      path: '/ticket-transfers',
-      builder: (context, state) => const TicketTransferScreen(),
     ),
     // Ticket detail route
     GoRoute(
@@ -376,6 +359,19 @@ final appRouter = GoRouter(
           eventId: extra['eventId'] as String?,
           description: extra['description'] as String?,
           metadata: extra['metadata'] as Map<String, dynamic>?,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/checkout-success',
+      builder: (context, state) {
+        final sessionId = state.uri.queryParameters['session_id'] ?? '';
+
+        return CheckoutScreen(
+          paymentType: 'success',
+          amount: 0.0,
+          description: 'Payment Success',
+          metadata: {'session_id': sessionId},
         );
       },
     ),

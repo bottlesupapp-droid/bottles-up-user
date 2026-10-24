@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../providers/auth_provider.dart';
+import '../services/auth_rate_limiter.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,11 +24,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _acceptTerms = false;
 
+  Timer? _lockoutTimer;
+  Duration? _lockoutRemaining;
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
+  }
+
+  void _startLockoutCountdown(String email) {
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final remaining = AuthRateLimiter.lockoutRemaining(email);
+      setState(() => _lockoutRemaining = remaining);
+      if (remaining == null) _lockoutTimer?.cancel();
+    });
+  }
+
+  String _fmtDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   String? _validateEmail(String? value) {
@@ -59,12 +81,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       return;
     }
-    
-    if (_formKey.currentState?.validate() ?? false) {
-      await ref.read(authProvider.notifier).login(
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
+
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final email = _emailController.text.trim().toLowerCase();
+
+    if (AuthRateLimiter.isLocked(email)) {
+      _startLockoutCountdown(email);
+      setState(() => _lockoutRemaining = AuthRateLimiter.lockoutRemaining(email));
+      return;
+    }
+
+    final notifier = ref.read(authProvider.notifier);
+    final prevState = ref.read(authProvider);
+
+    await notifier.login(
+      email: email,
+      password: _passwordController.text,
+    );
+
+    final newState = ref.read(authProvider);
+    if (newState.hasError && !prevState.hasError) {
+      AuthRateLimiter.recordFailure(email);
+      final remaining = AuthRateLimiter.attemptsRemaining(email);
+      if (AuthRateLimiter.isLocked(email)) {
+        _startLockoutCountdown(email);
+        setState(() => _lockoutRemaining = AuthRateLimiter.lockoutRemaining(email));
+      } else if (remaining <= 2 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$remaining attempt${remaining == 1 ? '' : 's'} left before 15-min lockout'),
+          backgroundColor: Colors.orange,
+        ));
+      }
+    } else if (newState.value == true) {
+      AuthRateLimiter.reset(email);
     }
   }
 
@@ -282,11 +332,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             
                             const SizedBox(height: 24),
                             
+                            // Lockout banner
+                            if (_lockoutRemaining != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .error
+                                      .withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.lock_clock,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Too many attempts. Try again in ${_fmtDuration(_lockoutRemaining!)}',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .error),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+
                             // Login Button
                             ElevatedButton(
-                              onPressed: authState.isLoading ? null : _handleLogin,
+                              onPressed: (authState.isLoading ||
+                                      _lockoutRemaining != null)
+                                  ? null
+                                  : _handleLogin,
                               style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -296,10 +386,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       color: Colors.white,
                                       size: 24,
                                     )
-                                  : const Text('Login'),
+                                  : Text(_lockoutRemaining != null
+                                      ? 'Locked — ${_fmtDuration(_lockoutRemaining!)}'
+                                      : 'Login'),
                             ),
-                            
-                            if (authState.hasError) ...[
+
+                            if (authState.hasError && _lockoutRemaining == null) ...[
                               const SizedBox(height: 16),
                               Text(
                                 'Login failed. Please try again.',
@@ -335,10 +427,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                             const SizedBox(height: 24),
 
-                            const Spacer(),
-                            
-                            SizedBox.shrink(),
-                            
+                            // Divider
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'or',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Sign Up Button
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Don't have an account? ",
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                TextButton(
+                                  onPressed: authState.isLoading
+                                      ? null
+                                      : () {
+                                          context.push('/signup');
+                                        },
+                                  child: Text(
+                                    'Sign Up',
+                                    style: TextStyle(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
                             const SizedBox(height: 16),
                           ],
                         ),

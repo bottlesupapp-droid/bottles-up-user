@@ -60,11 +60,18 @@ serve(async (req) => {
       throw new Error('Invalid amount')
     }
 
-    // Get Stripe secret key
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    // Get Stripe secret key - use TEST key for sandbox payments
+    const stripeKey = Deno.env.get('test_SK')
     if (!stripeKey) {
-      throw new Error('Stripe secret key not configured')
+      throw new Error('Stripe test secret key not configured')
     }
+
+    // Verify it's a test key
+    if (!stripeKey.startsWith('sk_test_')) {
+      throw new Error('Invalid Stripe test key. Expected sk_test_... for test mode.')
+    }
+
+    console.log('✅ Checkout using TEST mode Stripe secret key')
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: '2023-10-16',

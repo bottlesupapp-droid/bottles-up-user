@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Shared monorepo package
+  shared:
+    path: ../../packages/shared
+
   cupertino_icons: ^1.0.2
   flutter_riverpod: ^2.4.9
   freezed_annotation: ^2.4.1
@@ -63,6 +68,11 @@ flutter:
     - assets/
     - assets/app_logo.jpg
     - assets/app_logo.svg
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
 
 flutter_launcher_icons:
   android: "launcher_icon"

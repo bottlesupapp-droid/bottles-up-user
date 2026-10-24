@@ -108,7 +108,6 @@ class EventBookingService {
           .single();
 
       // The database trigger will handle sending the approval email
-      print('RSVP verified successfully for code: $verificationCode');
     } catch (e) {
       throw Exception('Failed to verify RSVP: $e');
     }
@@ -128,18 +127,6 @@ class EventBookingService {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      // Check if user already has a table booking for this event
-      final existingBooking = await _supabase
-          .from('event_table_bookings')
-          .select()
-          .eq('event_id', eventId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      if (existingBooking != null) {
-        throw Exception('You already have a table booking for this event');
-      }
-
       // Verify the table exists and is available for this event
       final tableExists = await _supabase
           .from('event_tables')
@@ -152,6 +139,17 @@ class EventBookingService {
       if (tableExists == null) {
         throw Exception('Selected table is not available for this event');
       }
+
+      // Fetch event_date so the booking row is sortable in the bookings tab
+      String? eventDate;
+      try {
+        final eventRow = await _supabase
+            .from('events')
+            .select('event_date')
+            .eq('id', eventId)
+            .single();
+        eventDate = eventRow['event_date'] as String?;
+      } catch (_) {}
 
       final response = await _supabase
           .from('event_table_bookings')
@@ -166,6 +164,7 @@ class EventBookingService {
             'status': 'pending_payment',
             'payment_status': 'pending',
             'contact_email': user.email,
+            if (eventDate != null) 'event_date': eventDate,
           })
           .select()
           .single();
