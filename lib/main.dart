@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'package:bottles_up_user/core/config/payment_config.dart';
 import 'package:bottles_up_user/core/error/global_error_handler.dart';
 import 'package:bottles_up_user/features/auth/services/deep_link_listener.dart';
 import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:bottles_up_user/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -19,23 +17,6 @@ Future<void> main() async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-
-      // Initialize Stripe. The publishable key comes from dart-define; if not
-      // set at build time the payment service will set it later from the edge
-      // function response. urlScheme enables 3DS redirects back to the app on iOS.
-      // NOTE: merchantIdentifier (Apple Pay) is intentionally NOT set here —
-      // Apple Pay requires a registered merchant ID + com.apple.developer.in-app-payments
-      // entitlement. Until those are configured in Apple Developer Portal, setting
-      // merchantIdentifier causes internal Apple Pay validation to hang on iOS.
-      try {
-        Stripe.publishableKey = PaymentConfig.stripePublishableKey;
-        Stripe.urlScheme = 'bottlesup';
-        await Stripe.instance.applySettings();
-      } catch (e) {
-        // Key not provided at build time — payment service sets it dynamically.
-        debugPrint('⚠️ Stripe initialization skipped: $e');
-        debugPrint('Stripe will be initialized with key from payment intent');
-      }
 
       // Initialize global error handler
       GlobalErrorHandler().initialize(

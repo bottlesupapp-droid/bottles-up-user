@@ -4,23 +4,16 @@ import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/reset_password_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/signup_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_booking_screen.dart';
-import 'package:bottles_up_user/features/events/screens/event_detail_screen.dart';
-import 'package:bottles_up_user/features/location/screens/location_permission_screen.dart';
-import 'package:bottles_up_user/features/location/screens/manual_location_entry_screen.dart';
+import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
-import 'package:bottles_up_user/features/notifications/screens/notification_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
-import 'package:bottles_up_user/features/profile/screens/orders_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/privacy_policy_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen.dart';
 import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
-import 'package:bottles_up_user/features/table_selection/screens/table_selection_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_discovery_screen.dart';
-import 'package:bottles_up_user/features/venues/screens/venue_detail_screen.dart';
-import 'package:bottles_up_user/features/tickets/screens/ticket_detail_screen.dart';
-import 'package:bottles_up_user/features/payment/screens/checkout_screen.dart';
+import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
+import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
+import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -33,8 +26,6 @@ const _publicRoutes = {
   '/phone-login',
   '/forgot-password',
   '/reset-password',
-  '/location-permission',
-  '/location/manual-entry',
 };
 
 // Refreshes the router whenever Supabase auth state changes.
@@ -97,283 +88,161 @@ final appRouter = GoRouter(
       ),
     ),
   ),
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
-    GoRoute(
-      path: '/signup',
-      builder: (context, state) => const SignupScreen(),
-    ),
-    GoRoute(
-      path: '/phone-login',
-      builder: (context, state) => const PhoneLoginScreen(),
-    ),
-    GoRoute(
-      path: '/forgot-password',
-      builder: (context, state) => const ForgotPasswordScreen(),
-    ),
-    GoRoute(
-      path: '/reset-password',
-      builder: (context, state) {
-        // Extract parameters from both query and fragment
-        final params = <String, String>{};
-        params.addAll(state.uri.queryParameters);
+  routes: appRoutes,
+);
 
-        // Parse fragment parameters (Supabase uses fragments)
-        if (state.uri.fragment.isNotEmpty) {
-          final fragmentParts = state.uri.fragment.split('&');
-          for (final part in fragmentParts) {
-            final keyValue = part.split('=');
-            if (keyValue.length == 2) {
-              params[keyValue[0]] = Uri.decodeComponent(keyValue[1]);
-            }
+/// Every screen the app can open. Apart from the router so a test can open them without a signed-in session.
+final List<RouteBase> appRoutes = [
+  GoRoute(
+    path: '/',
+    builder: (context, state) => const SplashScreen(),
+  ),
+  GoRoute(
+    path: '/login',
+    builder: (context, state) => const LoginScreen(),
+  ),
+  GoRoute(
+    path: '/signup',
+    builder: (context, state) => const SignupScreen(),
+  ),
+  GoRoute(
+    path: '/phone-login',
+    builder: (context, state) => const PhoneLoginScreen(),
+  ),
+  GoRoute(
+    path: '/forgot-password',
+    builder: (context, state) => const ForgotPasswordScreen(),
+  ),
+  GoRoute(
+    path: '/reset-password',
+    builder: (context, state) {
+      // Extract parameters from both query and fragment
+      final params = <String, String>{};
+      params.addAll(state.uri.queryParameters);
+
+      // Parse fragment parameters (Supabase uses fragments)
+      if (state.uri.fragment.isNotEmpty) {
+        final fragmentParts = state.uri.fragment.split('&');
+        for (final part in fragmentParts) {
+          final keyValue = part.split('=');
+          if (keyValue.length == 2) {
+            params[keyValue[0]] = Uri.decodeComponent(keyValue[1]);
           }
         }
+      }
 
-        final accessToken = params['access_token'];
-        final refreshToken = params['refresh_token'];
+      final accessToken = params['access_token'];
+      final refreshToken = params['refresh_token'];
 
-        return ResetPasswordScreen(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
+      return ResetPasswordScreen(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+    },
+  ),
+  GoRoute(
+    path: '/home',
+    builder: (context, state) => const MainNavigationScreen(),
+  ),
+  GoRoute(
+    path: '/profile/edit',
+    pageBuilder: (context, state) => CustomTransitionPage(
+      key: state.pageKey,
+      child: const EditProfileScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+          ),
+          child: child,
         );
       },
     ),
-    GoRoute(
-      path: '/location-permission',
-      builder: (context, state) => const LocationPermissionScreen(),
-    ),
-    GoRoute(
-      path: '/location/manual-entry',
-      builder: (context, state) => const ManualLocationEntryScreen(),
-    ),
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => const MainNavigationScreen(),
-    ),
-    GoRoute(
-      path: '/profile/edit',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const EditProfileScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
+  ),
+  GoRoute(
+    path: '/profile/settings',
+    pageBuilder: (context, state) => CustomTransitionPage(
+      key: state.pageKey,
+      child: const SettingsScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
             ),
-            child: child,
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/profile/orders',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const OrdersScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-            ),
-            child: child,
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/profile/settings',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const SettingsScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-            ),
-            child: child,
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/profile/privacy-policy',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const PrivacyPolicyScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-            ),
-            child: child,
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/profile/terms-conditions',
-      pageBuilder: (context, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const TermsConditionsScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-            ),
-            child: child,
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/notifications',
-      builder: (context, state) => const NotificationScreen(),
-    ),
-    GoRoute(
-      path: '/events/:id',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        return EventDetailScreen(eventId: eventId);
-      },
-    ),
-    GoRoute(
-      path: '/events/:id/book',
-      builder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        return EventBookingScreen(eventId: eventId);
-      },
-    ),
-    GoRoute(
-      path: '/table-selection/:clubId',
-      builder: (context, state) {
-        final clubId = state.pathParameters['clubId']!;
-        final date = state.uri.queryParameters['date'];
-        final timeSlot = state.uri.queryParameters['timeSlot'];
-        final guestCount = int.tryParse(state.uri.queryParameters['guestCount'] ?? '4') ?? 4;
-
-        return TableSelectionScreen(
-          clubId: clubId,
-          date: date,
-          timeSlot: timeSlot,
-          guestCount: guestCount,
-          clubName: state.uri.queryParameters['clubName'],
+          ),
+          child: child,
         );
       },
     ),
-    // Venue routes
-    GoRoute(
-      path: '/venues',
-      builder: (context, state) => const VenueDiscoveryScreen(),
-    ),
-    GoRoute(
-      path: '/venues/:id',
-      builder: (context, state) {
-        final venueId = state.pathParameters['id']!;
-        return VenueDetailScreen(venueId: venueId);
-      },
-    ),
-    // Ticket detail route
-    GoRoute(
-      path: '/tickets/:id',
-      builder: (context, state) {
-        final ticketId = state.pathParameters['id']!;
-        final eventName = state.uri.queryParameters['eventName'] ?? 'Event';
-        final venueName = state.uri.queryParameters['venueName'] ?? 'Venue';
-        final eventDate = state.uri.queryParameters['eventDate'] ?? '';
-        final eventTime = state.uri.queryParameters['eventTime'] ?? '';
-        final ticketQuantity = int.tryParse(state.uri.queryParameters['ticketQuantity'] ?? '1') ?? 1;
-        final ticketPrice = state.uri.queryParameters['ticketPrice'] ?? '0';
-        final totalAmount = state.uri.queryParameters['totalAmount'] ?? '0';
-        final status = state.uri.queryParameters['status'] ?? 'pending';
-        final confirmationCode = state.uri.queryParameters['confirmationCode'];
-
-        return TicketDetailScreen(
-          ticketId: ticketId,
-          eventName: eventName,
-          venueName: venueName,
-          eventDate: eventDate,
-          eventTime: eventTime,
-          ticketQuantity: ticketQuantity,
-          ticketPrice: ticketPrice,
-          totalAmount: totalAmount,
-          status: status,
-          confirmationCode: confirmationCode,
+  ),
+  GoRoute(
+    path: '/profile/privacy-policy',
+    pageBuilder: (context, state) => CustomTransitionPage(
+      key: state.pageKey,
+      child: const PrivacyPolicyScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+          ),
+          child: child,
         );
       },
     ),
-    GoRoute(
-      path: '/checkout',
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
-
-        if (extra == null) {
-          // Fallback if no data provided
-          return const CheckoutScreen(
-            paymentType: 'general',
-            amount: 0.0,
-            description: 'Payment',
-          );
-        }
-
-        return CheckoutScreen(
-          paymentType: extra['paymentType'] as String? ?? 'general',
-          amount: (extra['amount'] as num?)?.toDouble() ?? 0.0,
-          bookingId: extra['bookingId'] as String?,
-          eventId: extra['eventId'] as String?,
-          description: extra['description'] as String?,
-          metadata: extra['metadata'] as Map<String, dynamic>?,
+  ),
+  GoRoute(
+    path: '/profile/terms-conditions',
+    pageBuilder: (context, state) => CustomTransitionPage(
+      key: state.pageKey,
+      child: const TermsConditionsScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+          ),
+          child: child,
         );
       },
     ),
-    GoRoute(
-      path: '/checkout-success',
-      builder: (context, state) {
-        final sessionId = state.uri.queryParameters['session_id'] ?? '';
-
-        return CheckoutScreen(
-          paymentType: 'success',
-          amount: 0.0,
-          description: 'Payment Success',
-          metadata: {'session_id': sessionId},
-        );
-      },
-    ),
-  ],
-);
+  ),
+  GoRoute(
+    path: '/events/:id',
+    builder: (context, state) => EventPageScreen(eventId: state.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/events/:id/tickets/:tierId',
+    builder: (context, state) => TicketPurchaseScreen(eventId: state.pathParameters['id']!, tierId: state.pathParameters['tierId']!),
+  ),
+  GoRoute(
+    path: '/payment',
+    redirect: (context, state) => state.extra is PaymentWaitArgs ? null : '/home',
+    builder: (context, state) => PaymentScreen(args: state.extra as PaymentWaitArgs),
+  ),
+  GoRoute(
+    path: '/tickets/:id',
+    builder: (context, state) => TicketScreen(orderId: state.pathParameters['id']!),
+  ),
+];
