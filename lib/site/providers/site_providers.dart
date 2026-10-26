@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/site_event.dart';
 import '../models/my_night.dart';
+import '../models/site_contact.dart';
 import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../models/ticket_order.dart';
@@ -12,6 +13,7 @@ import '../services/booking_actions_service.dart';
 import '../services/guest_passes_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
+import '../services/site_contact_service.dart';
 import '../services/site_events_service.dart';
 import '../services/table_checkout_service.dart';
 import '../services/ticket_checkout_service.dart';
@@ -28,6 +30,7 @@ final tableCheckoutServiceProvider = Provider<TableCheckoutService>((ref) => Tab
 final myBookingsServiceProvider = Provider<MyBookingsService>((ref) => MyBookingsService(ref.watch(siteClientProvider)));
 final guestPassesServiceProvider = Provider<GuestPassesService>((ref) => GuestPassesService(ref.watch(siteClientProvider)));
 final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => BookingActionsService(ref.watch(siteClientProvider)));
+final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
 
 /// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
@@ -77,6 +80,9 @@ final tableBookingProvider = FutureProvider.autoDispose.family<TableBooking?, St
 
 /// The guests on a table booking, by the booking's confirmation code.
 final guestRosterProvider = FutureProvider.autoDispose.family<GuestRoster, String>((ref, code) => ref.watch(guestPassesServiceProvider).roster(code));
+
+/// How to reach BottlesUp, from the CMS.
+final siteContactProvider = FutureProvider.autoDispose<SiteContact>((ref) => ref.watch(siteContactServiceProvider).load());
 
 final myTicketOrdersProvider = FutureProvider.autoDispose<List<TicketOrder>>((ref) => ref.watch(myTicketsServiceProvider).orders());
 

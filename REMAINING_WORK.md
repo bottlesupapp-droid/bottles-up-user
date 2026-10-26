@@ -44,7 +44,7 @@ The website only has a refund request for table bookings (`guest_request_refund`
 
 ### B6. Profile and settings
 - [ ] Edit profile and avatar still use the old `profiles` and `media` tables: move to the site schema or keep deliberately.
-- [ ] Review the Settings screen for legacy leftovers.
+- [x] Settings replaced (27 Oct): the old screen was switches that did nothing (push, analytics, location, dark mode, currency, clear cache) and invented e-mail addresses. The new "Help and settings" shows the account, how notifications work, BottlesUp's real contact details from the CMS (`site_content`; nothing is shown that the team has not set), what the app collects, the privacy policy, and a data-copy request by e-mail. The old file is in `_archive/`.
 - [x] Privacy opens the website's page (25 Oct). Terms still shows text nobody at the client wrote: needs A6.
 
 ### B8. The client's social plan (new 25 Oct, needs decisions)
@@ -79,7 +79,7 @@ Store listing
 ## D. Quality and clean-up
 
 - [ ] Run on a real phone or the simulator (only when the user asks for a build). Checks: sign in, open an event, buy with a Stripe test card, see the ticket and QR in My tickets, scan it with the vendor door scanner, book a table, delete a test account.
-- [ ] Clear the 36 analyzer warnings left in the old login and theme code.
+- [x] Analyzer 278 -> 6 (27 Oct). The 6 left are the hidden Google/Apple sign-in buttons (`_handleSocialLogin`, `_SocialLoginButton` in login and sign-up): they go when decision A7 (which sign-in methods) is made. Also removed: log lines that printed a person's e-mail at sign-up, and a dead second password-reset path.
 - [x] Read what production holds (24 Oct, `docs/production_snapshot/`). `supabase db pull` itself was not run (it needs Docker, which this machine does not have, and it writes a migration into the website repo).
 - [ ] **For the website, not the app:** three customer "read your own rows" policies (table bookings, booking bottles, bottle substitutions) exist only in production, in no file of the website repo; a database rebuilt from the repo shows customers none of their table bookings. `docs/production_snapshot/customer_read_policies.sql` has them for reference. Recommended: a website migration written `drop policy if exists` + `create policy`, which changes nothing in production. Needs the user's yes.
 - [ ] **Check the Supabase Auth setting "Confirm email" is ON** (Dashboard > Authentication > Providers > Email). The policies compare e-mail addresses and never look at confirmation; today it is harmless (1 of 84 accounts has an unconfirmed e-mail, matching no booking), but with the switch off anyone could read another person's bookings by signing up with their address.

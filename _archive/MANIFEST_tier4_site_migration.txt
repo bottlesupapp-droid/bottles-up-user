@@ -111,3 +111,4 @@ lib/shared/widgets/shimmer_loading.dart
 lib/shared/widgets/widgets.dart
 lib/core/config/payment_config.dart
 lib/features/profile/screens/privacy_policy_screen.dart
+lib/features/profile/screens/settings_screen.dart

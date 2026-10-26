@@ -93,7 +93,7 @@ class AppleSignInService {
       } else if (e.code == AuthorizationErrorCode.unknown) {
         throw 'Unknown Apple Sign In error. Please try again.';
       }
-      throw 'Apple Sign In error: ${e.message ?? e.code.toString()}';
+      throw 'Apple Sign In error: ${e.message}';
     } on AuthException catch (e) {
       debugPrint('🔴 Supabase Auth Exception: ${e.message}');
       if (e.message.contains('timeout') || e.message.contains('network')) {

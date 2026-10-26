@@ -377,7 +377,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                 const Color(0xFF171214).withValues(alpha: 0.60),
               ],
             ),
-            border: Border(
+            border: const Border(
               bottom: BorderSide(
                 color: _kGlassBorder,
                 width: 0.5,

@@ -190,7 +190,8 @@ class GoogleSignInService {
   static Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
-    } catch (e) {
+    } catch (_) {
+      // Signing out of Google is best effort: the BottlesUp session is ended either way.
     }
   }
 

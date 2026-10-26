@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bottles_up_user/features/auth/models/auth_state.dart';
 import 'package:bottles_up_user/features/auth/services/auth_service.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
@@ -248,7 +249,6 @@ class Auth extends _$Auth {
     state = const AsyncLoading();
 
     try {
-      print('🔐 Starting signup for: $email');
       final authService = ref.read(authServiceProvider);
       final response = await authService.signUpWithProfile(
         name: name,
@@ -258,21 +258,16 @@ class Auth extends _$Auth {
         phoneNumber: phoneNumber,
       );
 
-      print('🔐 Signup response received, user ID: ${response.user?.id}');
-
       // Check if signup was successful
       if (response.user?.id != null) {
         // Signup successful - user and profile created
-        print('✅ Signup successful!');
         state = const AsyncData(true);
       } else {
         // This shouldn't happen with our new flow, but handle it just in case
-        print('❌ Signup failed - no user ID');
         throw 'Signup completed but user verification failed. Please try logging in.';
       }
     } catch (error, stackTrace) {
-      print('❌ Signup error: $error');
-      print('Stack trace: $stackTrace');
+      debugPrint('Signup error: $error');
       state = AsyncError(error, stackTrace);
     }
   }

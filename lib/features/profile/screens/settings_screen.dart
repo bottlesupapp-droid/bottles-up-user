@@ -1,475 +1,80 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gap/gap.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
-// Settings providers
-final notificationsProvider = StateNotifierProvider<NotificationSettingsNotifier, NotificationSettings>((ref) {
-  return NotificationSettingsNotifier();
-});
+import '../../../site/models/site_contact.dart';
+import '../../../site/providers/site_providers.dart';
+import '../../../site/site_error.dart';
 
-final privacyProvider = StateNotifierProvider<PrivacySettingsNotifier, PrivacySettings>((ref) {
-  return PrivacySettingsNotifier();
-});
-
-final appPreferencesProvider = StateNotifierProvider<AppPreferencesNotifier, AppPreferences>((ref) {
-  return AppPreferencesNotifier();
-});
-
-// Settings models
-class NotificationSettings {
-  final bool pushNotifications;
-  final bool emailNotifications;
-  final bool bookingReminders;
-  final bool promotionalOffers;
-
-  NotificationSettings({
-    required this.pushNotifications,
-    required this.emailNotifications,
-    required this.bookingReminders,
-    required this.promotionalOffers,
-  });
-
-  NotificationSettings copyWith({
-    bool? pushNotifications,
-    bool? emailNotifications,
-    bool? bookingReminders,
-    bool? promotionalOffers,
-  }) {
-    return NotificationSettings(
-      pushNotifications: pushNotifications ?? this.pushNotifications,
-      emailNotifications: emailNotifications ?? this.emailNotifications,
-      bookingReminders: bookingReminders ?? this.bookingReminders,
-      promotionalOffers: promotionalOffers ?? this.promotionalOffers,
-    );
-  }
-}
-
-class PrivacySettings {
-  final bool shareLocation;
-  final bool allowAnalytics;
-
-  PrivacySettings({
-    required this.shareLocation,
-    required this.allowAnalytics,
-  });
-
-  PrivacySettings copyWith({
-    bool? shareLocation,
-    bool? allowAnalytics,
-  }) {
-    return PrivacySettings(
-      shareLocation: shareLocation ?? this.shareLocation,
-      allowAnalytics: allowAnalytics ?? this.allowAnalytics,
-    );
-  }
-}
-
-class AppPreferences {
-  final bool darkMode;
-  final String currency;
-
-  AppPreferences({
-    required this.darkMode,
-    required this.currency,
-  });
-
-  AppPreferences copyWith({
-    bool? darkMode,
-    String? currency,
-  }) {
-    return AppPreferences(
-      darkMode: darkMode ?? this.darkMode,
-      currency: currency ?? this.currency,
-    );
-  }
-}
-
-// State notifiers
-class NotificationSettingsNotifier extends StateNotifier<NotificationSettings> {
-  NotificationSettingsNotifier() : super(NotificationSettings(
-    pushNotifications: true,
-    emailNotifications: true,
-    bookingReminders: true,
-    promotionalOffers: false,
-  )) {
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = NotificationSettings(
-      pushNotifications: prefs.getBool('push_notifications') ?? true,
-      emailNotifications: prefs.getBool('email_notifications') ?? true,
-      bookingReminders: prefs.getBool('booking_reminders') ?? true,
-      promotionalOffers: prefs.getBool('promotional_offers') ?? false,
-    );
-  }
-
-  Future<void> updatePushNotifications(bool value) async {
-    state = state.copyWith(pushNotifications: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('push_notifications', value);
-  }
-
-  Future<void> updateEmailNotifications(bool value) async {
-    state = state.copyWith(emailNotifications: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('email_notifications', value);
-  }
-
-  Future<void> updateBookingReminders(bool value) async {
-    state = state.copyWith(bookingReminders: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('booking_reminders', value);
-  }
-
-  Future<void> updatePromotionalOffers(bool value) async {
-    state = state.copyWith(promotionalOffers: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('promotional_offers', value);
-  }
-}
-
-class PrivacySettingsNotifier extends StateNotifier<PrivacySettings> {
-  PrivacySettingsNotifier() : super(PrivacySettings(
-    shareLocation: true,
-    allowAnalytics: true,
-  )) {
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = PrivacySettings(
-      shareLocation: prefs.getBool('share_location') ?? true,
-      allowAnalytics: prefs.getBool('allow_analytics') ?? true,
-    );
-  }
-
-  Future<void> updateShareLocation(bool value) async {
-    state = state.copyWith(shareLocation: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('share_location', value);
-  }
-
-  Future<void> updateAllowAnalytics(bool value) async {
-    state = state.copyWith(allowAnalytics: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('allow_analytics', value);
-  }
-}
-
-class AppPreferencesNotifier extends StateNotifier<AppPreferences> {
-  AppPreferencesNotifier() : super(AppPreferences(
-    darkMode: false,
-    currency: 'USD',
-  )) {
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = AppPreferences(
-      darkMode: prefs.getBool('dark_mode') ?? false,
-      currency: prefs.getString('currency') ?? 'USD',
-    );
-  }
-
-  Future<void> updateDarkMode(bool value) async {
-    state = state.copyWith(darkMode: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('dark_mode', value);
-  }
-
-  Future<void> updateCurrency(String value) async {
-    state = state.copyWith(currency: value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('currency', value);
-  }
-}
-
+/// Help and settings, with nothing in it that does not do anything: who you are signed in as, how notifications work, how to reach BottlesUp (as the team has set it in the CMS), and your
+/// data. There are no switches for things the app does not have (push, analytics, location, themes, currencies).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _sendEmail(String email) async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: email,
-      queryParameters: {
-        'subject': 'Settings Support - BottlesUp',
-      },
-    );
-    await launchUrl(emailLaunchUri);
+  Future<void> _open(BuildContext context, WidgetRef ref, Uri uri) async {
+    final ok = await ref.read(urlOpenerProvider)(uri);
+    if (!ok && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('That could not be opened on this phone.')));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationSettings = ref.watch(notificationsProvider);
-    final privacySettings = ref.watch(privacyProvider);
-    final appPreferences = ref.watch(appPreferencesProvider);
-
+    final theme = Theme.of(context);
+    final contact = ref.watch(siteContactProvider);
+    final email = ref.watch(accountProvider).valueOrNull?.email;
+    Widget heading(String text, String key) => Padding(padding: const EdgeInsets.fromLTRB(0, 22, 0, 6), child: Text(text, key: Key(key), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Help and settings')),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        key: const Key('settings'),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
-          // Notifications Section
-          _buildSectionHeader(context, 'Notifications', Iconsax.notification),
-          _buildSwitchTile(
-            context,
-            'Push Notifications',
-            'Receive notifications on your device',
-            notificationSettings.pushNotifications,
-            (value) => ref.read(notificationsProvider.notifier).updatePushNotifications(value),
-          ),
-          _buildSwitchTile(
-            context,
-            'Email Notifications',
-            'Receive notifications via email',
-            notificationSettings.emailNotifications,
-            (value) => ref.read(notificationsProvider.notifier).updateEmailNotifications(value),
-          ),
-          _buildSwitchTile(
-            context,
-            'Booking Reminders',
-            'Get reminded about upcoming bookings',
-            notificationSettings.bookingReminders,
-            (value) => ref.read(notificationsProvider.notifier).updateBookingReminders(value),
-          ),
-          _buildSwitchTile(
-            context,
-            'Promotional Offers',
-            'Receive special offers and deals',
-            notificationSettings.promotionalOffers,
-            (value) => ref.read(notificationsProvider.notifier).updatePromotionalOffers(value),
-          ),
-          const Gap(24),
-
-          // Privacy Section
-          _buildSectionHeader(context, 'Privacy', Iconsax.shield_security),
-          _buildSwitchTile(
-            context,
-            'Location Access',
-            'Allow app to access your location',
-            privacySettings.shareLocation,
-            (value) => ref.read(privacyProvider.notifier).updateShareLocation(value),
-          ),
-          _buildSwitchTile(
-            context,
-            'Analytics',
-            'Help improve the app with usage data',
-            privacySettings.allowAnalytics,
-            (value) => ref.read(privacyProvider.notifier).updateAllowAnalytics(value),
-          ),
-          const Gap(24),
-
-          // App Preferences Section
-          _buildSectionHeader(context, 'Preferences', Iconsax.setting_2),
-          _buildSwitchTile(
-            context,
-            'Dark Mode',
-            'Use dark theme for the app',
-            appPreferences.darkMode,
-            (value) => ref.read(appPreferencesProvider.notifier).updateDarkMode(value),
-          ),
-          _buildActionTile(
-            context,
-            Iconsax.dollar_circle,
-            'Currency',
-            'Current: ${appPreferences.currency}',
-            () => _showCurrencyDialog(context, ref, appPreferences.currency),
-          ),
-          const Gap(24),
-
-          // Data Management Section
-          _buildSectionHeader(context, 'Data Management', Iconsax.archive),
-          _buildActionTile(
-            context,
-            Iconsax.refresh,
-            'Clear Cache',
-            'Free up storage space',
-            () => _showClearCacheDialog(context),
-          ),
-          _buildActionTile(
-            context,
-            Iconsax.export,
-            'Export Data',
-            'Download your personal data',
-            () => _sendEmail('data-export@bottlesup.com'),
-          ),
-          _buildActionTile(
-            context,
-            Iconsax.trash,
-            'Delete Account',
-            'Permanently delete your account',
-            () => _showDeleteAccountDialog(context),
-            isDestructive: true,
-          ),
-          const Gap(24),
-
-          // Support Section
-          _buildSectionHeader(context, 'Support', Iconsax.support),
-          _buildActionTile(
-            context,
-            Iconsax.message_question,
-            'Contact Support',
-            'Get help with the app',
-            () => _sendEmail('support@bottlesup.com'),
-          ),
-          const Gap(32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const Gap(8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile(
-    BuildContext context,
-    String title,
-    String subtitle,
-    bool value,
-    Function(bool) onChanged,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: SwitchListTile(
-        title: Text(title),
-        subtitle: Text(subtitle),
-        value: value,
-        onChanged: onChanged,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      ),
-    );
-  }
-
-  Widget _buildActionTile(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isDestructive ? Colors.red : null,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isDestructive ? Colors.red : null,
-          ),
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      ),
-    );
-  }
-
-  void _showCurrencyDialog(BuildContext context, WidgetRef ref, String currentCurrency) {
-    final currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD'];
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Currency'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: currencies.map((currency) => RadioListTile<String>(
-            title: Text(currency),
-            value: currency,
-            groupValue: currentCurrency,
-            onChanged: (value) {
-              if (value != null) {
-                ref.read(appPreferencesProvider.notifier).updateCurrency(value);
-                Navigator.of(context).pop();
-              }
-            },
-          )).toList(),
-        ),
-      ),
-    );
-  }
-
-  void _showClearCacheDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('This will remove all cached data. Are you sure?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared successfully')),
+          heading('Your account', 'settings-account-heading'),
+          Text(email == null ? 'You are signed in.' : 'Signed in as $email', key: const Key('settings-account')),
+          heading('Notifications', 'settings-notifications-heading'),
+          Text('BottlesUp e-mails your tickets, booking confirmations and updates. Push notifications are not available yet, so there is nothing to switch on or off.', key: const Key('settings-notifications'), style: theme.textTheme.bodyMedium),
+          heading('Contact BottlesUp', 'settings-contact-heading'),
+          contact.when(
+            loading: () => const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator())),
+            error: (error, _) => Row(
+              children: [
+                Expanded(child: Text(error is SiteException ? error.message : loadFailedMessage('the contact details'), key: const Key('contact-failed'), style: TextStyle(color: theme.colorScheme.error))),
+                TextButton(key: const Key('contact-retry'), onPressed: () => ref.invalidate(siteContactProvider), child: const Text('Try again')),
+              ],
+            ),
+            data: (c) {
+              if (c.isEmpty) return Text('Contact details are not available right now.', key: const Key('contact-none'), style: theme.textTheme.bodyMedium);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (c.address != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(c.address!, key: const Key('contact-address'))),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (c.hasEmail) OutlinedButton.icon(key: const Key('contact-email'), onPressed: () => _open(context, ref, supportMailto(c.email!, subject: 'BottlesUp help', message: '', from: email)), icon: const Icon(Icons.mail_outline), label: Text(c.email!)),
+                      if (c.hasPhone) OutlinedButton.icon(key: const Key('contact-phone'), onPressed: () => _open(context, ref, telUri(c.phone!)!), icon: const Icon(Icons.phone_outlined), label: Text(c.phone!)),
+                      for (final s in c.socials) OutlinedButton(key: Key('contact-social-${s.name.toLowerCase()}'), onPressed: () => _open(context, ref, s.url), child: Text(s.name)),
+                    ],
+                  ),
+                ],
               );
             },
-            child: const Text('Clear'),
           ),
+          heading('Your data', 'settings-data-heading'),
+          ListTile(key: const Key('settings-collects'), contentPadding: EdgeInsets.zero, title: const Text('What this app collects'), trailing: const Icon(Icons.arrow_forward_ios, size: 18), onTap: () => context.push('/profile/data')),
+          ListTile(key: const Key('settings-privacy'), contentPadding: EdgeInsets.zero, title: const Text('Privacy policy'), trailing: const Icon(Icons.arrow_forward_ios, size: 18), onTap: () => context.push('/profile/privacy-policy')),
+          if (contact.valueOrNull?.hasEmail == true)
+            ListTile(
+              key: const Key('settings-copy'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Ask for a copy of your data'),
+              subtitle: const Text('Opens an e-mail to BottlesUp that you read and send yourself.'),
+              trailing: const Icon(Icons.mail_outline),
+              onTap: () => _open(context, ref, supportMailto(contact.value!.email!, subject: 'Copy of my data', message: 'Please send me a copy of the personal data BottlesUp holds about me.', from: email)),
+            ),
+          Padding(padding: const EdgeInsets.only(top: 12), child: Text('To delete your account, use Delete account in your profile.', key: const Key('settings-delete-note'), style: theme.textTheme.bodySmall)),
         ],
       ),
     );
   }
-
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This action cannot be undone. All your data will be permanently deleted. '
-          'Please contact support to proceed with account deletion.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _sendEmail('account-deletion@bottlesup.com');
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Contact Support'),
-          ),
-        ],
-      ),
-    );
-  }
-} 
+}

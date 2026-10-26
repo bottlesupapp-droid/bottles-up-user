@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bottles_up_user/site/models/table_booking.dart';
 import 'package:bottles_up_user/site/services/my_bookings_service.dart';
 import 'package:bottles_up_user/site/services/my_tickets_service.dart';
+import 'package:bottles_up_user/site/services/site_contact_service.dart';
 import 'package:bottles_up_user/site/services/site_events_service.dart';
 import 'package:bottles_up_user/site/services/venues_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,7 @@ void main() {
     await venues.floors('v1');
     await venues.bottles('v1');
     await venues.feeBasisPoints();
+    await SiteContactService(site.client).load();
     final bookings = MyBookingsService(site.client);
     await bookings.bookings();
     await bookings.booking('bk1');
@@ -77,7 +79,9 @@ void main() {
     expectColumns('site_venue_time_slots', inside(venueSelect, 'site_venue_time_slots'));
     expectColumns('site_venue_floors', plain(site.forTable('site_venue_floors').single.query['select']!));
     expectColumns('site_bottles', plain(site.forTable('site_bottles').single.query['select']!));
-    expectColumns('site_content', plain(site.forTable('site_content').single.query['select']!));
+    for (final r in site.forTable('site_content')) {
+      expectColumns('site_content', plain(r.query['select']!));
+    }
 
     final bookingSelects = {for (final r in site.forTable('site_table_bookings')) r.query['select']!};
     expect(bookingSelects.length, 1, reason: 'the list and the detail read the same columns');
