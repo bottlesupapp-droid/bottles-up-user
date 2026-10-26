@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../site/site_config.dart';
 import 'google_sign_in_service.dart';
 import 'apple_sign_in_service.dart';
 
@@ -200,7 +201,7 @@ class AuthService {
       
       await _supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'bottlesupapp://auth-callback/reset-password',
+        redirectTo: passwordResetRedirect,
       );
       
     } on AuthException catch (e) {

@@ -33,36 +33,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Deep link intent filter for password reset -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="bottlesup" android:host="auth-callback" />
-            </intent-filter>
-
-            <!-- Payment deep link intent filters for Stripe checkout -->
+            <!-- Links back into the app, all on the app's own scheme `bottlesup`. reset-password: the link in a password-reset e-mail (lib/site/site_config.dart: passwordResetRedirect;
+                 the address must also be in Supabase > Authentication > URL Configuration > Redirect URLs). auth-callback: sign-in redirects.
+                 There are no web-address (https) links: the website has no page the app handles, and a payment ends on the website's own page, which the app follows by asking the website. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="bottlesup" android:host="payment" />
-            </intent-filter>
-
-            <!-- HTTP/HTTPS deep link intent filter for web fallback -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http"
-                    android:host="bottlesupapp.com" />
-            </intent-filter>
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https"
-                    android:host="bottlesupapp.com" />
+                <data android:scheme="bottlesup" android:host="reset-password" />
+                <data android:scheme="bottlesup" android:host="auth-callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

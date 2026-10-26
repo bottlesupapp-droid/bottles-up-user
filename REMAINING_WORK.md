@@ -53,27 +53,28 @@ The website only has a refund request for table bookings (`guest_request_refund`
 ### B7. Notifications
 - [ ] Push and in-app, if A5 is yes.
 
-## C. Store readiness
+## C. Store readiness (27 Oct: everything that can be done without a build or the owner's accounts is done)
 
 iOS
-- [ ] `PrivacyInfo.xcprivacy` (privacy manifest) and a "data collected" document, as for the vendor app.
-- [ ] Entitlements file, only for capabilities actually used (Sign in with Apple, push, associated domains).
-- [ ] Signing and provisioning profile for `com.btlup.pop`.
-- [ ] Check `Info.plist` needs no usage strings now that location is gone.
+- [x] Privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` (in the Runner target; the project still opens in Xcode), the "data collected" document `docs/DATA_COLLECTED_USER_APP.md`, and the in-app list (Profile > What this app collects). A test keeps the three in step. Apple's own checker has not run on it (it runs on the first upload).
+- [x] No entitlements are needed (no Sign in with Apple button, no push, no web links); no usage strings are needed (no location, camera, microphone or contacts; the photo picker on iOS 15 needs none). `ITSAppUsesNonExemptEncryption` is false (HTTPS only), so each upload is not stopped to ask.
+- [ ] Signing and provisioning profile for `com.btlup.pop`, and the App ID: the owner's step in the Apple Developer account.
 
 Android
-- [ ] `key.properties` and a release keystore (the build file reads them; none seen).
-- [ ] Check the release build configuration.
+- [x] The build file takes the version from `pubspec.yaml` (it used to say 1.0.0 (1) whatever pubspec said), and a release build without `android/key.properties` now stops with a message instead of silently signing with the debug key; `android/key.properties.example` says what to put in it. Not run through Gradle (nothing is built without being asked).
+- [ ] Create the release keystore and `key.properties`, and back the keystore up: the owner's step.
 
 Links
-- [ ] The app-link filters use `bottlesupapp.com` but the website is `www.bottlesupapp.com`.
-- [ ] Both platforms need the website's verification files (`assetlinks.json`, Apple association file).
-- [ ] Remove the leftover `bottlesup://payment` filter.
+- [x] Fixed (27 Oct): the app only opens from its own scheme `bottlesup://` (password reset and sign-in). The web-address filters (`bottlesupapp.com`, which the website redirects to `www`, and which no website page uses) and the old `bottlesup://payment` filter are gone, so there are no verification files to serve. **The password-reset e-mail used to send people to `bottlesupapp://auth-callback/reset-password`, a scheme neither phone registered, so the link could never open the app.** It now asks for `bottlesup://reset-password`.
+- [ ] **For the user:** add `bottlesup://reset-password` to Supabase > Authentication > URL Configuration > Redirect URLs. Without it Supabase ignores the address and sends the e-mail link to the website's address, where nothing handles it. The website has no forgot-password page either (it only changes a password for a signed-in person).
+- [ ] Optional later: universal links so website pages for events and venues open the app (needs the entitlement, the website's association files and a handler for each page).
 
 Store listing
-- [ ] Privacy text, data-safety answers, screenshots, descriptions.
-- [ ] Crash reporting key, if wanted.
-- [ ] Version and build numbers.
+- [ ] Answer Apple's App Privacy and Google's Data safety forms from `docs/DATA_COLLECTED_USER_APP.md`; screenshots, descriptions: the owner's step.
+- [ ] The profile picture goes to a public bucket (`media`): decide whether to leave it (the in-app text says so) or have the website make it private.
+- [ ] Terms of use: the app still shows text nobody at the client wrote (decision A6).
+- [x] Version and build numbers come from `pubspec.yaml` (`2.0.1+3` today: change it to what the first release should be called).
+- [ ] Crash reporting: none, and the privacy answers say none. Adding it means adding it to the manifest and the forms first.
 
 ## D. Quality and clean-up
 

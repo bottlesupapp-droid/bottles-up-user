@@ -31,3 +31,7 @@ Uri venuePageUri(String venueId, {String? origin}) => Uri.parse('${origin ?? sit
 
 /// A map search for an address, which opens in the phone's maps (or the browser).
 Uri mapsSearchUri(String address) => Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': address});
+
+/// Where the link in a password-reset e-mail sends the person: back into the app (its own scheme, registered on both phones). The address must be in the project's list of allowed redirect
+/// addresses (Supabase > Authentication > URL Configuration), or the e-mail sends people to the website's address instead.
+const String passwordResetRedirect = 'bottlesup://reset-password';

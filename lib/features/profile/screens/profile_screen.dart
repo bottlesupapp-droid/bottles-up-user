@@ -319,6 +319,13 @@ class ProfileScreenInternal extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Iconsax.shield_tick),
+                  title: const Text('What this app collects'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 20),
+                  onTap: () => context.push('/profile/data'),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   leading: const Icon(Iconsax.document_text_1),
                   title: const Text('Terms & Conditions'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 20),

@@ -8,6 +8,7 @@ import 'package:bottles_up_user/features/bookings_site/screens/add_bottles_scree
 import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
+import 'package:bottles_up_user/features/profile/screens/data_collected_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/privacy_policy_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
@@ -231,6 +232,10 @@ final List<RouteBase> appRoutes = [
         );
       },
     ),
+  ),
+  GoRoute(
+    path: '/profile/data',
+    builder: (context, state) => const DataCollectedScreen(),
   ),
   GoRoute(
     path: '/events/:id',

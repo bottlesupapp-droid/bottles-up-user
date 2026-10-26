@@ -15,6 +15,26 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// A release build with no signing key cannot be uploaded to Google Play, and used to be produced silently (it fell back to the debug key). Fail early with a clear message instead.
+// For a local, throwaway release build only: ORG_GRADLE_PROJECT_allowUnsignedRelease=true
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any { it.name == "assembleRelease" || it.name == "bundleRelease" }
+    if (!buildsRelease || project.hasProperty("allowUnsignedRelease")) return@whenReady
+
+    if (!keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "Release build needs a signing key, but android/key.properties was not found. " +
+                "Create it with keyAlias, keyPassword, storeFile and storePassword (see android/key.properties.example). " +
+                "For a local test build only: ORG_GRADLE_PROJECT_allowUnsignedRelease=true"
+        )
+    }
+    val missing = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+        .filter { keystoreProperties[it] == null || keystoreProperties[it].toString().isBlank() }
+    if (missing.isNotEmpty()) {
+        throw GradleException("android/key.properties is missing: ${missing.joinToString(", ")}")
+    }
+}
+
 android {
     namespace = "com.bottlesup.user"
     compileSdk = flutter.compileSdkVersion
@@ -33,10 +53,11 @@ android {
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String?
+                keyPassword = keystoreProperties["keyPassword"] as String?
+                // Relative paths are resolved from android/, as key.properties.example says.
+                storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it as String) }
+                storePassword = keystoreProperties["storePassword"] as String?
             }
         }
     }
@@ -47,20 +68,16 @@ android {
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
 
-        // Version management
-        // Increment versionCode for each release to Play Store
-        versionCode = 1
-        versionName = "1.0.0"
+        // The version comes from pubspec.yaml (version: name+build), the one place it is set, so the two stores and the app agree.
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // Use release signing config if key.properties exists
-            // Otherwise fall back to debug signing for development
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // Signed with the release key when key.properties exists; the check above stops a release build without one.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             }
 
             // Optimize for production
