@@ -157,7 +157,7 @@ void main() {
 
     walk(appRoutes, '');
     expect(paths, containsAll(['/', '/login', '/signup', '/home', '/events/:id', '/events/:id/tickets/:tierId', '/venues/:id', '/venues/:id/tables/:tableId/book', '/payment', '/tickets/:id', '/bookings/:id', 'bottles']));
-    for (final gone in ['/checkout', '/checkout-success', '/events/:id/book', '/table-selection/:clubId', '/location-permission', '/location/manual-entry', '/profile/orders', '/notifications']) {
+    for (final gone in ['/checkout', '/checkout-success', '/events/:id/book', '/table-selection/:clubId', '/location-permission', '/location/manual-entry', '/profile/orders']) {
       expect(paths, isNot(contains(gone)), reason: gone);
     }
   });

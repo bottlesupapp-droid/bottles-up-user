@@ -7,6 +7,7 @@ import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
+import '../../../site/models/features.dart';
 import '../widgets/profile_grid.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/switcher_sheet.dart';
@@ -232,6 +233,30 @@ class _Actions extends StatelessWidget {
     if (profile.blockedByMe) {
       return Row(children: [Expanded(child: OutlinedButton(key: const Key('unblock'), onPressed: onUnblock, child: const Text('Unblock')))]);
     }
-    return Row(children: [Expanded(child: FollowButton(actor: actor, profile: profile))]);
+    return Consumer(builder: (context, ref, _) {
+      final canMessage = ref.watch(featureOnProvider(Feature.inbox));
+      return Row(children: [
+        Expanded(child: FollowButton(actor: actor, profile: profile)),
+        if (canMessage) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              key: const Key('message-button'),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final router = GoRouter.of(context);
+                try {
+                  final id = await ref.read(inboxServiceProvider).startDirect(actor: actor.id, other: profile.id);
+                  router.push('/inbox/$id');
+                } on SiteException catch (e) {
+                  messenger.showSnackBar(SnackBar(content: Text(e.message)));
+                }
+              },
+              child: const Text('Message'),
+            ),
+          ),
+        ],
+      ]);
+    });
   }
 }

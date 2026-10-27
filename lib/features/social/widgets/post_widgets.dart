@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/features.dart';
 import '../../../site/models/post.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/post_rules.dart';
 import '../../../site/site_error.dart';
 import 'profile_widgets.dart';
+import 'share_sheet.dart';
 
 /// The colour of the ring round a Members Only story, and of the Members Only badge. BottlesUp orange, as the plan draws it.
 const Color membersOnlyColor = Color(0xFFFF6B00);
@@ -303,6 +305,17 @@ class _PostCardViewState extends ConsumerState<PostCardView> {
           child: Row(children: [
             IconButton(key: Key('like-${p.id}'), tooltip: _liked ? 'Unlike' : 'Like', onPressed: _toggleLike, icon: Icon(_liked ? Icons.favorite : Icons.favorite_border, color: _liked ? Colors.red : null)),
             if (p.commentsEnabled) IconButton(key: Key('comment-${p.id}'), tooltip: 'Comments', onPressed: widget.onOpen, icon: const Icon(Icons.mode_comment_outlined)),
+            if (ref.watch(featureOnProvider(Feature.inbox)) && p.audience == PostAudience.public && p.kind != PostKind.story)
+              IconButton(
+                key: Key('share-${p.id}'),
+                tooltip: 'Send',
+                onPressed: () async {
+                  if (await showShareSheet(context, actor: widget.actor, refKind: 'post', refId: p.id) && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sent.')));
+                  }
+                },
+                icon: const Icon(Icons.send_outlined),
+              ),
             const Spacer(),
             IconButton(key: Key('save-${p.id}'), tooltip: _saved ? 'Unsave' : 'Save', onPressed: _toggleSave, icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border)),
           ]),

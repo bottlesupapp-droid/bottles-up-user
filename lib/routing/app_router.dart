@@ -15,6 +15,11 @@ import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen.dart';
 import 'package:bottles_up_user/features/social/screens/blocked_screen.dart';
 import 'package:bottles_up_user/features/social/screens/business_profile_screen.dart';
+import 'package:bottles_up_user/features/social/screens/conversation_screen.dart';
+import 'package:bottles_up_user/features/social/screens/group_info_screen.dart';
+import 'package:bottles_up_user/features/social/screens/inbox_screen.dart';
+import 'package:bottles_up_user/features/social/screens/new_message_screen.dart';
+import 'package:bottles_up_user/features/social/screens/notifications_screen.dart';
 import 'package:bottles_up_user/features/social/screens/create_post_screen.dart';
 import 'package:bottles_up_user/features/social/screens/explore_screen.dart';
 import 'package:bottles_up_user/features/social/screens/follow_requests_screen.dart';
@@ -318,6 +323,12 @@ final List<RouteBase> appRoutes = [
   ),
   GoRoute(path: '/post/:id', builder: (context, state) => PostScreen(postId: state.pathParameters['id']!)),
   GoRoute(path: '/stories/:handle', builder: (context, state) => StoryViewerScreen(handle: state.pathParameters['handle']!)),
+  GoRoute(path: '/inbox', builder: (context, state) => const InboxScreen()),
+  GoRoute(path: '/inbox/new', builder: (context, state) => const NewMessageScreen()),
+  GoRoute(path: '/inbox/new-group', builder: (context, state) => const NewMessageScreen(group: true)),
+  GoRoute(path: '/inbox/:id', builder: (context, state) => ConversationScreen(conversationId: state.pathParameters['id']!)),
+  GoRoute(path: '/inbox/:id/info', builder: (context, state) => GroupInfoScreen(conversationId: state.pathParameters['id']!)),
+  GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
   GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
   GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
   GoRoute(

@@ -13,6 +13,7 @@ import '../../../site/site_config.dart';
 import '../../../site/site_error.dart';
 import '../../../site/when.dart';
 import '../../tickets_site/widgets/ticket_qr.dart';
+import '../../social/widgets/message_venue_button.dart';
 import '../widgets/club_payment_card.dart';
 import '../widgets/guests_section.dart';
 import '../widgets/orders_section.dart';
@@ -228,6 +229,7 @@ class _Body extends ConsumerWidget {
             ],
           ),
         ),
+        if (b.isPaid && b.venueId != null && canMessageVenue(ref)) _Section('Messages', 'section-messages', MessageVenueButton(bookingId: b.id)),
         if (b.isPaid)
           _Section(
             'Orders',

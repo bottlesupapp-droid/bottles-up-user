@@ -633,3 +633,67 @@ Map<String, dynamic> reviewsPage({List<Map<String, dynamic>> items = const [], i
       'summary': {'count': count, 'average': average, 'stars': stars},
       'items': items,
     };
+
+/// A conversation as the website's inbox lists it.
+Map<String, dynamic> convRow({
+  String id = 'c1',
+  String kind = 'direct',
+  String? title,
+  String status = 'active',
+  bool muted = false,
+  String lastAt = '2099-10-24T23:00:00Z',
+  int members = 2,
+  List<Map<String, dynamic>>? others,
+  Map<String, dynamic>? last,
+  int unread = 0,
+  String? bookingId,
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'title': title,
+      'booking_id': bookingId,
+      'status': status,
+      'muted': muted,
+      'last_message_at': lastAt,
+      'member_count': members,
+      'others': others ?? [profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray')],
+      'last': last ?? {'kind': 'text', 'body': 'See you there', 'removed': false, 'created_at': lastAt, 'sender': profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray'), 'is_mine': false},
+      'unread': unread,
+    };
+
+/// A message as the website's `dm_message_card` shows it.
+Map<String, dynamic> dmRow({
+  String id = 'm1',
+  String conversation = 'c1',
+  String kind = 'text',
+  String? body = 'Hello',
+  bool removed = false,
+  String createdAt = '2099-10-24T23:00:00Z',
+  Map<String, dynamic>? sender,
+  bool mine = false,
+  Map<String, dynamic>? ref,
+}) =>
+    {
+      'id': id,
+      'conversation': conversation,
+      'kind': kind,
+      'body': body,
+      'removed': removed,
+      'created_at': createdAt,
+      'sender': sender ?? (mine ? profileRow(id: 'me', handle: 'dana', name: 'Dana Lee') : profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray')),
+      'is_mine': mine,
+      'ref': ref,
+    };
+
+Map<String, dynamic> notificationRow({String id = 'n1', String kind = 'like', String createdAt = '2099-10-24T23:00:00Z', Map<String, dynamic>? actor, bool read = false, Map<String, dynamic>? post, String? commentBody, bool followsBack = false}) => {
+      'id': id,
+      'kind': kind,
+      'created_at': createdAt,
+      'read': read,
+      'actor': actor ?? profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray'),
+      'post': post,
+      'comment_body': commentBody,
+      'review_id': null,
+      'follows_back': followsBack,
+    };

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/features.dart';
+import '../models/inbox.dart';
 import '../models/site_event.dart';
 import '../models/post.dart';
 import '../models/review.dart';
@@ -15,6 +16,7 @@ import '../models/ticket_order.dart';
 import '../services/account_service.dart';
 import '../services/booking_actions_service.dart';
 import '../services/features_service.dart';
+import '../services/inbox_service.dart';
 import '../services/posts_service.dart';
 import '../services/reviews_service.dart';
 import '../services/guest_passes_service.dart';
@@ -42,6 +44,7 @@ final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteCon
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
 final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
 final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
+final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
 
@@ -214,6 +217,31 @@ class DirectoryKey {
 final professionalsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, DirectoryKey>(
   (ref, k) => ref.watch(reviewsServiceProvider).professionals(actor: k.actor, category: k.category, city: k.city, query: k.query),
 );
+
+/// The badge on the Inbox tab: conversations with something new and requests waiting. Zero while messages are switched off.
+final inboxCountsProvider = FutureProvider.autoDispose.family<InboxCounts, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.inbox))) return const InboxCounts();
+  return ref.watch(inboxServiceProvider).counts(actor);
+});
+
+/// Which conversation, as the acting profile sees it.
+class ConversationKey {
+  const ConversationKey({required this.actor, required this.id});
+
+  final String actor;
+  final String id;
+
+  @override
+  bool operator ==(Object other) => other is ConversationKey && other.actor == actor && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, id);
+}
+
+final conversationProvider = FutureProvider.autoDispose.family<Conversation, ConversationKey>((ref, k) => ref.watch(inboxServiceProvider).conversation(actor: k.actor, id: k.id));
+
+/// How many notifications the profile has not read.
+final unreadNotificationsProvider = FutureProvider.autoDispose.family<int, String>((ref, actor) => ref.watch(inboxServiceProvider).unreadNotifications(actor));
 
 /// Forget everything about the person who was signed in (their profiles, which one they were acting as) so the next person starts clean.
 void resetSocialState(WidgetRef ref) {

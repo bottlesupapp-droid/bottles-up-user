@@ -63,6 +63,12 @@ class SocialEntryCard extends ConsumerWidget {
                 ]),
                 const SizedBox(height: 8),
                 Wrap(spacing: 8, children: [
+                  if (ref.watch(featureOnProvider(Feature.inbox)))
+                    OutlinedButton(
+                      key: const Key('open-inbox'),
+                      onPressed: () => context.push('/inbox'),
+                      child: Badge(isLabelVisible: (ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0) > 0, label: Text('${ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0}'), child: const Text('Messages')),
+                    ),
                   OutlinedButton(key: const Key('open-explore'), onPressed: () => context.push('/explore'), child: const Text('Explore')),
                   FilledButton(key: const Key('open-feed'), onPressed: () => context.push('/feed'), child: const Text('Home feed')),
                   FilledButton.tonal(key: const Key('view-profile'), onPressed: () => context.push('/u/${actor.handle}'), child: const Text('View profile')),
