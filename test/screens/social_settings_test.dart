@@ -98,13 +98,20 @@ void main() {
   });
 
   group('privacy', () {
-    testWidgets('the private account switch shows the account and saves it with the interests kept', (tester) async {
-      site.rpcs['profile_save_personal'] = (_) => ok(myPersonal(private: true));
+    testWidgets('the private account switch shows the account and saves it with the interests kept, and shows it saved', (tester) async {
+      var isPrivate = false;
+      site.rpcs['profile_my_profiles'] = (_) => ok([myPersonal(private: isPrivate)]);
+      site.rpcs['profile_save_personal'] = (b) {
+        isPrivate = b['p_privacy'] == 'private';
+        return ok(myPersonal(private: isPrivate));
+      };
       await openSocial(tester, site, '/me/settings', features: on);
       expect(switchOn(tester, 'private-account'), isFalse);
       await tester.tap(find.byKey(const Key('private-account')));
       await tester.pumpAndSettle();
       expect(site.forRpc('profile_save_personal').single.body, {'p_privacy': 'private', 'p_interests': ['music']});
+      expect(switchOn(tester, 'private-account'), isTrue, reason: 'the profile is read again, so the switch shows what was saved');
+      expect(find.byKey(const Key('goto-requests')), findsOneWidget);
     });
 
     testWidgets('a private account shows the follow requests; a public one does not', (tester) async {

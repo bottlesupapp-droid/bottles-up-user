@@ -17,9 +17,10 @@ class Feature {
   static const creatorEarnings = 'creator_earnings';
   static const ranks = 'ranks';
   static const jobs = 'jobs';
+  static const aiCaptions = 'ai_captions';
 
   static const all = [
-    social, stories, reels, membersOnly, inbox, reviews, splitPayments, marketplace, venueHire, referrals, subscriptions, advertising, creatorEarnings, ranks, jobs,
+    social, stories, reels, membersOnly, inbox, reviews, splitPayments, marketplace, venueHire, referrals, subscriptions, advertising, creatorEarnings, ranks, jobs, aiCaptions,
   ];
 }
 

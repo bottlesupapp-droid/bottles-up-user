@@ -16,6 +16,7 @@ import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
 import '../services/booking_actions_service.dart';
+import '../services/caption_ideas_service.dart';
 import '../services/features_service.dart';
 import '../services/inbox_service.dart';
 import '../services/posts_service.dart';
@@ -47,6 +48,7 @@ final accountServiceProvider = Provider<AccountService>((ref) => AccountService(
 final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
 final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
 final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
+final captionIdeasServiceProvider = Provider<CaptionIdeasService>((ref) => CaptionIdeasService(ref.watch(siteClientProvider)));
 final safetyServiceProvider = Provider<SafetyService>((ref) => SafetyService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));

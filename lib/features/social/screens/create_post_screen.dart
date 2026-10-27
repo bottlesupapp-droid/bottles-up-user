@@ -12,6 +12,7 @@ import '../../../site/rules/post_rules.dart';
 import '../../../site/services/media_picker.dart';
 import '../../../site/services/posts_service.dart';
 import '../../../site/site_error.dart';
+import '../widgets/caption_ideas_sheet.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/rules_gate.dart';
 import '../widgets/switcher_sheet.dart';
@@ -158,6 +159,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
   }
 
+  /// Asks the caption writer for ideas and puts the one chosen in the caption box, where it can be changed. Nothing is posted by this.
+  Future<void> _ideas() async {
+    final place = [for (final t in _tags) if (t.kind != TagKind.profile) t.name].firstOrNull;
+    final chosen = await showCaptionIdeasSheet(context, kind: _kind, placeOrEvent: place, start: _caption.text);
+    if (chosen == null || !mounted) return;
+    setState(() => _caption.text = chosen.length > maxCaptionLength ? chosen.substring(0, maxCaptionLength) : chosen);
+  }
+
   Future<void> _tag() async {
     final picked = await showModalBottomSheet<List<PostTag>>(
       context: context,
@@ -238,6 +247,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               ]),
               const SizedBox(height: 12),
               TextField(key: const Key('caption-field'), controller: _caption, maxLines: 4, maxLength: maxCaptionLength, textCapitalization: TextCapitalization.sentences, decoration: const InputDecoration(labelText: 'Write a caption (optional)')),
+              if (ref.watch(featureOnProvider(Feature.aiCaptions)))
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(key: const Key('caption-ideas'), onPressed: _posting ? null : _ideas, icon: const Icon(Icons.auto_awesome, size: 18), label: const Text('Caption ideas')),
+                ),
               const SizedBox(height: 8),
               Text('Who can see this', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),

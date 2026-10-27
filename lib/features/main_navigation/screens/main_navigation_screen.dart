@@ -32,6 +32,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   /// Which layout is showing: the original Events / Tables / Bookings / Profile tabs, or (when BottlesUp has switched `social` on) Home / Explore / Create / Inbox / Profile.
   bool _social = false;
 
+  /// The page in front in the social layout. (The original layout keeps its own place in [_currentIndex].)
+  _Page _front = _Page.home;
+
   /// The pages of the social layout that have been opened. A page is built when first opened and then kept, so nothing loads until it is wanted.
   final Set<_Page> _opened = {_Page.home};
   
@@ -138,11 +141,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     if (!features.hasValue && !features.hasError) {
       return const Scaffold(body: Center(child: CircularProgressIndicator(key: Key('shell-loading'))));
     }
-    final social = ref.watch(featureOnProvider(Feature.social));
-    if (social != _social) {
-      _social = social;
-      _currentIndex = 0;
-    }
+    _social = ref.watch(featureOnProvider(Feature.social));
     return _social ? _socialShell(context) : _classicShell(context);
   }
 
@@ -207,8 +206,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     );
   }
 
-  /// The pages the social layout has, in order (Create is a button, not a page).
-  List<_Page> get _pages => [_Page.home, _Page.explore, if (ref.read(featureOnProvider(Feature.inbox))) _Page.inbox, _Page.profile];
+  /// The pages the social layout has, in order (Create is a button, not a page). Messages are a page only while they are switched on.
+  List<_Page> _pages({required bool inbox}) => [_Page.home, _Page.explore, if (inbox) _Page.inbox, _Page.profile];
 
   Widget _socialPage(_Page page) {
     if (!_opened.contains(page)) return const SizedBox.shrink();
@@ -222,12 +221,15 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   Widget _socialShell(BuildContext context) {
     final inboxOn = ref.watch(featureOnProvider(Feature.inbox));
-    final pages = _pages;
-    if (_currentIndex >= pages.length) _currentIndex = 0;
-    final current = pages[_currentIndex];
+    final pages = _pages(inbox: inboxOn);
+    // The switches are read again when the person signs in as someone else; if messages have gone while the Inbox is in front, Home is.
+    if (!pages.contains(_front)) _front = _Page.home;
+    final current = _front;
+    final front = pages.indexOf(current);
     _opened.add(current);
     final actor = ref.watch(actorProfileProvider);
-    final badge = inboxOn && actor != null ? (ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0) : 0;
+    // (The count is nothing while messages are switched off: inboxCountsProvider says so.)
+    final badge = actor != null ? (ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0) : 0;
     // The navigation items: the pages in order, with Create as a button in the middle after Explore.
     final items = <({_Page? page, GlassNavItem item})>[
       (page: _Page.home, item: const GlassNavItem(icon: Ionicons.home_outline, activeIcon: Ionicons.home, label: 'Home')),
@@ -242,8 +244,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         children: [
           IndexedStack(
             key: const Key('social-pages'),
-            index: _currentIndex,
-            children: [for (final p in pages) _socialPage(p)],
+            index: front,
+            // IndexedStack keeps the pages behind the front one alive and running: switching their tickers off is what tells a page it is hidden (the inbox stops looking for news).
+            children: [for (var i = 0; i < pages.length; i++) TickerMode(enabled: i == front, child: _socialPage(pages[i]))],
           ),
           Positioned(
             left: 0,
@@ -255,8 +258,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 final page = items[i].page;
                 if (page == null) {
                   context.push('/create');
-                } else if (page != current) {
-                  setState(() => _currentIndex = pages.indexOf(page));
+                } else {
+                  setState(() => _front = page);
                 }
               },
               items: [for (final e in items) e.item],

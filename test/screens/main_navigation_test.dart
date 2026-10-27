@@ -4,6 +4,7 @@ import 'package:bottles_up_user/features/main_navigation/screens/main_navigation
 import 'package:bottles_up_user/site/models/features.dart';
 import 'package:bottles_up_user/site/providers/site_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -82,12 +83,35 @@ void main() {
       expect(find.byKey(const Key('home-feed')), findsOneWidget, reason: 'Home opens first');
     });
 
-    testWidgets('without messages there is no Inbox tab', (tester) async {
+    testWidgets('without messages there is no Inbox tab, and no page behind it', (tester) async {
       await open(tester, features: const {'social': true});
+      expect(tester.widget<IndexedStack>(find.byKey(const Key('social-pages'))).children, hasLength(3));
       expect(find.byKey(const Key('nav-inbox')), findsNothing);
       for (final label in ['Home', 'Explore', 'Create', 'Profile']) {
         expect(find.byKey(Key('nav-${label.toLowerCase()}')), findsOneWidget, reason: label);
       }
+    });
+
+    testWidgets('with messages there are four pages behind the tabs', (tester) async {
+      await open(tester, features: on);
+      expect(tester.widget<IndexedStack>(find.byKey(const Key('social-pages'))).children, hasLength(4));
+    });
+
+    testWidgets('if messages are switched off while the Inbox is in front, Home is what shows', (tester) async {
+      final features = <String, bool>{...on};
+      site.rpcs['site_features'] = (_) => ok(features);
+      await open(tester, features: features);
+      await tester.tap(find.byKey(const Key('nav-inbox')));
+      await tester.pumpAndSettle();
+      expect(find.text('No messages yet'), findsOneWidget);
+      features['inbox'] = false;
+      final container = ProviderScope.containerOf(tester.element(find.byKey(const Key('social-pages'))));
+      container.invalidate(featuresProvider);
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('nav-inbox')), findsNothing);
+      expect(find.byKey(const Key('home-feed')), findsOneWidget);
     });
 
     testWidgets('Create is a button: it opens the create page and does not leave the tab', (tester) async {
@@ -112,6 +136,23 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-inbox')));
       await tester.pumpAndSettle();
       expect(site.forRpc('dm_inbox'), hasLength(1), reason: 'coming back does not start again');
+    });
+
+    testWidgets('the inbox looks for news only while it is the page in front', (tester) async {
+      await open(tester, features: on);
+      await tester.tap(find.byKey(const Key('nav-inbox')));
+      await tester.pumpAndSettle();
+      expect(site.forRpc('dm_inbox'), hasLength(1));
+      await tester.tap(find.byKey(const Key('nav-home')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 16));
+      await settleCalls(tester);
+      expect(site.forRpc('dm_inbox'), hasLength(1), reason: 'hidden behind Home it does not poll');
+      await tester.tap(find.byKey(const Key('nav-inbox')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 16));
+      await settleCalls(tester);
+      expect(site.forRpc('dm_inbox').length, greaterThan(1), reason: 'in front again it does');
     });
 
     testWidgets('the Inbox tab counts what is new', (tester) async {
