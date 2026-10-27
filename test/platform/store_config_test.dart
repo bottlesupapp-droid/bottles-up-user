@@ -133,6 +133,9 @@ void main() {
       'PhoneNumber': 'phone number',
       'UserID': 'account id',
       'PhotosorVideos': 'profile picture',
+      'EmailsorTextMessages': 'messages you send',
+      'OtherUserContent': 'comments',
+      'ProductInteraction': 'likes, saves, follows',
       'CustomerSupport': 'refund',
       'PurchaseHistory': 'tickets you buy',
       'OtherDataTypes': 'age',
@@ -159,7 +162,8 @@ void main() {
     test('it never declares what the app says it does not collect (location, contacts, advertising, browsing), nor card details, which stay on Stripe\'s page', () {
       final says = dataCollected.firstWhere((s) => s.title == 'What the app does not collect').lines.join(' ');
       expect(says, allOf(contains('location'), contains('contacts'), contains('advertising id'), contains('browsing')));
-      for (final never in ['Location', 'Contacts', 'DeviceID', 'AdvertisingData', 'BrowsingHistory', 'SearchHistory', 'PaymentInfo', 'CreditInfo', 'Health', 'Fitness', 'SensitiveInfo', 'CrashData', 'ProductInteraction']) {
+      // ProductInteraction is declared (likes, saves, follows, blocks and seen stories are stored so the feed works), but only for the app's own function: the purposes test above allows nothing else.
+      for (final never in ['Location', 'Contacts', 'DeviceID', 'AdvertisingData', 'BrowsingHistory', 'SearchHistory', 'PaymentInfo', 'CreditInfo', 'Health', 'Fitness', 'SensitiveInfo', 'CrashData', 'OtherUsageData', 'PerformanceData', 'OtherDiagnosticData']) {
         expect(declared(), isNot(contains(never)), reason: never);
       }
       expect(dataCollected.firstWhere((s) => s.title == 'Payments').lines.join(' '), allOf(contains('Stripe'), contains('never reach')));
