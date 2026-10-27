@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/features.dart';
 import '../models/site_event.dart';
+import '../models/social_profile.dart';
 import '../models/my_night.dart';
 import '../models/site_contact.dart';
 import '../models/table_booking.dart';
@@ -10,11 +12,13 @@ import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
 import '../services/booking_actions_service.dart';
+import '../services/features_service.dart';
 import '../services/guest_passes_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
 import '../services/site_contact_service.dart';
 import '../services/site_events_service.dart';
+import '../services/social_profiles_service.dart';
 import '../services/table_checkout_service.dart';
 import '../services/ticket_checkout_service.dart';
 import '../services/venues_service.dart';
@@ -32,6 +36,100 @@ final guestPassesServiceProvider = Provider<GuestPassesService>((ref) => GuestPa
 final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => BookingActionsService(ref.watch(siteClientProvider)));
 final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
+final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
+final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
+
+/// Which parts of the app BottlesUp has switched on. Read once per run; a failed read keeps everything new switched off.
+final featuresProvider = FutureProvider<SiteFeatures>((ref) => ref.watch(featuresServiceProvider).features());
+
+/// Is this feature on right now? False while the switches are still loading.
+final featureOnProvider = Provider.family<bool, String>((ref, key) => ref.watch(featuresProvider).valueOrNull?.isOn(key) ?? false);
+
+/// Every profile the signed-in person may act as, their own first. Forget it when someone signs out ([resetSocialState]).
+final myProfilesProvider = FutureProvider<List<SocialProfile>>((ref) => ref.watch(socialProfilesServiceProvider).myProfiles());
+
+/// The profile the person chose to act as, by id. Null means their own.
+final selectedProfileIdProvider = StateProvider<String?>((ref) => null);
+
+/// The profile the person is acting as now: the one they picked while they still may, otherwise their own. Null while the list loads or when they have none yet.
+final actorProfileProvider = Provider<SocialProfile?>((ref) {
+  final mine = ref.watch(myProfilesProvider).valueOrNull;
+  if (mine == null || mine.isEmpty) return null;
+  final picked = ref.watch(selectedProfileIdProvider);
+  for (final p in mine) {
+    if (p.id == picked && !p.suspended) return p;
+  }
+  for (final p in mine) {
+    if (!p.isBusiness && !p.suspended) return p;
+  }
+  return null;
+});
+
+/// Who is looked at: a username, or an id. [actor] is in the key so a profile is read again when the person switches.
+class ProfileKey {
+  const ProfileKey({required this.actor, this.handle, this.id});
+
+  final String actor;
+  final String? handle;
+  final String? id;
+
+  @override
+  bool operator ==(Object other) => other is ProfileKey && other.actor == actor && other.handle == handle && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, handle, id);
+}
+
+final socialProfileProvider = FutureProvider.autoDispose.family<SocialProfile, ProfileKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).profile(actor: k.actor, handle: k.handle, id: k.id),
+);
+
+/// Who follows a profile, or who it follows ([followers]); the first page.
+class PeopleKey {
+  const PeopleKey({required this.actor, required this.profile, required this.followers});
+
+  final String actor;
+  final String profile;
+  final bool followers;
+
+  @override
+  bool operator ==(Object other) => other is PeopleKey && other.actor == actor && other.profile == profile && other.followers == followers;
+
+  @override
+  int get hashCode => Object.hash(actor, profile, followers);
+}
+
+final peopleProvider = FutureProvider.autoDispose.family<List<SocialProfile>, PeopleKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).people(actor: k.actor, profile: k.profile, followers: k.followers),
+);
+
+/// A search of profiles, as the acting profile.
+class SearchKey {
+  const SearchKey({required this.actor, required this.query});
+
+  final String actor;
+  final String query;
+
+  @override
+  bool operator ==(Object other) => other is SearchKey && other.actor == actor && other.query == query;
+
+  @override
+  int get hashCode => Object.hash(actor, query);
+}
+
+final profileSearchProvider = FutureProvider.autoDispose.family<List<SocialProfile>, SearchKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).search(actor: k.actor, query: k.query),
+);
+
+final followRequestsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).requests(actor));
+
+final blockedProfilesProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).blocked(actor));
+
+/// Forget everything about the person who was signed in (their profiles, which one they were acting as) so the next person starts clean.
+void resetSocialState(WidgetRef ref) {
+  ref.invalidate(myProfilesProvider);
+  ref.read(selectedProfileIdProvider.notifier).state = null;
+}
 
 /// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
 final upcomingEventsProvider = FutureProvider.autoDispose<List<SiteEvent>>((ref) => ref.watch(siteEventsServiceProvider).upcoming());

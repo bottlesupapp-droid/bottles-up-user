@@ -437,3 +437,57 @@ Map<String, dynamic> rosterAnswer({int max = 6, int remaining = 4, List<Map<Stri
     };
 
 Map<String, dynamic> guestRow({String id = 'g1', String name = 'Sam Park', String email = 'sam@example.com', String? sent = '2099-10-21T10:00:00Z', String? checkedIn}) => {'id': id, 'guest_name': name, 'guest_email': email, 'ticket_sent_at': sent, 'checked_in_at': checkedIn};
+
+/// A profile as the website's `profile_card` shows it. [follow] is 'none', 'active' or 'pending'.
+Map<String, dynamic> profileRow({
+  String id = 'p1',
+  String kind = 'personal',
+  String handle = 'dana',
+  String? name = 'Dana Lee',
+  String? category,
+  String? bio,
+  String? city = 'Toronto',
+  String? avatar,
+  String? cover,
+  String privacy = 'public',
+  String status = 'active',
+  bool verified = false,
+  int followers = 0,
+  int following = 0,
+  bool mine = false,
+  String follow = 'none',
+  bool followsMe = false,
+  bool blocked = false,
+  bool canSee = true,
+  List<String> interests = const [],
+  Map<String, dynamic> links = const {},
+  Map<String, dynamic> extra = const {},
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'handle': handle,
+      'display_name': name,
+      'category': category,
+      'bio': bio,
+      'city': city,
+      'avatar_url': avatar,
+      'cover_url': cover,
+      'social_links': links,
+      'privacy': privacy,
+      'status': status,
+      'verified': verified,
+      'interests': interests,
+      'followers': followers,
+      'following': following,
+      'is_mine': mine,
+      'relation': {'follow': follow, 'follows_me': followsMe, 'blocked': blocked},
+      'can_see_content': canSee,
+      ...extra,
+    };
+
+/// The answer of an rpc that returns a value or a list.
+({int status, Object? body}) ok(Object? body) => (status: 200, body: body);
+
+/// What the database says when a function raises a sentence (`raise exception '...'`): PostgREST answers 400 with code P0001.
+({int status, Object? body}) raised(String sentence) => (status: 400, body: {'code': 'P0001', 'message': sentence, 'details': null, 'hint': null});

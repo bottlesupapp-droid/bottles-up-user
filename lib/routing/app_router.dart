@@ -13,6 +13,13 @@ import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dar
 import 'package:bottles_up_user/features/profile/screens/privacy_policy_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen.dart';
+import 'package:bottles_up_user/features/social/screens/blocked_screen.dart';
+import 'package:bottles_up_user/features/social/screens/business_profile_screen.dart';
+import 'package:bottles_up_user/features/social/screens/follow_requests_screen.dart';
+import 'package:bottles_up_user/features/social/screens/people_list_screen.dart';
+import 'package:bottles_up_user/features/social/screens/people_search_screen.dart';
+import 'package:bottles_up_user/features/social/screens/social_profile_screen.dart';
+import 'package:bottles_up_user/features/social/screens/social_setup_screen.dart';
 import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
@@ -277,4 +284,14 @@ final List<RouteBase> appRoutes = [
     path: '/tickets/:id',
     builder: (context, state) => TicketScreen(orderId: state.pathParameters['id']!),
   ),
+  // Social: profiles, following, blocking. Every screen asks first whether BottlesUp has switched social on.
+  GoRoute(path: '/me/setup', builder: (context, state) => const SocialSetupScreen()),
+  GoRoute(path: '/me/business/new', builder: (context, state) => const BusinessProfileScreen()),
+  GoRoute(path: '/me/business/:id/edit', builder: (context, state) => BusinessProfileScreen(profileId: state.pathParameters['id']!)),
+  GoRoute(path: '/people', builder: (context, state) => const PeopleSearchScreen()),
+  GoRoute(path: '/people/requests', builder: (context, state) => const FollowRequestsScreen()),
+  GoRoute(path: '/people/blocked', builder: (context, state) => const BlockedScreen()),
+  GoRoute(path: '/u/:handle', builder: (context, state) => SocialProfileScreen(handle: state.pathParameters['handle']!)),
+  GoRoute(path: '/profiles/:id/followers', builder: (context, state) => PeopleListScreen(profileId: state.pathParameters['id']!, followers: true)),
+  GoRoute(path: '/profiles/:id/following', builder: (context, state) => PeopleListScreen(profileId: state.pathParameters['id']!, followers: false)),
 ];

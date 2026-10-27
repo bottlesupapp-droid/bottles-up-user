@@ -49,3 +49,32 @@ Set<String> columnsOf(String table) {
   }
   return cols;
 }
+
+/// The migrations with their comments taken out, so a word in a comment is never mistaken for code.
+String migrationCode(String fileNameContains) {
+  final f = _migrations().firstWhere((f) => f.path.contains(fileNameContains));
+  return f.readAsStringSync().replaceAll(RegExp(r'--[^\n]*'), '');
+}
+
+/// The parameters of a function the migrations create (`create function public.follow_set(p_actor uuid, ...)`), in order, with whether each has a default.
+List<({String name, bool hasDefault})> sqlFunctionParamInfo(String name) {
+  final m = RegExp('create\\s+function\\s+public\\.$name\\s*\\(([^)]*)\\)', caseSensitive: false).firstMatch(allMigrations().replaceAll(RegExp(r'--[^\n]*'), ''));
+  if (m == null) throw StateError('no function $name in the migrations');
+  final body = m.group(1)!.trim();
+  if (body.isEmpty) return const [];
+  return [
+    for (final part in body.split(','))
+      (name: part.trim().split(RegExp(r'\s+')).first, hasDefault: RegExp(r'\sdefault\s', caseSensitive: false).hasMatch(part)),
+  ];
+}
+
+List<String> sqlFunctionParams(String name) => [for (final p in sqlFunctionParamInfo(name)) p.name];
+
+/// The words inside the first `in ( 'a', 'b' )` list that follows [marker] in [sql].
+Set<String> sqlWordsAfter(String sql, String marker) {
+  final at = sql.indexOf(marker);
+  if (at < 0) throw StateError('no "$marker" in the SQL');
+  final open = sql.indexOf('(', at);
+  final close = sql.indexOf(')', open);
+  return {for (final m in RegExp("'([^']*)'").allMatches(sql.substring(open, close))) m.group(1)!};
+}

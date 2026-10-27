@@ -50,3 +50,17 @@ SiteException siteExceptionFrom(Object error, {String generic = actionFailedMess
   logProblem('request', error);
   return SiteException(generic);
 }
+
+/// What a database function said, when it said it in words for a person: the sentence it raised (code P0001, as `raise exception 'Choose public or private.'`). Anything else (a missing grant,
+/// a dropped connection, a server fault) goes to the log and is replaced by [generic].
+SiteException siteExceptionFromRpc(Object error, {String generic = actionFailedMessage}) {
+  if (error is SiteException) return error;
+  if (error is PostgrestException) {
+    final said = error.message.trim();
+    if (error.code == 'P0001' && said.isNotEmpty && said.length <= 200) {
+      return SiteException(said[0].toUpperCase() + said.substring(1) + (RegExp(r'[.!?]$').hasMatch(said) ? '' : '.'));
+    }
+  }
+  logProblem('database function', error);
+  return SiteException(generic);
+}

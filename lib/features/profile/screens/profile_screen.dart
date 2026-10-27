@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../../../site/providers/site_providers.dart';
+import '../../social/widgets/social_entry_card.dart';
 import '../../../site/site_error.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -87,6 +88,7 @@ class ProfileScreenInternal extends ConsumerWidget {
     if (shouldLogout) {
       try {
         await ref.read(authStateProvider.notifier).signOut();
+        resetSocialState(ref);
 
         if (context.mounted) {
           context.go('/login');
@@ -128,6 +130,7 @@ class ProfileScreenInternal extends ConsumerWidget {
       messenger.showSnackBar(SnackBar(content: Text(problem), backgroundColor: Colors.red));
       return;
     }
+    resetSocialState(ref);
     messenger.showSnackBar(const SnackBar(content: Text('Your account has been deleted.')));
     router.go('/login');
   }
@@ -236,6 +239,8 @@ class ProfileScreenInternal extends ConsumerWidget {
                       ),
                 ),
                 const Gap(32),
+
+                const SocialEntryCard(),
 
                 // Premium Plan Button - Commented out as requested
                 /*
