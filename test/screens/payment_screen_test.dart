@@ -301,6 +301,32 @@ void main() {
       expect(container.read(bookingsSegmentProvider), BookingsSegment.tables);
     });
 
+    testWidgets('where Bookings is not a tab (the social layout), paid tickets open the tickets page, and a table still its own page', (tester) async {
+      site.rpcs['site_features'] = (_) => ok({'social': true});
+      site.functions['site-booking-status'] = (b) => (status: 200, body: paidAnswer());
+      final router = GoRouter(routes: [
+        GoRoute(path: '/', builder: (c, s) => PaymentScreen(args: argsWith(), interval: const Duration(seconds: 1))),
+        GoRoute(path: '/home', builder: (c, s) => const Scaffold(body: Text('home', key: Key('home')))),
+        GoRoute(path: '/me/bookings', builder: (c, s) => const Scaffold(body: Text('my bookings', key: Key('my-bookings-page')))),
+      ]);
+      tester.view.physicalSize = const Size(800, 2200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = ProviderContainer(overrides: [siteClientProvider.overrideWithValue(site.client)]);
+      addTearDown(container.dispose);
+      await container.read(featuresProvider.future);
+      await tester.pumpWidget(UncontrolledProviderScope(container: container, child: MaterialApp.router(routerConfig: router)));
+      await tester.pump();
+      await tick(tester);
+      await tester.tap(find.byKey(const Key('view-tickets')));
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('my-bookings-page')), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home')), findsOneWidget);
+    });
+
     testWidgets('after a table is paid, View my bookings opens that booking\'s own page, found by its confirmation code', (tester) async {
       site.functions['site-booking-status'] = (b) => (status: 200, body: paidBookingAnswer(code: 'TB-ABCD2345'));
       site.tables['site_table_bookings'] = [bookingRow(id: 'other', code: 'TB-OTHER111'), bookingRow(id: 'mine', code: 'TB-ABCD2345')];

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../site/models/checkout.dart';
+import '../../../site/models/features.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
@@ -165,8 +166,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
       }
     }
     if (!c.mounted) return;
+    final social = ref.read(featureOnProvider(Feature.social));
     c.go('/home');
-    if (bookingId != null) c.push('/bookings/$bookingId');
+    if (bookingId != null) {
+      c.push('/bookings/$bookingId');
+    } else if (social) {
+      // The social layout has no Bookings tab: the tickets are a page of their own.
+      c.push('/me/bookings');
+    }
   }
 
   void _back() => (widget.onBackToEvent ?? (c) => c.go(widget.args.backPath))(context);

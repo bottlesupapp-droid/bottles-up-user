@@ -270,8 +270,34 @@ class _GlassNavItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (item.isAction) {
+      return Expanded(
+        child: Semantics(
+          button: true,
+          label: item.label,
+          child: GestureDetector(
+            key: Key('nav-${item.label.toLowerCase()}'),
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: Center(
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_kOrange, Color(0xFFFF9248)]),
+                  boxShadow: [BoxShadow(color: _kOrange.withValues(alpha: 0.4), blurRadius: 14)],
+                ),
+                child: Icon(item.icon, color: Colors.white, size: 26),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Expanded(
       child: GestureDetector(
+        key: Key('nav-${item.label.toLowerCase()}'),
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
@@ -305,13 +331,17 @@ class _GlassNavItemWidget extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  isSelected ? item.activeIcon : item.icon,
-                  key: ValueKey(isSelected),
-                  color: isSelected ? _kOrange : Colors.white.withValues(alpha: 0.55),
-                  size: 22,
+              Badge(
+                isLabelVisible: item.badge > 0,
+                label: Text(item.badge > 99 ? '99+' : '${item.badge}', key: Key('nav-badge-${item.label.toLowerCase()}')),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isSelected ? item.activeIcon : item.icon,
+                    key: ValueKey(isSelected),
+                    color: isSelected ? _kOrange : Colors.white.withValues(alpha: 0.55),
+                    size: 22,
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
@@ -336,10 +366,18 @@ class GlassNavItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
+
+  /// A number shown on the icon (unread messages); nothing when 0.
+  final int badge;
+
+  /// A button that does something instead of showing a page (Create): drawn as a filled orange circle and never selected.
+  final bool isAction;
   const GlassNavItem(
       {required this.icon,
       required this.activeIcon,
-      required this.label});
+      required this.label,
+      this.badge = 0,
+      this.isAction = false});
 }
 
 // ── GlassAppBar ───────────────────────────────────────────────────────────────

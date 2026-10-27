@@ -1,4 +1,5 @@
 import 'package:bottles_up_user/site/models/inbox.dart';
+import 'package:bottles_up_user/site/rules/notification_rules.dart';
 import 'package:bottles_up_user/site/services/inbox_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,6 +29,8 @@ void main() {
       site.rpcs['dm_people'] = (_) => ok(<Object>[]);
       site.rpcs['notifications_list'] = (_) => ok([notificationRow()]);
       site.rpcs['notifications_unread'] = (_) => ok(0);
+      site.rpcs['notification_prefs'] = (_) => ok({'like': true});
+      site.rpcs['notification_prefs_set'] = (_) => ok({'like': false});
 
       final convs = await service.inbox(actor: 'a');
       await service.inbox(actor: 'a', requests: true, after: convs.last);
@@ -52,8 +55,10 @@ void main() {
       await service.notifications(actor: 'a', before: notes.last);
       await service.unreadNotifications('a');
       await service.markNotificationsRead('a');
+      await service.notificationPrefs('a');
+      await service.setNotificationKinds(actor: 'a', kinds: ['like'], enabled: false);
 
-      expect(site.rpcRequests.map((r) => r.name).toSet(), hasLength(20));
+      expect(site.rpcRequests.map((r) => r.name).toSet(), hasLength(22));
       for (final r in site.rpcRequests) {
         final params = sqlFunctionParamInfo(r.name);
         final names = params.map((p) => p.name).toSet();
@@ -73,6 +78,13 @@ void main() {
     test('the conversation and message kinds', () {
       expect(sqlWordsAfter(sql, "kind text not null check (kind in ('direct',"), {'direct', 'group', 'booking'});
       expect(sqlWordsAfter(sql.substring(sql.indexOf('create table public.site_dm_messages')), "kind text not null check (kind in ('text',"), {'text', 'post', 'event', 'venue', 'booking'});
+    });
+
+    test('the groups of notifications the app switches are made of kinds the website knows, and cover all of them', () {
+      final kinds = sqlWordsAfter(sql.substring(sql.indexOf('create table public.site_notification_opt_outs')), 'kind text not null check (kind in');
+      final grouped = [for (final g in notificationGroups) ...g.kinds];
+      expect(grouped.toSet(), kinds);
+      expect(grouped.length, kinds.length, reason: 'no kind is in two groups');
     });
 
     test('the limits the app says', () {

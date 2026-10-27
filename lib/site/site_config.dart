@@ -23,6 +23,10 @@ final String siteUrl = siteOrigin(_configuredSite);
 /// The website's page for an event (the id works as well as the slug).
 Uri eventPageUri(String eventId, {String? origin}) => Uri.parse('${origin ?? siteUrl}/events/${Uri.encodeComponent(eventId)}');
 
+/// Where a business runs its venue, events, door, team and payouts: BottlesUp Business on the web (the Business app signs in to the same place). The app links here from a
+/// business profile; it does not do those tasks itself.
+Uri businessToolsUri({String? origin}) => Uri.parse('${origin ?? siteUrl}/workspaces');
+
 /// The website's privacy policy.
 Uri privacyPolicyUri({String? origin}) => Uri.parse('${origin ?? siteUrl}/privacy-policy');
 

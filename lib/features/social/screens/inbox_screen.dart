@@ -83,7 +83,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           _forActor = actor.id;
           _timer?.cancel();
           _timer = Timer.periodic(widget.refreshEvery, (_) {
-            if (mounted) _load(actor, quiet: true);
+            // As a tab it stays alive behind the other pages: it only looks for news while it is in front.
+            if (mounted && TickerMode.valuesOf(context).enabled) _load(actor, quiet: true);
           });
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _load(actor);

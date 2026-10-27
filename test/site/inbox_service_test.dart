@@ -118,6 +118,19 @@ void main() {
     expect(site.forRpc('dm_leave').single.body, {'p_actor': 'me', 'p_conversation': 'g1'});
   });
 
+  test('which notifications are wanted: read, and switched on or off for some kinds', () async {
+    site.rpcs['notification_prefs'] = (_) => ok({'like': false, 'comment': true, 'junk': 'x'});
+    expect(await service.notificationPrefs('me'), {'like': false, 'comment': true});
+    expect(site.forRpc('notification_prefs').single.body, {'p_actor': 'me'});
+    site.rpcs['notification_prefs_set'] = (_) => ok({'like': true});
+    expect(await service.setNotificationKinds(actor: 'me', kinds: ['like', 'comment'], enabled: true), {'like': true});
+    expect(site.forRpc('notification_prefs_set').single.body, {'p_actor': 'me', 'p_kinds': ['like', 'comment'], 'p_enabled': true});
+    site.rpcs['notification_prefs_set'] = (_) => raised('Choose what to change.');
+    await expectLater(service.setNotificationKinds(actor: 'me', kinds: const [], enabled: false), sentence('Choose what to change.'));
+    site.rpcs['notification_prefs'] = (_) => ok(null);
+    expect(await service.notificationPrefs('me'), isEmpty);
+  });
+
   test('notifications', () async {
     site.rpcs['notifications_list'] = (_) => ok([notificationRow(id: 'a', createdAt: '2099-10-24T23:00:00.5Z')]);
     site.rpcs['notifications_unread'] = (_) => ok(4);

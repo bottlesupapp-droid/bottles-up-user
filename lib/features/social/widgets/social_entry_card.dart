@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../site/models/features.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
+import 'business_tools_card.dart';
+import 'my_night_card.dart';
 import 'profile_widgets.dart';
 import 'switcher_sheet.dart';
 
@@ -43,7 +45,7 @@ class SocialEntryCard extends ConsumerWidget {
               ),
             );
           }
-          return Card(
+          final card = Card(
             key: const Key('social-entry'),
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -69,6 +71,7 @@ class SocialEntryCard extends ConsumerWidget {
                       onPressed: () => context.push('/inbox'),
                       child: Badge(isLabelVisible: (ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0) > 0, label: Text('${ref.watch(inboxCountsProvider(actor.id)).valueOrNull?.badge ?? 0}'), child: const Text('Messages')),
                     ),
+                  OutlinedButton(key: const Key('open-bookings'), onPressed: () => context.push('/me/bookings'), child: const Text('Tickets & bookings')),
                   OutlinedButton(key: const Key('open-explore'), onPressed: () => context.push('/explore'), child: const Text('Explore')),
                   FilledButton(key: const Key('open-feed'), onPressed: () => context.push('/feed'), child: const Text('Home feed')),
                   FilledButton.tonal(key: const Key('view-profile'), onPressed: () => context.push('/u/${actor.handle}'), child: const Text('View profile')),
@@ -81,6 +84,7 @@ class SocialEntryCard extends ConsumerWidget {
                   if (actor.isPrivate) TextButton(key: const Key('open-requests'), onPressed: () => context.push('/people/requests'), child: const Text('Follow requests')),
                   TextButton(key: const Key('open-saved'), onPressed: () => context.push('/me/saved'), child: const Text('Saved posts')),
                   if (ref.watch(featureOnProvider(Feature.membersOnly))) TextButton(key: const Key('open-members'), onPressed: () => context.push('/me/members'), child: const Text('Members Only')),
+                  TextButton(key: const Key('open-settings'), onPressed: () => context.push('/me/settings'), child: const Text('Privacy and notifications')),
                   TextButton(key: const Key('open-blocked'), onPressed: () => context.push('/people/blocked'), child: const Text('Blocked profiles')),
                   TextButton(key: const Key('open-rules'), onPressed: () => context.push('/rules'), child: const Text('Community rules')),
                   if (list.length == 1) TextButton(key: const Key('open-new-business'), onPressed: () => context.push('/me/business/new'), child: const Text('Create a business profile')),
@@ -88,6 +92,11 @@ class SocialEntryCard extends ConsumerWidget {
               ]),
             ),
           );
+          return Column(children: [
+            const MyNightCard(),
+            card,
+            if (actor.isBusiness) const Padding(padding: EdgeInsets.only(top: 12), child: BusinessToolsCard()),
+          ]);
         },
       ),
     );

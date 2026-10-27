@@ -122,6 +122,26 @@ class InboxService {
         loadFailedMessage('your notifications'),
       ));
 
+  /// Which kinds of notification the profile gets: every kind the website names, on or off.
+  Future<Map<String, bool>> notificationPrefs(String actor) async {
+    final r = await _rpc('notification_prefs', {'p_actor': actor}, loadFailedMessage('your notification settings'));
+    return {
+      if (r is Map)
+        for (final e in r.entries)
+          if (e.key is String && e.value is bool) e.key as String: e.value as bool,
+    };
+  }
+
+  /// Switches some kinds on or off for the profile; answers all of them as they now stand.
+  Future<Map<String, bool>> setNotificationKinds({required String actor, required List<String> kinds, required bool enabled}) async {
+    final r = await _rpc('notification_prefs_set', {'p_actor': actor, 'p_kinds': kinds, 'p_enabled': enabled}, actionFailedMessage);
+    return {
+      if (r is Map)
+        for (final e in r.entries)
+          if (e.key is String && e.value is bool) e.key as String: e.value as bool,
+    };
+  }
+
   Future<int> unreadNotifications(String actor) async {
     try {
       final r = await _db.rpc('notifications_unread', params: {'p_actor': actor});

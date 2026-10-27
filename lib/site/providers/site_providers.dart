@@ -246,6 +246,9 @@ class ConversationKey {
 
 final conversationProvider = FutureProvider.autoDispose.family<Conversation, ConversationKey>((ref, k) => ref.watch(inboxServiceProvider).conversation(actor: k.actor, id: k.id));
 
+/// Which kinds of notification the profile gets.
+final notificationPrefsProvider = FutureProvider.autoDispose.family<Map<String, bool>, String>((ref, actor) => ref.watch(inboxServiceProvider).notificationPrefs(actor));
+
 /// How many notifications the profile has not read.
 final unreadNotificationsProvider = FutureProvider.autoDispose.family<int, String>((ref, actor) => ref.watch(inboxServiceProvider).unreadNotifications(actor));
 
