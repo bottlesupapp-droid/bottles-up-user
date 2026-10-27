@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/features.dart';
 import '../models/inbox.dart';
+import '../models/safety.dart';
 import '../models/site_event.dart';
 import '../models/post.dart';
 import '../models/review.dart';
@@ -19,6 +20,7 @@ import '../services/features_service.dart';
 import '../services/inbox_service.dart';
 import '../services/posts_service.dart';
 import '../services/reviews_service.dart';
+import '../services/safety_service.dart';
 import '../services/guest_passes_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
@@ -45,6 +47,7 @@ final accountServiceProvider = Provider<AccountService>((ref) => AccountService(
 final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
 final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
 final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
+final safetyServiceProvider = Provider<SafetyService>((ref) => SafetyService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
 
@@ -133,6 +136,9 @@ final profileSearchProvider = FutureProvider.autoDispose.family<List<SocialProfi
 final followRequestsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).requests(actor));
 
 final blockedProfilesProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).blocked(actor));
+
+/// The community rules as BottlesUp published them (the version to accept, and the text). Read again when the person opens the rules.
+final communityRulesProvider = FutureProvider.autoDispose<CommunityRules>((ref) => ref.watch(safetyServiceProvider).rules());
 
 /// Has the person accepted the community rules? Read again after they accept.
 final rulesAcceptedProvider = FutureProvider<bool>((ref) => ref.watch(postsServiceProvider).rulesAccepted());

@@ -37,7 +37,7 @@ void main() {
       site.rpcs['rules_status'] = (_) => ok({'version': 1, 'accepted': false});
       site.rpcs['rules_accept'] = (_) => ok({'version': 1, 'accepted': true});
       expect(await service.rulesAccepted(), isFalse);
-      await service.acceptRules();
+      await service.acceptRules(1);
       expect(site.forRpc('rules_accept').single.body, {'p_version': 1});
     });
   });

@@ -23,7 +23,7 @@ class BlockedScreen extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => LoadFailed(message: e is SiteException ? e.message : loadFailedMessage('the blocked profiles'), onRetry: () => ref.invalidate(blockedProfilesProvider(actor.id))),
             data: (list) => list.isEmpty
-                ? const EmptyState(icon: Icons.block, title: 'Nobody blocked', text: 'Profiles you block will show here. They are never told.')
+                ? const EmptyState(icon: Icons.block, title: 'Nobody blocked', text: 'People you block will show here. They are never told. Blocking someone hides all of their profiles from you, and yours from them.')
                 : ListView(key: const Key('blocked-list'), padding: const EdgeInsets.only(bottom: 96), children: [
                     for (final p in list)
                       ProfileTile(

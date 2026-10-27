@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
 import '../../../site/models/features.dart';
 import '../widgets/profile_grid.dart';
+import '../widgets/report_sheet.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/switcher_sheet.dart';
 
@@ -55,7 +57,7 @@ class _ProfileView extends ConsumerWidget {
         context: context,
         builder: (c) => AlertDialog(
           title: Text('Block @${profile.handle}?'),
-          content: const Text('You will no longer see each other, and any follows between you end. They are not told.'),
+          content: const Text('You will no longer see each other, on any profile, and any follows between you end. They are not told.'),
           actions: [
             TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
             FilledButton(key: const Key('confirm-block'), onPressed: () => c.pop(true), child: const Text('Block')),
@@ -89,9 +91,16 @@ class _ProfileView extends ConsumerWidget {
           if (!p.isMine)
             PopupMenuButton<String>(
               key: const Key('profile-menu'),
-              onSelected: (v) => _setBlocked(context, ref, v == 'block'),
+              onSelected: (v) {
+                if (v == 'report') {
+                  showReportSheet(context, actor: actor, kind: ReportKind.profile, target: p.id, alsoBlock: p.blockedByMe ? null : p);
+                } else {
+                  _setBlocked(context, ref, v == 'block');
+                }
+              },
               itemBuilder: (_) => [
                 if (p.blockedByMe) const PopupMenuItem(value: 'unblock', child: Text('Unblock')) else const PopupMenuItem(value: 'block', child: Text('Block')),
+                const PopupMenuItem(value: 'report', child: Text('Report')),
               ],
             ),
         ],

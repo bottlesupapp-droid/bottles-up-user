@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/inbox.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
 import '../widgets/message_widgets.dart';
 import '../widgets/profile_widgets.dart';
+import '../widgets/report_sheet.dart';
 import '../widgets/rules_gate.dart';
 
 const int _page = 30;
@@ -149,6 +151,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
   }
 
+  Future<void> _report(SocialProfile actor, DmMessage m) async {
+    final result = await showReportSheet(context, actor: actor, kind: ReportKind.message, target: m.id, alsoBlock: m.sender);
+    // Blocking the other person in a one-to-one conversation ends it.
+    if (result != null && result.blocked && _conversation?.kind == ConversationKind.direct && mounted) {
+      context.canPop() ? context.pop() : context.go('/inbox');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ActorGate(
@@ -239,7 +249,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       reverse: true,
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
-        for (final m in _messages) MessageBubble(message: m, showSender: isGroup, onLongPress: m.isMine && !m.removed ? () => _remove(actor, m) : null),
+        for (final m in _messages)
+          MessageBubble(message: m, showSender: isGroup, onLongPress: m.removed ? null : (m.isMine ? () => _remove(actor, m) : () => _report(actor, m))),
         if (_more) Padding(padding: const EdgeInsets.all(8), child: Center(child: TextButton(key: const Key('earlier'), onPressed: _loading ? null : () => _load(actor, older: true), child: const Text('Earlier messages')))),
       ],
     );

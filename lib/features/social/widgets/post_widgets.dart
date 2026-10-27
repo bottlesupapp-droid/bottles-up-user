@@ -6,11 +6,13 @@ import 'package:video_player/video_player.dart';
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/features.dart';
 import '../../../site/models/post.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/post_rules.dart';
 import '../../../site/site_error.dart';
 import 'profile_widgets.dart';
+import 'report_sheet.dart';
 import 'share_sheet.dart';
 
 /// The colour of the ring round a Members Only story, and of the Members Only badge. BottlesUp orange, as the plan draws it.
@@ -258,6 +260,12 @@ class _PostCardViewState extends ConsumerState<PostCardView> {
     }
   }
 
+  Future<void> _report() async {
+    final result = await showReportSheet(context, actor: widget.actor, kind: ReportKind.post, target: _post.id, alsoBlock: _post.author);
+    // A person who was blocked is gone from this feed.
+    if (result != null && result.blocked) widget.onDeleted?.call();
+  }
+
   Future<void> _edit() async {
     final updated = await showModalBottomSheet<SocialPost>(
       context: context,
@@ -297,7 +305,11 @@ class _PostCardViewState extends ConsumerState<PostCardView> {
                   onSelected: (v) => v == 'edit' ? _edit() : _delete(),
                   itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Edit')), PopupMenuItem(value: 'delete', child: Text('Delete'))],
                 )
-              : null,
+              : PopupMenuButton<String>(
+                  key: Key('post-menu-${p.id}'),
+                  onSelected: (_) => _report(),
+                  itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report'))],
+                ),
         ),
         PostMediaView(post: p, onDoubleTap: _liked ? null : _toggleLike),
         Padding(

@@ -317,9 +317,13 @@ void main() {
       expect(find.byKey(const Key('post-p1')), findsNothing);
     });
 
-    testWidgets('other people\'s posts have no edit or delete', (tester) async {
+    testWidgets('other people\'s posts have no edit or delete, only Report', (tester) async {
       await openOne(tester, post('p1', mine: false));
-      expect(find.byKey(const Key('post-menu-p1')), findsNothing);
+      await tester.tap(find.byKey(const Key('post-menu-p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Report'), findsOneWidget);
+      expect(find.text('Edit'), findsNothing);
+      expect(find.text('Delete'), findsNothing);
     });
   });
 }

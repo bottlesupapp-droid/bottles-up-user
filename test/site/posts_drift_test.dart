@@ -39,7 +39,7 @@ void main() {
 
       final after = parseSocialPost(card)!;
       await service.rulesAccepted();
-      await service.acceptRules();
+      await service.acceptRules(1);
       await service.create(actor: 'a', kind: PostKind.post, audience: PostAudience.public, media: const [UploadedMedia(path: 'a/b.jpg', type: 'image/jpeg')], caption: 'x', tags: const [TagRef(TagKind.event, 'e')]);
       await service.edit(actor: 'a', post: 'p', caption: 'x', audience: PostAudience.public, commentsEnabled: true);
       await service.delete(actor: 'a', post: 'p');
@@ -105,8 +105,10 @@ void main() {
       expect(re.hasMatch('00000000-0000-4000-8000-000000000001/../x'), isFalse);
     });
 
-    test('the app\'s idea of the rules version is the website\'s', () {
-      expect(sql, contains('create function public.social_rules_version()\nreturns int\nlanguage sql\nimmutable\nset search_path = public\nas \$\$ select 1 \$\$;'));
+    test('the app does not assume a rules version: it reads the published one and accepts exactly that', () {
+      expect(sql, contains('select coalesce((select max(r.version) from public.site_community_rules r), 1)'));
+      expect(sqlFunctionParams('rules_current'), isEmpty);
+      expect(sqlFunctionParams('rules_accept'), ['p_version']);
     });
 
     test('the audiences and kinds are the website\'s', () {

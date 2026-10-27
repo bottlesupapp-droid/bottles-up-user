@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/post.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/post_rules.dart';
 import '../../../site/site_error.dart';
 import '../widgets/post_widgets.dart';
 import '../widgets/profile_widgets.dart';
+import '../widgets/report_sheet.dart';
 
 /// How long a photo stays up before the next story. A video stays up as long as it runs.
 const Duration storyPhotoTime = Duration(seconds: 5);
@@ -121,6 +123,17 @@ class _ViewerState extends ConsumerState<_Viewer> with SingleTickerProviderState
     _show();
   }
 
+  Future<void> _report(SocialPost s) async {
+    _timer.stop();
+    final result = await showReportSheet(context, actor: widget.actor, kind: ReportKind.post, target: s.id, alsoBlock: widget.owner);
+    if (!mounted) return;
+    if (result != null && result.blocked) {
+      _close();
+    } else {
+      _timer.forward();
+    }
+  }
+
   Future<void> _delete() async {
     _timer.stop();
     final sure = await showDialog<bool>(
@@ -195,6 +208,7 @@ class _ViewerState extends ConsumerState<_Viewer> with SingleTickerProviderState
                   Expanded(child: Text('${widget.owner.displayName}  ${timeAgo(s.createdAt, DateTime.now())}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
                   if (s.isMembersOnly)
                     Container(key: const Key('story-members-badge'), margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: membersOnlyColor, borderRadius: BorderRadius.circular(10)), child: const Text('Members Only', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700))),
+                  if (!s.isMine) IconButton(key: const Key('report-story'), tooltip: 'Report', icon: const Icon(Icons.flag_outlined, color: Colors.white), onPressed: () => _report(s)),
                   if (s.isMine) IconButton(key: const Key('delete-story'), tooltip: 'Delete story', icon: const Icon(Icons.delete_outline, color: Colors.white), onPressed: _delete),
                   IconButton(key: const Key('close-story'), tooltip: 'Close', icon: const Icon(Icons.close, color: Colors.white), onPressed: _close),
                 ]),

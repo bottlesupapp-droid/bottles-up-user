@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/post.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/post_rules.dart';
 import '../../../site/site_error.dart';
 import '../widgets/post_widgets.dart';
 import '../widgets/profile_widgets.dart';
+import '../widgets/report_sheet.dart';
 import '../widgets/rules_gate.dart';
 
 const int _commentPage = 30;
@@ -192,6 +194,17 @@ class _PostBodyState extends ConsumerState<_PostBody> {
             if (parent == null) for (final r in _replies[c.id] ?? const <PostComment>[]) _tile(r, parent: c.id),
           ]),
         ),
+        if (!c.isMine && c.author.id != widget.actor.id)
+          PopupMenuButton<String>(
+            key: Key('comment-menu-${c.id}'),
+            padding: EdgeInsets.zero,
+            iconSize: 20,
+            onSelected: (_) async {
+              final result = await showReportSheet(context, actor: widget.actor, kind: ReportKind.comment, target: c.id, alsoBlock: c.author);
+              if (result != null && result.blocked) _load();
+            },
+            itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report'))],
+          ),
         if (c.canDelete) IconButton(key: Key('delete-comment-${c.id}'), tooltip: 'Delete comment', visualDensity: VisualDensity.compact, icon: const Icon(Icons.delete_outline, size: 20), onPressed: () => _delete(c, parent: parent)),
       ]),
     );

@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../site/models/features.dart';
 import '../../../site/models/review.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/post_rules.dart';
 import '../../../site/site_error.dart';
 import 'profile_widgets.dart';
+import 'report_sheet.dart';
 import 'rules_gate.dart';
 
 /// Five stars, filled to [rating] (a half star for .5 and up is not drawn: the number beside it is the exact average).
@@ -98,7 +100,16 @@ class ReviewTile extends ConsumerWidget {
               Row(children: [StarRow(rating: r.rating.toDouble(), size: 14), const SizedBox(width: 6), Text(timeAgo(r.createdAt, now ?? DateTime.now()), style: theme.textTheme.bodySmall)]),
             ]),
           ),
-          if (r.isMine) TextButton(key: Key('delete-review-${r.id}'), onPressed: () => _delete(context, ref), child: const Text('Delete')),
+          if (r.isMine) TextButton(key: Key('delete-review-${r.id}'), onPressed: () => _delete(context, ref), child: const Text('Delete'))
+          else
+            PopupMenuButton<String>(
+              key: Key('review-menu-${r.id}'),
+              onSelected: (_) async {
+                final result = await showReportSheet(context, actor: actor, kind: ReportKind.review, target: r.id, alsoBlock: r.author);
+                if (result != null && result.blocked) onChanged();
+              },
+              itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report'))],
+            ),
         ]),
         if (r.body != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(r.body!, key: Key('review-body-${r.id}'))),
         if (r.reply != null)

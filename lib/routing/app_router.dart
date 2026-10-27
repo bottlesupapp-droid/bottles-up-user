@@ -17,6 +17,7 @@ import 'package:bottles_up_user/features/social/screens/blocked_screen.dart';
 import 'package:bottles_up_user/features/social/screens/business_profile_screen.dart';
 import 'package:bottles_up_user/features/social/screens/conversation_screen.dart';
 import 'package:bottles_up_user/features/social/screens/group_info_screen.dart';
+import 'package:bottles_up_user/features/social/screens/community_rules_screen.dart';
 import 'package:bottles_up_user/features/social/screens/inbox_screen.dart';
 import 'package:bottles_up_user/features/social/screens/new_message_screen.dart';
 import 'package:bottles_up_user/features/social/screens/notifications_screen.dart';
@@ -329,6 +330,7 @@ final List<RouteBase> appRoutes = [
   GoRoute(path: '/inbox/:id', builder: (context, state) => ConversationScreen(conversationId: state.pathParameters['id']!)),
   GoRoute(path: '/inbox/:id/info', builder: (context, state) => GroupInfoScreen(conversationId: state.pathParameters['id']!)),
   GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+  GoRoute(path: '/rules', builder: (context, state) => const CommunityRulesScreen()),
   GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
   GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
   GoRoute(

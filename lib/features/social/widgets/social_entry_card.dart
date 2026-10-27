@@ -82,6 +82,7 @@ class SocialEntryCard extends ConsumerWidget {
                   TextButton(key: const Key('open-saved'), onPressed: () => context.push('/me/saved'), child: const Text('Saved posts')),
                   if (ref.watch(featureOnProvider(Feature.membersOnly))) TextButton(key: const Key('open-members'), onPressed: () => context.push('/me/members'), child: const Text('Members Only')),
                   TextButton(key: const Key('open-blocked'), onPressed: () => context.push('/people/blocked'), child: const Text('Blocked profiles')),
+                  TextButton(key: const Key('open-rules'), onPressed: () => context.push('/rules'), child: const Text('Community rules')),
                   if (list.length == 1) TextButton(key: const Key('open-new-business'), onPressed: () => context.push('/me/business/new'), child: const Text('Create a business profile')),
                 ]),
               ]),

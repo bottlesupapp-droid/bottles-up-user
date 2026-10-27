@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/post.dart';
+import '../../../site/models/safety.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
 import '../widgets/post_widgets.dart';
 import '../widgets/profile_widgets.dart';
+import '../widgets/report_sheet.dart';
 
 const int _reelPage = 10;
 
@@ -131,6 +133,11 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
     }
   }
 
+  Future<void> _report() async {
+    final result = await showReportSheet(context, actor: widget.actor, kind: ReportKind.post, target: widget.reel.id, alsoBlock: widget.reel.author);
+    if (result != null && result.blocked && mounted && context.canPop()) context.pop();
+  }
+
   Future<void> _save() async {
     final want = !_saved;
     setState(() => _saved = want);
@@ -158,6 +165,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
           if (r.commentsEnabled) IconButton(key: Key('reel-comments-${r.id}'), onPressed: () => context.push('/post/${r.id}'), icon: const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 30)),
           if (r.commentsEnabled) Text('${r.comments}', style: const TextStyle(color: Colors.white)),
           IconButton(key: Key('reel-save-${r.id}'), onPressed: _save, icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border, color: Colors.white, size: 30)),
+          if (!r.isMine) IconButton(key: Key('reel-report-${r.id}'), tooltip: 'Report', onPressed: _report, icon: const Icon(Icons.flag_outlined, color: Colors.white, size: 28)),
         ]),
       ),
       Positioned(

@@ -60,6 +60,8 @@ Future<GoRouter> openSocial(
   final profiles = mine ?? [myPersonal()];
   site.rpcs.putIfAbsent('profile_my_profiles', () => (_) => ok(profiles));
   site.rpcs.putIfAbsent('story_rail', () => (_) => ok(<Object>[]));
+  // The community rules as BottlesUp has published them: nothing yet, so the app shows its own draft and the version is 1.
+  site.rpcs.putIfAbsent('rules_current', () => (_) => ok({'version': 1, 'body': null}));
   site.rpcs.putIfAbsent('profile_posts', () => (_) => ok({'total': 0, 'items': <Object>[]}));
   // [home] is a widget shown at '/__home' beside the app's own routes, for a piece of a screen that is not a route.
   // Pictures are shown through a cache on the phone's disk, which a test phone does not have: a plain box stands in, carrying the address.

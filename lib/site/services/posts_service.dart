@@ -73,8 +73,9 @@ class PostsService {
     return r is Map && r['accepted'] == true;
   }
 
-  Future<void> acceptRules() async {
-    await _rpc('rules_accept', {'p_version': 1}, actionFailedMessage);
+  /// Accepts [version] of the rules, the one the person has just read. The website refuses a version that is no longer the current one.
+  Future<void> acceptRules(int version) async {
+    await _rpc('rules_accept', {'p_version': version}, actionFailedMessage);
   }
 
   // ---- files
