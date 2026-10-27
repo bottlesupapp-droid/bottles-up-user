@@ -9,6 +9,8 @@ import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
 import '../../../site/models/features.dart';
+import '../../hire/widgets/hire_section.dart';
+import '../../hiring/widgets/pro_services_section.dart';
 import '../widgets/profile_grid.dart';
 import '../widgets/report_sheet.dart';
 import '../widgets/profile_widgets.dart';
@@ -150,6 +152,8 @@ class _ProfileView extends ConsumerWidget {
             if (p.links.isNotEmpty) _Links(links: p.links),
             const SizedBox(height: 16),
             _Actions(actor: actor, profile: p, onUnblock: () => _setBlocked(context, ref, false)),
+            ProServicesSection(profile: p),
+            HireSection(profile: p),
             const SizedBox(height: 16),
             if ((p.canSeeContent || p.isMine) && !p.blockedByMe) ProfileGrid(key: ValueKey('grid-${p.id}-${actor.id}'), actor: actor, profile: p),
             if (!p.canSeeContent && !p.isMine)

@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/features.dart';
+import '../models/hire.dart';
+import '../models/hiring.dart';
 import '../models/inbox.dart';
 import '../models/safety.dart';
 import '../models/site_event.dart';
@@ -24,6 +26,8 @@ import '../services/posts_service.dart';
 import '../services/reviews_service.dart';
 import '../services/safety_service.dart';
 import '../services/guest_passes_service.dart';
+import '../services/hire_service.dart';
+import '../services/hiring_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
 import '../services/site_contact_service.dart';
@@ -52,6 +56,8 @@ final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(
 final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
 final captionIdeasServiceProvider = Provider<CaptionIdeasService>((ref) => CaptionIdeasService(ref.watch(siteClientProvider)));
 final splitServiceProvider = Provider<SplitService>((ref) => SplitService(ref.watch(siteClientProvider)));
+final hiringServiceProvider = Provider<HiringService>((ref) => HiringService(ref.watch(siteClientProvider)));
+final hireServiceProvider = Provider<HireService>((ref) => HireService(ref.watch(siteClientProvider)));
 final safetyServiceProvider = Provider<SafetyService>((ref) => SafetyService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
@@ -321,6 +327,35 @@ final myShareRequestsProvider = FutureProvider.autoDispose<List<ShareRequest>>((
   return ref.watch(splitServiceProvider).myShares();
 });
 
+/// The services a professional offers (all of them for their own team, the active ones for everyone else). Empty when hiring is not open.
+final proServicesProvider = FutureProvider.autoDispose.family<List<ProService>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProService>[];
+  return ref.watch(hiringServiceProvider).services(profile);
+});
+
+/// The days a professional is not free, from today, for the next 120 days.
+final proBusyDaysProvider = FutureProvider.autoDispose.family<List<DateTime>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <DateTime>[];
+  final now = DateTime.now();
+  return ref.watch(hiringServiceProvider).busyDays(profile, from: DateTime(now.year, now.month, now.day));
+});
+
+/// The requests the signed-in person has made to professionals. Empty when hiring is not open.
+final myProRequestsProvider = FutureProvider.autoDispose<List<ProRequest>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProRequest>[];
+  return ref.watch(hiringServiceProvider).myRequests();
+});
+
+/// The requests a professional profile has received.
+final proRequestsForProvider = FutureProvider.autoDispose.family<List<ProRequest>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProRequest>[];
+  return ref.watch(hiringServiceProvider).requestsFor(actor);
+});
+
+final proRequestProvider = FutureProvider.autoDispose.family<ProRequest, String>((ref, id) => ref.watch(hiringServiceProvider).request(id));
+
+final proBookingProvider = FutureProvider.autoDispose.family<ProBooking, String>((ref, id) => ref.watch(hiringServiceProvider).booking(id));
+
 /// The guests on a table booking, by the booking's confirmation code.
 final guestRosterProvider = FutureProvider.autoDispose.family<GuestRoster, String>((ref, code) => ref.watch(guestPassesServiceProvider).roster(code));
 
@@ -378,3 +413,35 @@ final urlOpenerProvider = Provider<OpenUrl>((ref) {
     }
   };
 });
+
+// ---- teams, venue hire and the event workspace
+
+/// Teams are open when either hiring professionals or hosting events at venues is.
+final teamsOnProvider = Provider<bool>((ref) => ref.watch(featureOnProvider(Feature.marketplace)) || ref.watch(featureOnProvider(Feature.venueHire)));
+
+/// The team of a professional's profile.
+final teamProvider = FutureProvider.autoDispose.family<TeamInfo, String>((ref, actor) => ref.watch(hireServiceProvider).team(actor));
+
+/// Invitations to join somebody's team. Empty when teams are not open.
+final teamInvitationsProvider = FutureProvider.autoDispose<List<TeamInvitation>>((ref) {
+  if (!ref.watch(teamsOnProvider)) return const <TeamInvitation>[];
+  return ref.watch(hireServiceProvider).invitations();
+});
+
+/// What the person may do as a profile they act as (everything for an owner, a role's share for a team member).
+final profileAccessProvider = FutureProvider.autoDispose.family<ProfileAccess, String>((ref, profile) => ref.watch(hireServiceProvider).access(profile));
+
+/// The hires an event group or promoter has asked for. Empty when hiring a venue is not open.
+final hiresMineProvider = FutureProvider.autoDispose.family<List<Hire>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.venueHire))) return const <Hire>[];
+  return ref.watch(hireServiceProvider).hiresMine(actor);
+});
+
+/// The requests a venue has had. Empty when hiring a venue is not open.
+final hiresForProvider = FutureProvider.autoDispose.family<List<Hire>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.venueHire))) return const <Hire>[];
+  return ref.watch(hireServiceProvider).hiresFor(actor);
+});
+
+/// One hire's workspace, read as the profile that has it open.
+final hireWorkspaceProvider = FutureProvider.autoDispose.family<Workspace, ({String actor, String hire})>((ref, key) => ref.watch(hireServiceProvider).workspace(actor: key.actor, hire: key.hire));

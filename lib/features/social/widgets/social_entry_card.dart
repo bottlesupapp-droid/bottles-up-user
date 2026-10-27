@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../site/models/features.dart';
 import '../../../site/providers/site_providers.dart';
+import '../../../site/rules/hiring_rules.dart';
 import '../../../site/site_error.dart';
+import '../../hire/widgets/hire_widgets.dart';
 import 'business_tools_card.dart';
 import 'my_night_card.dart';
 import 'profile_widgets.dart';
@@ -83,6 +85,14 @@ class SocialEntryCard extends ConsumerWidget {
                 Wrap(spacing: 16, children: [
                   if (actor.isPrivate) TextButton(key: const Key('open-requests'), onPressed: () => context.push('/people/requests'), child: const Text('Follow requests')),
                   TextButton(key: const Key('open-saved'), onPressed: () => context.push('/me/saved'), child: const Text('Saved posts')),
+                  if (ref.watch(featureOnProvider(Feature.marketplace))) TextButton(key: const Key('open-hiring'), onPressed: () => context.push('/me/hiring'), child: const Text('Professionals I asked')),
+                  if (ref.watch(teamsOnProvider) && isProfessional(actor)) TextButton(key: const Key('open-team'), onPressed: () => context.push('/me/team'), child: const Text('Team')),
+                  if (ref.watch(featureOnProvider(Feature.venueHire)) && isOrganizerProfile(actor)) TextButton(key: const Key('open-hires'), onPressed: () => context.push('/me/hires'), child: const Text('My hires')),
+                  if (ref.watch(featureOnProvider(Feature.venueHire)) && isVenueProfile(actor)) TextButton(key: const Key('open-hire-requests-link'), onPressed: () => context.push('/me/hire-requests'), child: const Text('Hire requests')),
+                  if (ref.watch(featureOnProvider(Feature.marketplace)) && isProfessional(actor)) ...[
+                    TextButton(key: const Key('open-pro-requests'), onPressed: () => context.push('/me/pro-requests'), child: const Text('Requests for me')),
+                    TextButton(key: const Key('open-services'), onPressed: () => context.push('/me/services'), child: const Text('My services')),
+                  ],
                   if (ref.watch(featureOnProvider(Feature.membersOnly))) TextButton(key: const Key('open-members'), onPressed: () => context.push('/me/members'), child: const Text('Members Only')),
                   TextButton(key: const Key('open-settings'), onPressed: () => context.push('/me/settings'), child: const Text('Privacy and notifications')),
                   TextButton(key: const Key('open-blocked'), onPressed: () => context.push('/people/blocked'), child: const Text('Blocked profiles')),

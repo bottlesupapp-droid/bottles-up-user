@@ -9,6 +9,9 @@ import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
 import '../../split/widgets/shares_to_pay_card.dart';
+import '../../hire/widgets/hire_card.dart';
+import '../../hire/widgets/team_invitations_card.dart';
+import '../../hiring/widgets/hiring_card.dart';
 import '../widgets/my_night_card.dart';
 import '../widgets/post_widgets.dart';
 import '../widgets/profile_widgets.dart';
@@ -108,6 +111,9 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         padding: const EdgeInsets.only(bottom: 96),
         children: [
           const SharesToPayCard(),
+          const HiringCard(),
+          const HireCard(),
+          const TeamInvitationsCard(),
           const MyNightCard(),
           StoryRail(actor: actor),
           if (_posts.isEmpty)

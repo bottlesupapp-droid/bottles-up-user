@@ -38,6 +38,15 @@ import 'package:bottles_up_user/features/social/screens/people_list_screen.dart'
 import 'package:bottles_up_user/features/social/screens/people_search_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_profile_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_setup_screen.dart';
+import 'package:bottles_up_user/features/hire/screens/hire_form_screen.dart';
+import 'package:bottles_up_user/features/hire/screens/hire_screen.dart';
+import 'package:bottles_up_user/features/hire/screens/hires_screen.dart';
+import 'package:bottles_up_user/features/hire/screens/team_screen.dart';
+import 'package:bottles_up_user/features/hiring/screens/hiring_booking_screen.dart';
+import 'package:bottles_up_user/features/hiring/screens/hiring_request_screen.dart';
+import 'package:bottles_up_user/features/hiring/screens/hiring_requests_screen.dart';
+import 'package:bottles_up_user/features/hiring/screens/pro_request_form_screen.dart';
+import 'package:bottles_up_user/features/hiring/screens/pro_services_screen.dart';
 import 'package:bottles_up_user/features/split/screens/pay_share_screen.dart';
 import 'package:bottles_up_user/features/split/screens/shares_to_pay_screen.dart';
 import 'package:bottles_up_user/features/split/screens/split_bill_screen.dart';
@@ -344,6 +353,19 @@ final List<RouteBase> appRoutes = [
   GoRoute(path: '/me/bookings', builder: (context, state) => const MyBookingsScreen()),
   GoRoute(path: '/me/shares', builder: (context, state) => const SharesToPayScreen()),
   GoRoute(path: '/me/shares/:id', builder: (context, state) => PayShareScreen(shareId: state.pathParameters['id']!)),
+  // Hiring professionals: asking for a job, the quote, the booking and its payment; and a professional's own services and requests.
+  GoRoute(path: '/me/hiring', builder: (context, state) => const HiringRequestsScreen()),
+  GoRoute(path: '/me/pro-requests', builder: (context, state) => const HiringRequestsScreen(asProvider: true)),
+  GoRoute(path: '/me/services', builder: (context, state) => const ProServicesScreen()),
+  GoRoute(path: '/pros/:id/request', builder: (context, state) => ProRequestFormScreen(providerId: state.pathParameters['id']!)),
+  GoRoute(path: '/hiring/bookings/:id', builder: (context, state) => HiringBookingScreen(bookingId: state.pathParameters['id']!)),
+  GoRoute(path: '/hiring/:id', builder: (context, state) => HiringRequestScreen(requestId: state.pathParameters['id']!)),
+  // Teams, asking a venue to host an event, and the shared workspace of a hire. A hire is opened as the group's or the venue's profile (`as`).
+  GoRoute(path: '/me/team', builder: (context, state) => const TeamScreen()),
+  GoRoute(path: '/me/hires', builder: (context, state) => const HiresScreen()),
+  GoRoute(path: '/me/hire-requests', builder: (context, state) => const HiresScreen(asVenue: true)),
+  GoRoute(path: '/venues/:id/host', builder: (context, state) => HireFormScreen(venueId: state.pathParameters['id']!)),
+  GoRoute(path: '/hires/:id', builder: (context, state) => HireScreen(hireId: state.pathParameters['id']!, actorId: state.uri.queryParameters['as'])),
   GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
   GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
   GoRoute(

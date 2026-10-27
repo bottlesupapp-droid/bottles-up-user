@@ -739,3 +739,93 @@ Map<String, dynamic> shareRequestRow({
   String? paidAt,
 }) =>
     {'id': id, 'state': state, 'amount_cents': amount, 'currency': 'cad', 'deadline': deadline, 'host': host, 'venue': venue, 'booking_date': date, 'start_time': time, 'paid_at': paidAt};
+
+/// A service a professional lists (`pro_services_of`).
+Map<String, dynamic> proServiceRow({String id = 'sv1', String title = 'Wedding DJ set', String? description = 'Four hours with lights', int? from = 100000, String? note = 'from', bool active = true}) =>
+    {'id': id, 'title': title, 'description': description, 'from_cents': from, 'price_note': note, 'active': active};
+
+/// A quote as it sits on a request.
+Map<String, dynamic> proQuoteRow({String id = 'q1', int total = 100000, int deposit = 30000, String? due = '2099-11-01', String scope = 'Four hours of music, lights and sound', String valid = '2099-10-30T12:00:00Z', String status = 'sent'}) =>
+    {'id': id, 'total_cents': total, 'deposit_cents': deposit, 'balance_due_by': deposit >= total ? null : due, 'scope': scope, 'valid_until': valid, 'status': status, 'created_at': '2099-10-25T12:00:00Z'};
+
+/// A booking with a professional, from either side: pass [net] to see it as the professional does.
+Map<String, dynamic> proBookingRow({
+  String id = 'pb1',
+  String request = 'pr1',
+  String state = 'awaiting_deposit',
+  String title = 'Wedding DJ set',
+  String date = '2099-11-08',
+  int total = 100000,
+  int deposit = 30000,
+  int paid = 0,
+  String? due = '2099-11-01',
+  String? payBy = '2099-10-26T12:00:00Z',
+  String? doneAt,
+  String? cancelledBy,
+  String? cancelReason,
+  int freeDays = 7,
+  Map<String, dynamic>? provider,
+  Map<String, dynamic>? client,
+  int? net,
+  Map<String, dynamic>? dispute,
+}) =>
+    {
+      'id': id,
+      'request_id': request,
+      'state': state,
+      'title': title,
+      'event_date': date,
+      'currency': 'cad',
+      'total_cents': total,
+      'deposit_cents': deposit,
+      'balance_due_by': deposit >= total ? null : due,
+      'paid_cents': paid,
+      'owed_cents': total - paid,
+      'pay_by': payBy,
+      'provider_done_at': doneAt,
+      'completed_at': null,
+      'cancelled_by': cancelledBy,
+      'cancel_reason': cancelReason,
+      'free_cancel_days': freeDays,
+      'provider': provider ?? profileRow(id: 'p-dj', kind: 'business', handle: 'djdee', name: 'DJ Dee', category: 'dj'),
+      'client': client,
+      'net_cents': net,
+      'commission_bps': net == null ? null : 500,
+      'dispute': dispute,
+      'created_at': '2099-10-25T12:00:00Z',
+    };
+
+/// A request to hire a professional (`pro_request_get` and the lists). Pass [client] to see it as the professional does.
+Map<String, dynamic> proRequestRow({
+  String id = 'pr1',
+  String status = 'requested',
+  String date = '2099-11-08',
+  String message = 'A birthday night for 120',
+  String? timeNote = '9pm to 1am',
+  String? location = 'Club A',
+  int? guests = 120,
+  int? budget = 150000,
+  String? declineNote,
+  Map<String, dynamic>? service = const {'id': 'sv1', 'title': 'Wedding DJ set'},
+  Map<String, dynamic>? provider,
+  Map<String, dynamic>? client,
+  Map<String, dynamic>? quote,
+  Map<String, dynamic>? booking,
+}) =>
+    {
+      'id': id,
+      'status': status,
+      'event_date': date,
+      'time_note': timeNote,
+      'location': location,
+      'guests': guests,
+      'message': message,
+      'budget_cents': budget,
+      'decline_note': declineNote,
+      'created_at': '2099-10-24T12:00:00Z',
+      'service': service,
+      'provider': provider ?? profileRow(id: 'p-dj', kind: 'business', handle: 'djdee', name: 'DJ Dee', category: 'dj'),
+      'client': client,
+      'quote': quote,
+      'booking': booking,
+    };

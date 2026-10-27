@@ -19,6 +19,16 @@ const List<DataSection> dataCollected = [
     'The reason you give when you ask a venue for a refund or report a problem with a payment.',
     'If you ask friends to pay their share of your table, who you asked, how much and whether they paid. If a friend asks you, the host\'s first name, the venue, the night and your share, and your payment.',
   ]),
+  DataSection('Hiring professionals', [
+    'If you ask a professional (a DJ, a photographer and so on) for a job: the day, the place, the number of guests, your budget and what you wrote, their quote, the booking and what was paid. The professional sees your name and username.',
+    'The reason you give if you cancel a booking or say something went wrong. BottlesUp reads it if it has to decide.',
+    'If you are the professional: the services you list with their prices, the days you mark as busy, and the quotes and bookings you make.',
+  ]),
+  DataSection('Events at venues and teams', [
+    'If you ask a venue to host your event: the day, the hours, the kind of event, how many people you expect, the space, equipment, staffing, your budget and what you wrote, the venue\'s offer and whether you agreed, the schedule and tasks you and the venue add, and the professionals and public event you link. The venue sees the name and username of the person who asked.',
+    'If you run a professional\'s profile and invite people to its team: their usernames, the role you give them and when they accepted or left. Every invitation and change is logged for the owner and for BottlesUp.',
+    'The money in a venue hire is agreed here and settled between you and the venue: BottlesUp does not take it.',
+  ]),
   DataSection('Your profile', [
     'A username, and if you add them a short bio, your city, links to your pages and up to ten interests. Your profile is public unless you make it private in Privacy settings.',
     'If you open a business profile (a DJ, a photographer, an event group), its name, its category and the same details.',
