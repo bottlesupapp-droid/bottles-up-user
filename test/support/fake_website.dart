@@ -603,3 +603,33 @@ Map<String, dynamic> commentRow({String id = 'c1', String post = 'post1', String
 
 Map<String, dynamic> railRow({Map<String, dynamic>? profile, String latest = '2099-10-24T23:00:00Z', bool unseen = true, bool membersOnly = false, int count = 1, bool mine = false}) =>
     {'profile': profile ?? profileRow(id: 'a1', handle: 'ann', name: 'Ann Lee'), 'latest_at': latest, 'unseen': unseen, 'members_only': membersOnly, 'count': count, 'is_mine': mine};
+
+/// A review as the website's `review_card` shows it.
+Map<String, dynamic> reviewRow({
+  String id = 'r1',
+  String kind = 'venue',
+  int rating = 4,
+  String? body = 'Great night, slow bar.',
+  String createdAt = '2099-10-24T23:00:00Z',
+  Map<String, dynamic>? author,
+  bool mine = false,
+  bool canReply = false,
+  Map<String, dynamic>? reply,
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'rating': rating,
+      'body': body,
+      'created_at': createdAt,
+      'updated_at': createdAt,
+      'author': author ?? profileRow(id: 'u1', handle: 'ann', name: 'Ann Lee'),
+      'is_mine': mine,
+      'can_reply': canReply,
+      'reply': reply,
+    };
+
+Map<String, dynamic> reviewsPage({List<Map<String, dynamic>> items = const [], int count = 0, double average = 0, List<int> stars = const [0, 0, 0, 0, 0]}) => {
+      'summary': {'count': count, 'average': average, 'stars': stars},
+      'items': items,
+    };

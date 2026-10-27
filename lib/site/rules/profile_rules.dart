@@ -130,3 +130,20 @@ String initialsOf(String name) {
   final letters = [for (final w in words.take(2)) String.fromCharCode(w.runes.first).toUpperCase()];
   return letters.join();
 }
+
+/// The features a venue can list, and what each is called.
+const Map<String, String> venueAmenityLabels = {
+  'parking': 'Parking',
+  'valet': 'Valet',
+  'coat_check': 'Coat check',
+  'wifi': 'Wi-Fi',
+  'accessible': 'Wheelchair accessible',
+  'outdoor': 'Outdoor area',
+  'vip_area': 'VIP area',
+  'food': 'Food',
+  'smoking_area': 'Smoking area',
+  'private_rooms': 'Private rooms',
+  'live_music': 'Live music',
+  'dance_floor': 'Dance floor',
+  'bottle_service': 'Bottle service',
+};

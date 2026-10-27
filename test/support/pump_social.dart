@@ -63,7 +63,7 @@ Future<GoRouter> openSocial(
   site.rpcs.putIfAbsent('profile_posts', () => (_) => ok({'total': 0, 'items': <Object>[]}));
   // [home] is a widget shown at '/__home' beside the app's own routes, for a piece of a screen that is not a route.
   // Pictures are shown through a cache on the phone's disk, which a test phone does not have: a plain box stands in, carrying the address.
-  NetworkPicture.imageOverride = (url, fit) => SizedBox.expand(key: ValueKey('img:$url'));
+  NetworkPicture.imageOverride = (url, fit, width, height) => SizedBox(key: ValueKey('img:$url'), width: width, height: height);
   addTearDown(() => NetworkPicture.imageOverride = null);
   final router = GoRouter(
     initialLocation: home == null ? location : '/__home',

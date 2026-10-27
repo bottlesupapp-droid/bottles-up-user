@@ -16,7 +16,10 @@ import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen
 import 'package:bottles_up_user/features/social/screens/blocked_screen.dart';
 import 'package:bottles_up_user/features/social/screens/business_profile_screen.dart';
 import 'package:bottles_up_user/features/social/screens/create_post_screen.dart';
+import 'package:bottles_up_user/features/social/screens/explore_screen.dart';
 import 'package:bottles_up_user/features/social/screens/follow_requests_screen.dart';
+import 'package:bottles_up_user/features/social/screens/professionals_screen.dart';
+import 'package:bottles_up_user/features/social/screens/reviews_screen.dart';
 import 'package:bottles_up_user/features/social/screens/home_feed_screen.dart';
 import 'package:bottles_up_user/features/social/screens/members_screen.dart';
 import 'package:bottles_up_user/features/social/screens/post_screen.dart';
@@ -34,6 +37,7 @@ import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dar
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
 import 'package:bottles_up_user/site/models/post.dart';
+import 'package:bottles_up_user/site/models/review.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -314,6 +318,20 @@ final List<RouteBase> appRoutes = [
   ),
   GoRoute(path: '/post/:id', builder: (context, state) => PostScreen(postId: state.pathParameters['id']!)),
   GoRoute(path: '/stories/:handle', builder: (context, state) => StoryViewerScreen(handle: state.pathParameters['handle']!)),
+  GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
+  GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
+  GoRoute(
+    path: '/reviews/:kind/:id',
+    builder: (context, state) {
+      final kind = switch (state.pathParameters['kind']) {
+        'venue' => ReviewKind.venue,
+        'event' => ReviewKind.event,
+        _ => null,
+      };
+      if (kind == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('That page does not exist.', key: Key('no-such-page'))));
+      return ReviewsScreen(kind: kind, targetId: state.pathParameters['id']!);
+    },
+  ),
   GoRoute(path: '/reels', builder: (context, state) => const ReelsScreen()),
   GoRoute(path: '/me/members', builder: (context, state) => const MembersScreen()),
   GoRoute(path: '/me/saved', builder: (context, state) => const SavedPostsScreen()),

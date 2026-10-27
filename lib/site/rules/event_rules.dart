@@ -64,3 +64,22 @@ List<SiteEvent> filterEventsByDate(List<SiteEvent> events, DateFilter filter, Da
       DateFilter.tonight => [for (final e in events) if (happensTonight(e, now)) e],
       DateFilter.weekend => [for (final e in events) if (happensThisWeekend(e, now)) e],
     };
+
+/// Which events to show by what the cheapest ticket costs. Prices are in the event's own currency (all CAD today).
+enum PriceFilter { any, free, under30 }
+
+/// Events whose cheapest ticket on sale is in the range. An event with nothing on sale has no price and is left out of "Free" and "Under $30".
+List<SiteEvent> filterEventsByPrice(List<SiteEvent> events, PriceFilter filter) => switch (filter) {
+      PriceFilter.any => events,
+      PriceFilter.free => [for (final e in events) if (e.fromPriceCents == 0) e],
+      PriceFilter.under30 => [for (final e in events) if (e.fromPriceCents != null && e.fromPriceCents! <= 3000) e],
+    };
+
+/// Events with something left to buy (an event with no tickets on sale yet stays: they may come).
+List<SiteEvent> onlyAvailableEvents(List<SiteEvent> events) => [for (final e in events) if (!e.soldOut) e];
+
+/// The items of a "hot" list that are in [all], in the hot order. A hot id the app did not load (an unpublished one, a finished one) is skipped.
+List<T> inHotOrder<T>(List<T> all, String Function(T) idOf, List<String> hotIds) {
+  final byId = {for (final x in all) idOf(x): x};
+  return [for (final id in hotIds) if (byId[id] case final x?) x];
+}

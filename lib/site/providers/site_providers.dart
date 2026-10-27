@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/features.dart';
 import '../models/site_event.dart';
 import '../models/post.dart';
+import '../models/review.dart';
 import '../models/social_profile.dart';
 import '../models/my_night.dart';
 import '../models/site_contact.dart';
@@ -15,6 +16,7 @@ import '../services/account_service.dart';
 import '../services/booking_actions_service.dart';
 import '../services/features_service.dart';
 import '../services/posts_service.dart';
+import '../services/reviews_service.dart';
 import '../services/guest_passes_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
@@ -39,6 +41,7 @@ final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => B
 final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
 final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
+final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
 
@@ -155,6 +158,61 @@ final postProvider = FutureProvider.autoDispose.family<SocialPost, PostKey>((ref
 /// One profile's stories that are up, as the acting profile sees them.
 final storiesOfProvider = FutureProvider.autoDispose.family<List<SocialPost>, PeopleKey>(
   (ref, k) => ref.watch(postsServiceProvider).storiesOf(actor: k.actor, profile: k.profile),
+);
+
+/// Which reviews: of a venue or an event, as a profile sees them.
+class ReviewsKey {
+  const ReviewsKey({required this.actor, required this.kind, required this.target});
+
+  final String actor;
+  final ReviewKind kind;
+  final String target;
+
+  @override
+  bool operator ==(Object other) => other is ReviewsKey && other.actor == actor && other.kind == kind && other.target == target;
+
+  @override
+  int get hashCode => Object.hash(actor, kind, target);
+}
+
+/// The first page of reviews of a venue or event, with the summary.
+final reviewsPageProvider = FutureProvider.autoDispose.family<ReviewsPage, ReviewsKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).reviews(actor: k.actor, kind: k.kind, target: k.target, limit: 5),
+);
+
+/// May the profile review this? Read again after it writes or deletes one.
+final reviewEligibilityProvider = FutureProvider.autoDispose.family<ReviewEligibility, ReviewsKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).eligibility(actor: k.actor, kind: k.kind, target: k.target),
+);
+
+/// Ratings of the venues on screen, by venue id. The key is the ids joined with commas (a list would be a new key every time it was built). Empty while reviews are off or when
+/// they cannot be read.
+final venueRatingsProvider = FutureProvider.autoDispose.family<Map<String, VenueRating>, String>((ref, ids) {
+  if (!ref.watch(featureOnProvider(Feature.reviews)) || ids.isEmpty) return const {};
+  return ref.watch(reviewsServiceProvider).ratings(ids.split(','));
+});
+
+final hotVenuesProvider = FutureProvider.autoDispose<List<HotItem>>((ref) => ref.watch(reviewsServiceProvider).hotVenues());
+final hotEventsProvider = FutureProvider.autoDispose<List<HotItem>>((ref) => ref.watch(reviewsServiceProvider).hotEvents());
+
+/// A directory search of professionals.
+class DirectoryKey {
+  const DirectoryKey({required this.actor, this.category, this.city = '', this.query = ''});
+
+  final String actor;
+  final String? category;
+  final String city;
+  final String query;
+
+  @override
+  bool operator ==(Object other) => other is DirectoryKey && other.actor == actor && other.category == category && other.city == city && other.query == query;
+
+  @override
+  int get hashCode => Object.hash(actor, category, city, query);
+}
+
+final professionalsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, DirectoryKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).professionals(actor: k.actor, category: k.category, city: k.city, query: k.query),
 );
 
 /// Forget everything about the person who was signed in (their profiles, which one they were acting as) so the next person starts clean.

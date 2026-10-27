@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/review.dart';
 import '../../../site/models/venue.dart';
+import '../../social/widgets/reviews_widgets.dart';
 import '../../../site/money.dart';
 
 /// One venue in the Tables list: the picture, where it is, and how many tables there are and from what price.
 class VenueCard extends StatelessWidget {
-  const VenueCard({super.key, required this.venue, required this.onTap});
+  const VenueCard({super.key, required this.venue, required this.onTap, this.rating});
 
   final Venue venue;
   final VoidCallback onTap;
+
+  /// The average and count of reviews, when the venue has any (and reviews are on).
+  final VenueRating? rating;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +51,10 @@ class VenueCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(venue.name, key: Key('venue-name-${venue.id}'), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Row(children: [
+                    Expanded(child: Text(venue.name, key: Key('venue-name-${venue.id}'), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+                    if (rating != null) RatingBadge(rating: rating!),
+                  ]),
                   if (venue.address != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(venue.address!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
                   const SizedBox(height: 10),
                   Text(

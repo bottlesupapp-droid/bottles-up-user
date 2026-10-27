@@ -1,3 +1,6 @@
+import '../../social/widgets/reviews_widgets.dart';
+import '../../../site/models/review.dart';
+import '../widgets/venue_facts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -162,6 +165,8 @@ class _VenueScreenState extends ConsumerState<VenueScreen> {
                 const SizedBox(height: 12),
                 Text(venue.description!, key: const Key('venue-description'), style: theme.textTheme.bodyLarge),
               ],
+              VenueFactsSection(venue: venue),
+              ReviewsSection(kind: ReviewKind.venue, targetId: venue.id),
               const SizedBox(height: 20),
               Text('Pick a date and time', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),

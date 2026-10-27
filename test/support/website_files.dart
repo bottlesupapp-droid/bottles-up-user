@@ -78,3 +78,12 @@ Set<String> sqlWordsAfter(String sql, String marker) {
   final close = sql.indexOf(')', open);
   return {for (final m in RegExp("'([^']*)'").allMatches(sql.substring(open, close))) m.group(1)!};
 }
+
+/// The words inside the first `[ 'a', 'b' ]` that follows [marker] in [sql] (an `array[...]` list).
+Set<String> sqlWordsInBrackets(String sql, String marker) {
+  final at = sql.indexOf(marker);
+  if (at < 0) throw StateError('no "$marker" in the SQL');
+  final open = sql.indexOf('[', at);
+  final close = sql.indexOf(']', open);
+  return {for (final m in RegExp("'([^']*)'").allMatches(sql.substring(open, close))) m.group(1)!};
+}

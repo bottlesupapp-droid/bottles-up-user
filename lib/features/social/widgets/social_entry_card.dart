@@ -63,6 +63,7 @@ class SocialEntryCard extends ConsumerWidget {
                 ]),
                 const SizedBox(height: 8),
                 Wrap(spacing: 8, children: [
+                  OutlinedButton(key: const Key('open-explore'), onPressed: () => context.push('/explore'), child: const Text('Explore')),
                   FilledButton(key: const Key('open-feed'), onPressed: () => context.push('/feed'), child: const Text('Home feed')),
                   FilledButton.tonal(key: const Key('view-profile'), onPressed: () => context.push('/u/${actor.handle}'), child: const Text('View profile')),
                   OutlinedButton(key: const Key('open-create-post'), onPressed: () => context.push('/create'), child: const Text('Create')),

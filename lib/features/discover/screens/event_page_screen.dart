@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../site/models/review.dart';
+import '../../social/widgets/reviews_widgets.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/site_event.dart';
@@ -142,6 +144,7 @@ class _EventPageScreenState extends ConsumerState<EventPageScreen> {
                           disabled: over || t.soldOut,
                           onTap: () => setState(() => _tierId = t.id),
                         ),
+                    ReviewsSection(kind: ReviewKind.event, targetId: e.id),
                   ],
                 ),
               ),
