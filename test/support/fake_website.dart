@@ -31,6 +31,27 @@ class RpcRequest {
   final Map<String, dynamic> body;
 }
 
+/// What the app asked storage to do: upload a file, sign addresses, remove files.
+class StorageRequest {
+  StorageRequest(this.method, this.action, this.path, this.contentType, this.size, this.paths, [this.body = '']);
+
+  final String method;
+
+  /// 'upload', 'sign' or 'remove'.
+  final String action;
+
+  /// For an upload: the path in the bucket.
+  final String? path;
+  final String? contentType;
+  final int size;
+
+  /// For sign and remove: the paths asked about.
+  final List<String> paths;
+
+  /// The start of an upload's body as text (a multipart upload carries the file's own type in it).
+  final String body;
+}
+
 typedef FunctionHandler = ({int status, Object? body}) Function(Map<String, dynamic> body);
 
 /// A pretend BottlesUp website: the real Supabase client talks to it over HTTP, so a test sees exactly the requests the app makes (the address, the filters, the body) and decides
@@ -44,6 +65,11 @@ class FakeWebsite {
   final List<RpcRequest> rpcRequests = [];
   final List<TableRequest> tableRequests = [];
   final List<FunctionRequest> functionRequests = [];
+  final List<StorageRequest> storageRequests = [];
+
+  /// Paths storage will not sign (the website refuses them), and whether uploads fail.
+  final Set<String> unsignable = {};
+  bool failUploads = false;
 
   /// Makes every request fail with this status (a dropped connection is [networkDown]).
   int? failAllWith;
@@ -76,6 +102,11 @@ class FakeWebsite {
           if (r.name == name) r,
       ];
 
+  List<StorageRequest> storageOf(String action) => [
+        for (final r in storageRequests)
+          if (r.action == action) r,
+      ];
+
   List<FunctionRequest> forFunction(String name) => [
         for (final r in functionRequests)
           if (r.name == name) r,
@@ -96,6 +127,30 @@ class FakeWebsite {
       if (handler == null) return _json(request, 404, {'message': 'no such function $name'});
       final r = handler(decoded);
       return _json(request, r.status, r.body);
+    }
+    if (segments.length >= 4 && segments[0] == 'storage' && segments[1] == 'v1' && segments[2] == 'object') {
+      if (failAllWith != null) return _json(request, failAllWith!, {'message': 'failed'});
+      if (segments[3] == 'sign' && segments.length == 5) {
+        final body = jsonDecode(request.body) as Map;
+        final paths = [for (final p in body['paths'] as List) p as String];
+        storageRequests.add(StorageRequest('POST', 'sign', null, null, 0, paths));
+        return _json(request, 200, [
+          for (final p in paths)
+            unsignable.contains(p) ? {'error': 'Object not found', 'path': p, 'signedURL': null} : {'error': null, 'path': p, 'signedURL': '/object/sign/social-media/$p?token=t-$p'},
+        ]);
+      }
+      if (request.method == 'DELETE') {
+        final body = jsonDecode(request.body) as Map;
+        final paths = [for (final p in body['prefixes'] as List) p as String];
+        storageRequests.add(StorageRequest('DELETE', 'remove', null, null, 0, paths));
+        return _json(request, 200, <Object>[]);
+      }
+      if (request.method == 'POST' && segments[3] == 'social-media') {
+        final path = segments.sublist(4).join('/');
+        storageRequests.add(StorageRequest('POST', 'upload', path, request.headers['content-type'], request.bodyBytes.length, const [], latin1.decode(request.bodyBytes.take(400).toList(), allowInvalid: true)));
+        if (failUploads) return _json(request, 500, {'message': 'storage is down'});
+        return _json(request, 200, {'Key': 'social-media/$path'});
+      }
     }
     if (segments.length >= 3 && segments[0] == 'rest' && segments[1] == 'v1') {
       final table = segments[2];
@@ -491,3 +546,60 @@ Map<String, dynamic> profileRow({
 
 /// What the database says when a function raises a sentence (`raise exception '...'`): PostgREST answers 400 with code P0001.
 ({int status, Object? body}) raised(String sentence) => (status: 400, body: {'code': 'P0001', 'message': sentence, 'details': null, 'hint': null});
+
+/// A media item of a post.
+Map<String, dynamic> mediaRow({String id = 'm1', int position = 0, String type = 'image', String path = 'author/file.jpg', String? poster, int? width = 1080, int? height = 1350, int? durationMs}) =>
+    {'id': id, 'position': position, 'type': type, 'path': path, 'poster_path': poster, 'width': width, 'height': height, 'duration_ms': durationMs};
+
+/// A post as the website's `post_card` shows it.
+Map<String, dynamic> postRow({
+  String id = 'post1',
+  String kind = 'post',
+  String? caption = 'Friday vibes',
+  String audience = 'public',
+  bool comments = true,
+  String createdAt = '2099-10-24T22:00:00Z',
+  String? expiresAt,
+  Map<String, dynamic>? author,
+  List<Map<String, dynamic>>? media,
+  List<Map<String, dynamic>> tags = const [],
+  int likes = 0,
+  int commentCount = 0,
+  bool liked = false,
+  bool saved = false,
+  bool mine = false,
+  Map<String, dynamic> extra = const {},
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'caption': caption,
+      'audience': audience,
+      'comments_enabled': comments,
+      'created_at': createdAt,
+      'expires_at': expiresAt,
+      'author': author ?? profileRow(id: 'a1', handle: 'ann', name: 'Ann Lee'),
+      'media': media ?? [mediaRow(path: 'a1/$id.jpg')],
+      'tags': tags,
+      'likes': likes,
+      'comments': commentCount,
+      'liked': liked,
+      'saved': saved,
+      'is_mine': mine,
+      ...extra,
+    };
+
+Map<String, dynamic> commentRow({String id = 'c1', String post = 'post1', String? replyTo, String body = 'Great night!', String createdAt = '2099-10-24T23:00:00Z', Map<String, dynamic>? author, int replies = 0, bool mine = false, bool canDelete = false}) => {
+      'id': id,
+      'post': post,
+      'reply_to': replyTo,
+      'body': body,
+      'created_at': createdAt,
+      'author': author ?? profileRow(id: 'b1', handle: 'bob', name: 'Bob Ray'),
+      'replies': replies,
+      'is_mine': mine,
+      'can_delete': canDelete,
+    };
+
+Map<String, dynamic> railRow({Map<String, dynamic>? profile, String latest = '2099-10-24T23:00:00Z', bool unseen = true, bool membersOnly = false, int count = 1, bool mine = false}) =>
+    {'profile': profile ?? profileRow(id: 'a1', handle: 'ann', name: 'Ann Lee'), 'latest_at': latest, 'unseen': unseen, 'members_only': membersOnly, 'count': count, 'is_mine': mine};

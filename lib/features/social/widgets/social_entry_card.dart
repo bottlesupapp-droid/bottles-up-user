@@ -63,13 +63,17 @@ class SocialEntryCard extends ConsumerWidget {
                 ]),
                 const SizedBox(height: 8),
                 Wrap(spacing: 8, children: [
+                  FilledButton(key: const Key('open-feed'), onPressed: () => context.push('/feed'), child: const Text('Home feed')),
                   FilledButton.tonal(key: const Key('view-profile'), onPressed: () => context.push('/u/${actor.handle}'), child: const Text('View profile')),
+                  OutlinedButton(key: const Key('open-create-post'), onPressed: () => context.push('/create'), child: const Text('Create')),
                   OutlinedButton(key: const Key('find-people'), onPressed: () => context.push('/people'), child: const Text('Find people')),
                   if (list.length > 1) OutlinedButton(key: const Key('open-switcher'), onPressed: () => showProfileSwitcher(context), child: const Text('Switch')),
                 ]),
                 const Divider(height: 24),
                 Wrap(spacing: 16, children: [
                   if (actor.isPrivate) TextButton(key: const Key('open-requests'), onPressed: () => context.push('/people/requests'), child: const Text('Follow requests')),
+                  TextButton(key: const Key('open-saved'), onPressed: () => context.push('/me/saved'), child: const Text('Saved posts')),
+                  if (ref.watch(featureOnProvider(Feature.membersOnly))) TextButton(key: const Key('open-members'), onPressed: () => context.push('/me/members'), child: const Text('Members Only')),
                   TextButton(key: const Key('open-blocked'), onPressed: () => context.push('/people/blocked'), child: const Text('Blocked profiles')),
                   if (list.length == 1) TextButton(key: const Key('open-new-business'), onPressed: () => context.push('/me/business/new'), child: const Text('Create a business profile')),
                 ]),

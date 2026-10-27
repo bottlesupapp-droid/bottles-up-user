@@ -7,6 +7,7 @@ import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
+import '../widgets/profile_grid.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/switcher_sheet.dart';
 
@@ -140,6 +141,7 @@ class _ProfileView extends ConsumerWidget {
             const SizedBox(height: 16),
             _Actions(actor: actor, profile: p, onUnblock: () => _setBlocked(context, ref, false)),
             const SizedBox(height: 16),
+            if ((p.canSeeContent || p.isMine) && !p.blockedByMe) ProfileGrid(key: ValueKey('grid-${p.id}-${actor.id}'), actor: actor, profile: p),
             if (!p.canSeeContent && !p.isMine)
               Container(
                 key: const Key('private-notice'),

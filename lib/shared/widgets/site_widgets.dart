@@ -67,6 +67,10 @@ class NetworkPicture extends StatelessWidget {
   final double radius;
   final BoxFit fit;
 
+  /// Tests put their own picture here: the real one keeps a cache on the phone's disk, which a test phone does not have.
+  @visibleForTesting
+  static Widget Function(String url, BoxFit fit)? imageOverride;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -80,7 +84,7 @@ class NetworkPicture extends StatelessWidget {
     if (u == null) return placeholder;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: CachedNetworkImage(imageUrl: u, height: height, width: width, fit: fit, placeholder: (_, __) => placeholder, errorWidget: (_, __, ___) => placeholder),
+      child: imageOverride?.call(u, fit) ?? CachedNetworkImage(imageUrl: u, height: height, width: width, fit: fit, placeholder: (_, __) => placeholder, errorWidget: (_, __, ___) => placeholder),
     );
   }
 }

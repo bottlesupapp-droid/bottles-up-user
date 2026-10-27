@@ -15,7 +15,14 @@ import 'package:bottles_up_user/features/profile/screens/settings_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/terms_conditions_screen.dart';
 import 'package:bottles_up_user/features/social/screens/blocked_screen.dart';
 import 'package:bottles_up_user/features/social/screens/business_profile_screen.dart';
+import 'package:bottles_up_user/features/social/screens/create_post_screen.dart';
 import 'package:bottles_up_user/features/social/screens/follow_requests_screen.dart';
+import 'package:bottles_up_user/features/social/screens/home_feed_screen.dart';
+import 'package:bottles_up_user/features/social/screens/members_screen.dart';
+import 'package:bottles_up_user/features/social/screens/post_screen.dart';
+import 'package:bottles_up_user/features/social/screens/reels_screen.dart';
+import 'package:bottles_up_user/features/social/screens/saved_posts_screen.dart';
+import 'package:bottles_up_user/features/social/screens/story_viewer_screen.dart';
 import 'package:bottles_up_user/features/social/screens/people_list_screen.dart';
 import 'package:bottles_up_user/features/social/screens/people_search_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_profile_screen.dart';
@@ -26,6 +33,7 @@ import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
+import 'package:bottles_up_user/site/models/post.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -293,5 +301,21 @@ final List<RouteBase> appRoutes = [
   GoRoute(path: '/people/blocked', builder: (context, state) => const BlockedScreen()),
   GoRoute(path: '/u/:handle', builder: (context, state) => SocialProfileScreen(handle: state.pathParameters['handle']!)),
   GoRoute(path: '/profiles/:id/followers', builder: (context, state) => PeopleListScreen(profileId: state.pathParameters['id']!, followers: true)),
+  GoRoute(path: '/feed', builder: (context, state) => const HomeFeedScreen()),
+  GoRoute(
+    path: '/create',
+    builder: (context, state) => CreatePostScreen(
+      initialKind: switch (state.uri.queryParameters['kind']) {
+        'reel' => PostKind.reel,
+        'story' => PostKind.story,
+        _ => PostKind.post,
+      },
+    ),
+  ),
+  GoRoute(path: '/post/:id', builder: (context, state) => PostScreen(postId: state.pathParameters['id']!)),
+  GoRoute(path: '/stories/:handle', builder: (context, state) => StoryViewerScreen(handle: state.pathParameters['handle']!)),
+  GoRoute(path: '/reels', builder: (context, state) => const ReelsScreen()),
+  GoRoute(path: '/me/members', builder: (context, state) => const MembersScreen()),
+  GoRoute(path: '/me/saved', builder: (context, state) => const SavedPostsScreen()),
   GoRoute(path: '/profiles/:id/following', builder: (context, state) => PeopleListScreen(profileId: state.pathParameters['id']!, followers: false)),
 ];

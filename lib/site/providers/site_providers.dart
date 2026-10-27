@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/features.dart';
 import '../models/site_event.dart';
+import '../models/post.dart';
 import '../models/social_profile.dart';
 import '../models/my_night.dart';
 import '../models/site_contact.dart';
@@ -13,6 +14,7 @@ import '../models/ticket_order.dart';
 import '../services/account_service.dart';
 import '../services/booking_actions_service.dart';
 import '../services/features_service.dart';
+import '../services/posts_service.dart';
 import '../services/guest_passes_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
@@ -36,6 +38,7 @@ final guestPassesServiceProvider = Provider<GuestPassesService>((ref) => GuestPa
 final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => BookingActionsService(ref.watch(siteClientProvider)));
 final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
+final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
 
@@ -125,9 +128,39 @@ final followRequestsProvider = FutureProvider.autoDispose.family<List<SocialProf
 
 final blockedProfilesProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).blocked(actor));
 
+/// Has the person accepted the community rules? Read again after they accept.
+final rulesAcceptedProvider = FutureProvider<bool>((ref) => ref.watch(postsServiceProvider).rulesAccepted());
+
+/// The address a private picture or video is shown from, or null when it could not be signed.
+final signedMediaUrlProvider = FutureProvider.autoDispose.family<String?, String>((ref, path) => ref.watch(postsServiceProvider).signedUrl(path));
+
+final storyRailProvider = FutureProvider.autoDispose.family<List<StoryRailItem>, String>((ref, actor) => ref.watch(postsServiceProvider).storyRail(actor));
+
+/// A post, as the acting profile sees it.
+class PostKey {
+  const PostKey({required this.actor, required this.id});
+
+  final String actor;
+  final String id;
+
+  @override
+  bool operator ==(Object other) => other is PostKey && other.actor == actor && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, id);
+}
+
+final postProvider = FutureProvider.autoDispose.family<SocialPost, PostKey>((ref, k) => ref.watch(postsServiceProvider).post(actor: k.actor, id: k.id));
+
+/// One profile's stories that are up, as the acting profile sees them.
+final storiesOfProvider = FutureProvider.autoDispose.family<List<SocialPost>, PeopleKey>(
+  (ref, k) => ref.watch(postsServiceProvider).storiesOf(actor: k.actor, profile: k.profile),
+);
+
 /// Forget everything about the person who was signed in (their profiles, which one they were acting as) so the next person starts clean.
 void resetSocialState(WidgetRef ref) {
   ref.invalidate(myProfilesProvider);
+  ref.invalidate(rulesAcceptedProvider);
   ref.read(selectedProfileIdProvider.notifier).state = null;
 }
 

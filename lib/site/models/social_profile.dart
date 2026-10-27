@@ -28,6 +28,7 @@ class SocialProfile {
     this.blockedByMe = false,
     this.canSeeContent = true,
     this.at,
+    this.stillFollowing = true,
   });
 
   final String id;
@@ -60,8 +61,11 @@ class SocialProfile {
   /// False for a private profile the viewer does not follow: its header and counts are public, the rest is not.
   final bool canSeeContent;
 
-  /// When the request was made, the follow started or the block was set, in the list the profile came from.
+  /// When the request was made, the follow started, the block was set or the person was added to a Members Only list, in the list the profile came from.
   final DateTime? at;
+
+  /// On a Members Only list: false when the person has since stopped following (they stay on the list but see nothing).
+  final bool stillFollowing;
 }
 
 SocialProfile? parseSocialProfile(Object? json) {
@@ -80,7 +84,7 @@ SocialProfile? parseSocialProfile(Object? json) {
       if (e.key is String && v != null) links[e.key as String] = v;
     }
   }
-  final at = readText(json['requested_at']) ?? readText(json['followed_at']) ?? readText(json['blocked_at']);
+  final at = readText(json['requested_at']) ?? readText(json['followed_at']) ?? readText(json['blocked_at']) ?? readText(json['added_at']);
   return SocialProfile(
     id: id,
     isBusiness: kind == 'business',
@@ -109,6 +113,7 @@ SocialProfile? parseSocialProfile(Object? json) {
     // Anything but a clear yes hides the content: a private profile must not open because the answer was unreadable.
     canSeeContent: json['can_see_content'] == true,
     at: at == null ? null : DateTime.tryParse(at)?.toLocal(),
+    stillFollowing: json['still_following'] != false,
   );
 }
 
