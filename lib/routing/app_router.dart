@@ -38,6 +38,9 @@ import 'package:bottles_up_user/features/social/screens/people_list_screen.dart'
 import 'package:bottles_up_user/features/social/screens/people_search_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_profile_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_setup_screen.dart';
+import 'package:bottles_up_user/features/split/screens/pay_share_screen.dart';
+import 'package:bottles_up_user/features/split/screens/shares_to_pay_screen.dart';
+import 'package:bottles_up_user/features/split/screens/split_bill_screen.dart';
 import 'package:bottles_up_user/features/splash/screens/splash_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/table_booking_screen.dart';
 import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
@@ -298,6 +301,10 @@ final List<RouteBase> appRoutes = [
         path: 'bottles',
         builder: (context, state) => AddBottlesScreen(bookingId: state.pathParameters['id']!),
       ),
+      GoRoute(
+        path: 'split',
+        builder: (context, state) => SplitBillScreen(bookingId: state.pathParameters['id']!),
+      ),
     ],
   ),
   GoRoute(
@@ -335,6 +342,8 @@ final List<RouteBase> appRoutes = [
   GoRoute(path: '/rules', builder: (context, state) => const CommunityRulesScreen()),
   GoRoute(path: '/me/settings', builder: (context, state) => const PrivacySettingsScreen()),
   GoRoute(path: '/me/bookings', builder: (context, state) => const MyBookingsScreen()),
+  GoRoute(path: '/me/shares', builder: (context, state) => const SharesToPayScreen()),
+  GoRoute(path: '/me/shares/:id', builder: (context, state) => PayShareScreen(shareId: state.pathParameters['id']!)),
   GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
   GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
   GoRoute(

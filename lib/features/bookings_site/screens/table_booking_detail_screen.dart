@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/features.dart';
 import '../../../site/models/table_booking.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
@@ -14,6 +15,7 @@ import '../../../site/site_error.dart';
 import '../../../site/when.dart';
 import '../../tickets_site/widgets/ticket_qr.dart';
 import '../../social/widgets/message_venue_button.dart';
+import '../../split/widgets/split_section.dart';
 import '../widgets/club_payment_card.dart';
 import '../widgets/guests_section.dart';
 import '../widgets/orders_section.dart';
@@ -229,6 +231,7 @@ class _Body extends ConsumerWidget {
             ],
           ),
         ),
+        if (b.isPaid && ref.watch(featureOnProvider(Feature.splitPayments))) _Section('Split the bill', 'section-split', SplitSection(booking: b, canStart: usable && b.dueAtClubCents >= 500)),
         if (b.isPaid && b.venueId != null && canMessageVenue(ref)) _Section('Messages', 'section-messages', MessageVenueButton(bookingId: b.id)),
         if (b.isPaid)
           _Section(

@@ -17,6 +17,7 @@ const List<DataSection> dataCollected = [
     'The tickets you buy, the tables you book, the bottles you order and what you paid.',
     'The name and e-mail address of each guest you invite: their ticket is sent there.',
     'The reason you give when you ask a venue for a refund or report a problem with a payment.',
+    'If you ask friends to pay their share of your table, who you asked, how much and whether they paid. If a friend asks you, the host\'s first name, the venue, the night and your share, and your payment.',
   ]),
   DataSection('Your profile', [
     'A username, and if you add them a short bio, your city, links to your pages and up to ten interests. Your profile is public unless you make it private in Privacy settings.',

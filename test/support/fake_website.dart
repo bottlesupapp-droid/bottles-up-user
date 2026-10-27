@@ -697,3 +697,45 @@ Map<String, dynamic> notificationRow({String id = 'n1', String kind = 'like', St
       'review_id': null,
       'follows_back': followsBack,
     };
+
+/// One friend's share as the host's card lists it (`split_card`).
+Map<String, dynamic> shareLineRow({String id = 'sh1', Map<String, dynamic>? payer, int amount = 5000, String status = 'unpaid', String? paidAt}) =>
+    {'id': id, 'payer': payer ?? profileRow(id: 'p-bob', handle: 'bob', name: 'Bob Ray'), 'amount_cents': amount, 'status': status, 'paid_at': paidAt};
+
+/// A split as its host sees it (`split_for_booking`, `split_create`, `split_cancel`).
+Map<String, dynamic> splitPlanRow({
+  String id = 'sp1',
+  String booking = 'bk1',
+  String state = 'open',
+  String deadline = '2099-11-05T22:00:00Z',
+  int balance = 20000,
+  int collected = 0,
+  int outstanding = 10000,
+  List<Map<String, dynamic>>? shares,
+}) =>
+    {
+      'id': id,
+      'booking_id': booking,
+      'state': state,
+      'deadline': deadline,
+      'currency': 'cad',
+      'balance_cents': balance,
+      'collected_cents': collected,
+      'outstanding_cents': outstanding,
+      'shares': shares ?? [shareLineRow(id: 'sh1'), shareLineRow(id: 'sh2', payer: profileRow(id: 'p-cy', handle: 'cy', name: 'Cy Rus'))],
+      'created_at': '2099-11-01T12:00:00Z',
+    };
+
+/// A request to pay a share as the friend sees it (`split_my_shares`).
+Map<String, dynamic> shareRequestRow({
+  String id = 'sh1',
+  String state = 'unpaid',
+  int amount = 5000,
+  String deadline = '2099-11-05T22:00:00Z',
+  String host = 'Ann',
+  String venue = 'Club A',
+  String date = '2099-11-06',
+  String time = '22:00',
+  String? paidAt,
+}) =>
+    {'id': id, 'state': state, 'amount_cents': amount, 'currency': 'cad', 'deadline': deadline, 'host': host, 'venue': venue, 'booking_date': date, 'start_time': time, 'paid_at': paidAt};

@@ -6,6 +6,7 @@ import '../models/features.dart';
 import '../models/inbox.dart';
 import '../models/safety.dart';
 import '../models/site_event.dart';
+import '../models/split.dart';
 import '../models/post.dart';
 import '../models/review.dart';
 import '../models/social_profile.dart';
@@ -27,6 +28,7 @@ import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
 import '../services/site_contact_service.dart';
 import '../services/site_events_service.dart';
+import '../services/split_service.dart';
 import '../services/social_profiles_service.dart';
 import '../services/table_checkout_service.dart';
 import '../services/ticket_checkout_service.dart';
@@ -49,6 +51,7 @@ final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.wa
 final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
 final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
 final captionIdeasServiceProvider = Provider<CaptionIdeasService>((ref) => CaptionIdeasService(ref.watch(siteClientProvider)));
+final splitServiceProvider = Provider<SplitService>((ref) => SplitService(ref.watch(siteClientProvider)));
 final safetyServiceProvider = Provider<SafetyService>((ref) => SafetyService(ref.watch(siteClientProvider)));
 final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
 final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
@@ -305,6 +308,18 @@ final myTableBookingsProvider = FutureProvider.autoDispose<List<TableBooking>>((
 
 /// One booking with its bottles, club payments and refunds.
 final tableBookingProvider = FutureProvider.autoDispose.family<TableBooking?, String>((ref, id) => ref.watch(myBookingsServiceProvider).booking(id));
+
+/// The split of a table's bill, as its host sees it; null when there is none or splitting is not open.
+final splitForBookingProvider = FutureProvider.autoDispose.family<SplitPlan?, String>((ref, bookingId) {
+  if (!ref.watch(featureOnProvider(Feature.splitPayments))) return null;
+  return ref.watch(splitServiceProvider).forBooking(bookingId);
+});
+
+/// The requests to pay a share of someone's table that the signed-in person has had; empty when splitting is not open.
+final myShareRequestsProvider = FutureProvider.autoDispose<List<ShareRequest>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.splitPayments))) return const <ShareRequest>[];
+  return ref.watch(splitServiceProvider).myShares();
+});
 
 /// The guests on a table booking, by the booking's confirmation code.
 final guestRosterProvider = FutureProvider.autoDispose.family<GuestRoster, String>((ref, code) => ref.watch(guestPassesServiceProvider).roster(code));

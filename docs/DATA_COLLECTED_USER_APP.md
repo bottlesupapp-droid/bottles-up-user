@@ -15,7 +15,7 @@ All of it is collected for the app's own function (an account, tickets, bookings
 | `OtherUserContent` | captions, comments, reviews, a bio, interests and links on a profile, the reason given when reporting a post, comment, message or person; the few words typed for a caption idea (sent to Anthropic, see below) | Create, comments, reviews, profile, report sheet |
 | `ProductInteraction` | likes, saves, follows, blocks and which stories were seen, stored so the feed, the counts and the "seen" marks work | feed, profiles, stories |
 | `CustomerSupport` | the reason given when asking for a refund or reporting a payment | My Night |
-| `PurchaseHistory` | tickets bought, tables booked, bottles ordered, amounts paid | buying and booking |
+| `PurchaseHistory` | tickets bought, tables booked, bottles ordered, amounts paid; shares of a friend's table asked of the person or paid by them, and who a host asked | buying, booking, splitting a bill |
 | `OtherDataTypes` | an optional age | Edit profile |
 
 For Google Play's Data safety form the same facts apply: personal info (name, e-mail, phone, user ids, age), photos and videos, messages, other user-generated content, app interactions (declared as app functionality only), app activity is not collected for analytics, financial info is not collected (card details are typed on Stripe's page and never reach the app), data is encrypted in transit (HTTPS), and a person can ask for deletion in the app (Profile > Delete account) and on the website.

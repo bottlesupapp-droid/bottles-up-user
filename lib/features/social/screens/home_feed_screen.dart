@@ -8,6 +8,7 @@ import '../../../site/models/post.dart';
 import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
+import '../../split/widgets/shares_to_pay_card.dart';
 import '../widgets/my_night_card.dart';
 import '../widgets/post_widgets.dart';
 import '../widgets/profile_widgets.dart';
@@ -106,6 +107,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 96),
         children: [
+          const SharesToPayCard(),
           const MyNightCard(),
           StoryRail(actor: actor),
           if (_posts.isEmpty)
