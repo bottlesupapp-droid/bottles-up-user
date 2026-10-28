@@ -27,7 +27,7 @@ Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`.
 - [ ] A4. Which cut features come back (location, the old notifications screen, favourites, loyalty)? All are in `_archive/`.
 - [ ] A5. Push notifications in v1? Needs a Firebase account and the Apple push capability.
 - [ ] A6. Legal texts (Privacy, Terms) and the real support contact. The current Privacy screen has invented `@bottlesup.com` addresses.
-- [ ] A7. Which sign-in methods to offer. Google and Apple sign-in code exists but its buttons are not shown anywhere; if Google is offered, Apple requires Sign in with Apple too.
+- [x] A7. Sign-in methods: e-mail, phone, Google and Apple (28 Oct, at the user's "enable social logins on both apps"; branch `feat/social-login`). Still the owner's, in the consoles: the Apple Developer capability and profile, the Google Cloud client ids, and the Supabase provider client-id lists (the monorepo's `docs/SOCIAL_LOGIN_SETUP.md`).
 
 ## B. Features to build (one at a time; discuss each with the user first)
 
@@ -57,7 +57,7 @@ The website only has a refund request for table bookings (`guest_request_refund`
 
 iOS
 - [x] Privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` (in the Runner target; the project still opens in Xcode), the "data collected" document `docs/DATA_COLLECTED_USER_APP.md`, and the in-app list (Profile > What this app collects). A test keeps the three in step. Apple's own checker has not run on it (it runs on the first upload).
-- [x] No entitlements are needed (no Sign in with Apple button, no push, no web links); no usage strings are needed (no location, camera, microphone or contacts; the photo picker on iOS 15 needs none). `ITSAppUsesNonExemptEncryption` is false (HTTPS only), so each upload is not stopped to ask.
+- [x] The one entitlement is Sign in with Apple (`ios/Runner/Runner.entitlements`, added 28 Oct with the social sign-in buttons; no push, no web links); no usage strings are needed (no location, camera, microphone or contacts; the photo picker on iOS 15 needs none). `ITSAppUsesNonExemptEncryption` is false (HTTPS only), so each upload is not stopped to ask.
 - [ ] Signing and provisioning profile for `com.btlup.pop`, and the App ID: the owner's step in the Apple Developer account.
 
 Android
@@ -79,7 +79,7 @@ Store listing
 ## D. Quality and clean-up
 
 - [ ] Run on a real phone or the simulator (only when the user asks for a build). Checks: sign in, open an event, buy with a Stripe test card, see the ticket and QR in My tickets, scan it with the vendor door scanner, book a table, delete a test account.
-- [x] Analyzer 278 -> 6 (27 Oct). The 6 left are the hidden Google/Apple sign-in buttons (`_handleSocialLogin`, `_SocialLoginButton` in login and sign-up): they go when decision A7 (which sign-in methods) is made. Also removed: log lines that printed a person's e-mail at sign-up, and a dead second password-reset path.
+- [x] Analyzer 278 -> 6 (27 Oct) -> 0 (28 Oct, when the Google/Apple sign-in buttons came back and the unused `_SocialLoginButton` classes went). Also removed: log lines that printed a person's e-mail at sign-up, and a dead second password-reset path.
 - [x] Read what production holds (24 Oct, `docs/production_snapshot/`). `supabase db pull` itself was not run (it needs Docker, which this machine does not have, and it writes a migration into the website repo).
 - [ ] **For the website, not the app:** three customer "read your own rows" policies (table bookings, booking bottles, bottle substitutions) exist only in production, in no file of the website repo; a database rebuilt from the repo shows customers none of their table bookings. `docs/production_snapshot/customer_read_policies.sql` has them for reference. Recommended: a website migration written `drop policy if exists` + `create policy`, which changes nothing in production. Needs the user's yes.
 - [ ] **Check the Supabase Auth setting "Confirm email" is ON** (Dashboard > Authentication > Providers > Email). The policies compare e-mail addresses and never look at confirmation; today it is harmless (1 of 84 accounts has an unconfirmed e-mail, matching no booking), but with the switch off anyone could read another person's bookings by signing up with their address.

@@ -1,85 +1,54 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:async';
-import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'social_sign_in_support.dart';
 
 class AppleSignInService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Check if Apple Sign In is available on this platform
-  static bool get isAvailable => Platform.isIOS || Platform.isMacOS;
+  /// Apple sign-in exists on Apple's phones and computers only. Read from Flutter's platform so a test can change it.
+  static bool get isAvailable => defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS;
 
   /// Sign in with Apple and authenticate with Supabase
   static Future<AuthResponse> signInWithApple() async {
     try {
-      debugPrint('🍎 Starting Apple Sign-In flow...');
-      
-      // Check if Apple Sign In is available
-      if (!isAvailable) {
-        debugPrint('🔴 Apple Sign-In not available on this platform');
-        throw 'Apple Sign In is only available on iOS and macOS';
-      }
+      if (!isAvailable) throw 'Apple Sign In is only available on iOS and macOS';
 
-      debugPrint('🍎 Platform check passed, requesting Apple ID credential...');
-
-      // Request Apple Sign In with timeout
+      // Apple gets the hash of this value and puts it in the token; Supabase gets the plain value and checks it.
+      final rawNonce = newNonce();
       final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+        nonce: sha256Hex(rawNonce),
       ).timeout(
         const Duration(seconds: 60),
-        onTimeout: () {
-          debugPrint('🔴 Apple Sign-In credential request timeout');
-          throw TimeoutException('Apple Sign-In timed out. Please try again.', const Duration(seconds: 60));
-        },
+        onTimeout: () => throw TimeoutException('Apple Sign-In timed out. Please try again.', const Duration(seconds: 60)),
       );
 
-      debugPrint('🍎 Apple credential received');
-      debugPrint('🍎 User ID: ${credential.userIdentifier}');
-      debugPrint('🍎 Email: ${credential.email ?? "Not provided"}');
-      debugPrint('🍎 Name: ${credential.givenName ?? ""} ${credential.familyName ?? ""}');
+      final token = credential.identityToken;
+      if (token == null) throw 'Failed to get Apple ID token';
 
-      // Check if we got the required tokens
-      if (credential.identityToken == null) {
-        debugPrint('🔴 No identity token received from Apple');
-        throw 'Failed to get Apple ID token';
+      final AuthResponse response = await _supabase.auth
+          .signInWithIdToken(provider: OAuthProvider.apple, idToken: token, nonce: rawNonce)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw TimeoutException('Authentication with server timed out. Please try again.', const Duration(seconds: 30)),
+          );
+
+      final user = response.user;
+      if (user != null) {
+        final name = appleFullName(credential.givenName, credential.familyName);
+        await _rememberName(user, name);
+        await _createProfileIfNeeded(user, name: name, email: credential.email);
       }
-
-      debugPrint('🍎 Identity token received, authenticating with Supabase...');
-
-      // Sign in with Supabase using the Apple ID token with timeout
-      final AuthResponse response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.apple,
-        idToken: credential.identityToken!,
-        accessToken: credential.authorizationCode,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          debugPrint('🔴 Supabase authentication timeout');
-          throw TimeoutException('Authentication with server timed out. Please try again.', const Duration(seconds: 30));
-        },
-      );
-
-      debugPrint('🟢 Supabase authentication successful');
-      debugPrint('🍎 User authenticated: ${response.user?.email}');
-
-      // Check if this is a new user and create profile if needed
-      if (response.user != null) {
-        debugPrint('🍎 Creating user profile if needed...');
-        await _createProfileIfNeeded(response.user!, credential);
-        debugPrint('🟢 Profile creation completed');
-      }
-
-      debugPrint('🟢 Apple Sign-In flow completed successfully');
       return response;
     } on TimeoutException catch (e) {
-      debugPrint('🔴 Timeout Exception: ${e.message}');
+      debugPrint('Apple sign-in timeout: ${e.message}');
       throw 'Apple Sign-In timed out. Please check your internet connection and try again.';
     } on SignInWithAppleAuthorizationException catch (e) {
-      debugPrint('🔴 Apple Authorization Exception: ${e.code} - ${e.message}');
+      debugPrint('Apple authorization exception: ${e.code} - ${e.message}');
       if (e.code == AuthorizationErrorCode.canceled) {
         throw 'Apple Sign In was cancelled';
       } else if (e.code == AuthorizationErrorCode.failed) {
@@ -95,20 +64,17 @@ class AppleSignInService {
       }
       throw 'Apple Sign In error: ${e.message}';
     } on AuthException catch (e) {
-      debugPrint('🔴 Supabase Auth Exception: ${e.message}');
+      debugPrint('Apple sign-in, Supabase auth exception: ${e.message}');
       if (e.message.contains('timeout') || e.message.contains('network')) {
         throw 'Network error during authentication. Please check your internet connection and try again.';
       } else if (e.message.contains('invalid') || e.message.contains('token')) {
         throw 'Invalid Apple credentials. Please try signing in again.';
       }
       throw 'Authentication error: ${e.message}';
-    } catch (e, stackTrace) {
-      debugPrint('🔴 Unexpected error during Apple Sign-In: $e');
-      debugPrint('Stack trace: $stackTrace');
-
-      // Handle specific error messages
+    } catch (e) {
+      debugPrint('Unexpected error during Apple sign-in: $e');
       final errorString = e.toString().toLowerCase();
-      if (errorString.contains('cancelled') || errorString.contains('canceled')) {
+      if (isSignInCancelled(e)) {
         throw 'Apple Sign In was cancelled';
       } else if (errorString.contains('network') || errorString.contains('connection')) {
         throw 'Network error. Please check your internet connection and try again.';
@@ -117,104 +83,49 @@ class AppleSignInService {
       } else if (errorString.contains('configuration') || errorString.contains('setup')) {
         throw 'Apple Sign In configuration error. Please contact support.';
       }
-
-      throw 'Failed to sign in with Apple: ${e.toString()}';
+      throw 'Failed to sign in with Apple: $e';
     }
   }
 
-  /// Create user profile if it doesn't exist
-  static Future<void> _createProfileIfNeeded(
-    User user,
-    AuthorizationCredentialAppleID credential,
-  ) async {
+  /// Apple sends the name only the first time, so keep it on the sign-in at once; a failure here must not undo the sign-in.
+  static Future<void> _rememberName(User user, String? name) async {
+    if (name == null) return;
+    final meta = user.userMetadata;
+    if ((meta?['full_name'] ?? meta?['name']) != null) return;
     try {
-      debugPrint('🍎 Profile creation temporarily disabled - Apple Sign-In will work without profile creation');
-      debugPrint('🟢 Skipping profile creation for now');
-      
-      // TODO: Uncomment this section after running the profiles table migration
-      /*
-      debugPrint('🍎 Checking if user profile exists...');
-      
-      // Check if profile already exists with timeout
-      final existingProfile = await _supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle()
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              debugPrint('🔴 Profile check timeout');
-              throw TimeoutException('Profile check timed out', const Duration(seconds: 15));
-            },
-          );
-
-      // If profile doesn't exist, create one
-      if (existingProfile == null) {
-        debugPrint('🍎 Profile does not exist, creating new profile...');
-        
-        // Build name from Apple credential
-        String name = 'User';
-        if (credential.givenName != null && credential.familyName != null) {
-          name = '${credential.givenName} ${credential.familyName}';
-        } else if (credential.givenName != null) {
-          name = credential.givenName!;
-        } else if (user.userMetadata?['full_name'] != null) {
-          name = user.userMetadata!['full_name'];
-        } else if (user.email != null) {
-          name = user.email!.split('@')[0];
-        }
-
-        debugPrint('🍎 Creating profile with name: $name');
-
-        await _supabase.from('profiles').insert({
-          'id': user.id,
-          'name': name,
-          'email': user.email ?? credential.email,
-          'phone_number': user.phone,
-          'age': null, // Will be filled later by user if needed
-        }).timeout(
-          const Duration(seconds: 15),
-          onTimeout: () {
-            debugPrint('🔴 Profile creation timeout');
-            throw TimeoutException('Profile creation timed out', const Duration(seconds: 15));
-          },
-        );
-        
-        debugPrint('🟢 Profile created successfully');
-      } else {
-        debugPrint('🍎 Profile already exists, skipping creation');
-      }
-      */
+      await _supabase.auth.updateUser(UserAttributes(data: {'full_name': name, 'name': name}));
     } catch (e) {
-      // Log error but don't throw - we don't want to break the sign-in flow
-      debugPrint('🔴 Error creating profile for Apple user: $e');
+      debugPrint('Could not keep the name Apple gave: $e');
+    }
+  }
+
+  /// Create the `profiles` row if there is none, as the Google sign-in and the e-mail sign-up do. The column for the e-mail cannot be empty, so without one nothing is written.
+  static Future<void> _createProfileIfNeeded(User user, {String? name, String? email}) async {
+    try {
+      final existing = await _supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+      if (existing != null) return;
+      final address = user.email ?? email;
+      if (address == null || address.isEmpty) return;
+      await _supabase.from('profiles').insert({
+        'id': user.id,
+        'name': profileNameFor(fullName: name, name: user.userMetadata?['full_name'] as String?, email: address),
+        'email': address,
+        'phone_number': user.phone,
+        'age': null, // Will be filled later by the person if needed
+      });
+    } catch (e) {
+      // The sign-in itself worked; do not break it over the profile row.
+      debugPrint('Could not create the profile row for an Apple sign-in: $e');
     }
   }
 
   /// Check if Apple Sign In is configured properly
   static Future<bool> isConfigured() async {
-    if (!isAvailable) {
-      debugPrint('🍎 Apple Sign-In not available on this platform');
-      return false;
-    }
-
+    if (!isAvailable) return false;
     try {
-      debugPrint('🍎 Checking Apple Sign-In configuration...');
-      
-      // Try to get credential state - this will fail if not configured
-      await SignInWithApple.isAvailable().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('🔴 Apple Sign-In configuration check timeout');
-          throw TimeoutException('Configuration check timed out', const Duration(seconds: 10));
-        },
-      );
-      
-      debugPrint('🟢 Apple Sign-In is properly configured');
-      return true;
+      return await SignInWithApple.isAvailable().timeout(const Duration(seconds: 10));
     } catch (e) {
-      debugPrint('🔴 Apple Sign-In configuration check failed: $e');
+      debugPrint('Apple sign-in configuration check failed: $e');
       return false;
     }
   }

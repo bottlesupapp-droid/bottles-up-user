@@ -8,6 +8,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../providers/auth_provider.dart';
 import '../models/country.dart';
+import '../widgets/social_sign_in_buttons.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -148,21 +149,33 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _handleSocialLogin(String provider) async {
-    try {
-      if (provider == 'Google') {
-        await ref.read(authProvider.notifier).signInWithGoogle();
-      } else if (provider == 'Apple') {
-        await ref.read(authProvider.notifier).signInWithApple();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$provider login failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    // A first Google or Apple sign-in makes the account, so the terms are accepted here exactly as for the e-mail buttons.
+    if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the terms and conditions'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final notifier = ref.read(authProvider.notifier);
+    if (provider == 'Google') {
+      await notifier.signInWithGoogle();
+    } else if (provider == 'Apple') {
+      await notifier.signInWithApple();
+    }
+
+    // Closing the Google or Apple sheet is not an error (the notifier leaves no error for it); anything else is told in the sentence the sign-in gave.
+    final result = ref.read(authProvider);
+    if (mounted && result.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$provider login failed: ${result.error}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -509,6 +522,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                             const SizedBox(height: 24),
 
+                            // Google and Apple
+                            SocialSignInButtons(
+                              enabled: !authState.isLoading,
+                              onGoogle: () => _handleSocialLogin('Google'),
+                              onApple: () => _handleSocialLogin('Apple'),
+                            ),
+
                             const Spacer(),
                             
                             // Login Link
@@ -541,38 +561,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SocialLoginButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-
-  const _SocialLoginButton({
-    required this.icon,
-    required this.label,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-        ),
-        icon: Icon(icon, size: 24),
-        label: Text(label),
       ),
     );
   }

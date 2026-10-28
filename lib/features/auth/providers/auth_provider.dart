@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bottles_up_user/features/auth/models/auth_state.dart';
 import 'package:bottles_up_user/features/auth/services/auth_service.dart';
+import 'package:bottles_up_user/features/auth/services/social_sign_in_support.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -299,7 +300,8 @@ class Auth extends _$Auth {
         throw 'Failed to sign in with Google';
       }
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      // Closing the Google sheet is the person's choice, not a failure: they stay on the login page with no error.
+      state = isSignInCancelled(error) ? const AsyncData(false) : AsyncError(error, stackTrace);
     }
   }
 
@@ -314,7 +316,7 @@ class Auth extends _$Auth {
       // The app will need to check auth state after redirect
       state = const AsyncData(true);
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      state = isSignInCancelled(error) ? const AsyncData(false) : AsyncError(error, stackTrace);
     }
   }
 } 
