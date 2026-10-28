@@ -179,7 +179,7 @@ class _ReelPageState extends ConsumerState<_ReelPage> {
               ProfileAvatar(profile: r.author, size: 32),
               const SizedBox(width: 8),
               Flexible(child: Text('@${r.author.handle}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-              if (r.author.verified) ...[const SizedBox(width: 4), const VerifiedTick(size: 14)],
+              if (r.author.verified) ...[const SizedBox(width: 4), VerifiedTick(size: 14, rank: r.author.rank)],
             ]),
           ),
           if (r.caption != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(r.caption!, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white))),

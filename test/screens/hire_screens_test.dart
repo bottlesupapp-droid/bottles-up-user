@@ -1,6 +1,7 @@
 import 'package:bottles_up_user/features/hire/widgets/hire_card.dart';
 import 'package:bottles_up_user/features/hire/widgets/hire_widgets.dart';
 import 'package:bottles_up_user/features/hiring/widgets/hiring_widgets.dart';
+import 'package:bottles_up_user/site/models/social_profile.dart';
 import 'package:bottles_up_user/site/providers/site_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -972,4 +973,128 @@ void main() {
       expect([for (final k in ['hire-offer-button', 'hire-decline', 'hire-confirm', 'hire-cancel']) find.byKey(Key(k)).evaluate().length], [0, 0, 0, 0]);
     });
   });
+
+  group('each side sees only its own buttons, and the page opens as the profile it is for', () {
+    final asker = {'name': 'Gus Group', 'handle': 'gus'};
+    ProviderContainer scope(WidgetTester tester) => ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
+
+    Future<void> openAs(WidgetTester tester, String side, String state, {Map<String, dynamic>? offer, List<Map<String, dynamic>> items = const [], Map<String, dynamic>? event, String? hireChat, bool isOpen = true, List<Override> overrides = const []}) async {
+      site.rpcs['hire_workspace'] = (_) => ok(workspaceRow(side: side, hire: hireRow(state: state, asker: asker, offer: offer, eventId: event == null ? null : 'ev1'), open: isOpen, items: items, event: event, hireChat: hireChat));
+      await open(tester, '/hires/hr1?as=${side == 'venue' ? 'club' : 'grp'}', overrides: overrides);
+    }
+
+    int count(List<String> keys) => keys.fold(0, (n, k) => n + find.byKey(Key(k)).evaluate().length);
+
+    testWidgets('the group is shown the offer to answer, never the venue\'s buttons or who asked', (tester) async {
+      await openAs(tester, 'organizer', 'offered', offer: hireOfferRow(), isOpen: false);
+      expect(find.byKey(const Key('hire-agree')), findsOneWidget);
+      expect(find.byKey(const Key('hire-turn-down')), findsOneWidget);
+      expect(count(['hire-take-back', 'hire-offer-button', 'hire-decline', 'hire-confirm']), 0);
+      expect(find.text('Asked by'), findsNothing);
+    });
+
+    testWidgets('the venue is shown its offer to take back and who asked, never the group\'s buttons', (tester) async {
+      await openAs(tester, 'venue', 'offered', offer: hireOfferRow(), isOpen: false);
+      expect(find.byKey(const Key('hire-take-back')), findsOneWidget);
+      expect(find.text('Asked by'), findsOneWidget);
+      expect(find.text('Gus Group'), findsOneWidget);
+      expect(count(['hire-agree', 'hire-turn-down', 'hire-withdraw']), 0);
+    });
+
+    testWidgets('an agreement is confirmed by the venue only, and cancelled by either', (tester) async {
+      await openAs(tester, 'organizer', 'agreed', offer: hireOfferRow(status: 'accepted'));
+      expect(find.byKey(const Key('hire-confirm')), findsNothing);
+      expect(find.byKey(const Key('hire-cancel')), findsOneWidget);
+    });
+
+    testWidgets('the venue confirms an agreement', (tester) async {
+      await openAs(tester, 'venue', 'agreed', offer: hireOfferRow(status: 'accepted'));
+      expect(find.byKey(const Key('hire-confirm')), findsOneWidget);
+      expect(find.byKey(const Key('hire-cancel')), findsOneWidget);
+    });
+
+    testWidgets('the linked event cannot be unlinked by the venue', (tester) async {
+      await openAs(tester, 'venue', 'confirmed', offer: hireOfferRow(status: 'accepted'), event: linkedEventRow());
+      expect(find.byKey(const Key('linked-event')), findsOneWidget);
+      expect(find.byKey(const Key('unlink-event')), findsNothing);
+    });
+
+    testWidgets('a task that is done is struck through, one that is not is not', (tester) async {
+      await openAs(tester, 'organizer', 'agreed', offer: hireOfferRow(status: 'accepted'), items: [hireItemRow(done: true), hireItemRow(id: 'it2', title: 'Book the sound')]);
+      expect(tester.widget<Text>(find.text('Send the lineup')).style?.decoration, TextDecoration.lineThrough);
+      expect(tester.widget<Text>(find.text('Book the sound')).style?.decoration, isNot(TextDecoration.lineThrough));
+    });
+
+    testWidgets('a chat opens as the profile the page is for', (tester) async {
+      site.rpcs['dm_conversation'] = (_) => ok({'id': 'c1', 'kind': 'group', 'title': 'Hire: Club X', 'members': <Object>[]});
+      site.rpcs['dm_messages'] = (_) => ok(<Object>[]);
+      await openAs(tester, 'organizer', 'confirmed', offer: hireOfferRow(status: 'accepted'), hireChat: 'c1');
+      expect(scope(tester).read(selectedProfileIdProvider), isNull, reason: 'the person is acting as themselves until the chat opens');
+      await tap(tester, 'hire-open-chat');
+      await tester.pumpAndSettle();
+      expect(scope(tester).read(selectedProfileIdProvider), 'grp');
+    });
+
+    testWidgets('a double tap on Withdraw withdraws once', (tester) async {
+      site.rpcs['hire_withdraw'] = (_) => ok(hireRow(state: 'withdrawn'));
+      await openAs(tester, 'organizer', 'requested', isOpen: false);
+      await tester.ensureVisible(find.byKey(const Key('hire-withdraw')));
+      await tester.tap(find.byKey(const Key('hire-withdraw')));
+      await tester.tap(find.byKey(const Key('hire-withdraw')));
+      await settleCalls(tester);
+      expect(site.forRpc('hire_withdraw').length, 1);
+    });
+
+    testWidgets('after a request is sent the group\'s hires are read again', (tester) async {
+      site.rpcs['hire_request'] = (_) => ok(hireRow());
+      site.rpcs['hire_workspace'] = (_) => ok(workspaceRow(hire: hireRow()));
+      site.rpcs['hires_mine'] = (_) => ok(<Object>[]);
+      await open(tester, '/venues/club/host', overrides: [...asGroup, ...picking(soon)]);
+      scope(tester).listen(hiresMineProvider('grp'), (_, __) {}, fireImmediately: true);
+      await settleCalls(tester);
+      final before = site.forRpc('hires_mine').length;
+      expect(before, 1);
+      await tap(tester, 'hire-date');
+      await settleCalls(tester);
+      await type(tester, 'hire-type', 'Themed night');
+      await tap(tester, 'hire-send');
+      await settleCalls(tester);
+      await settleCalls(tester);
+      expect(site.forRpc('hires_mine').length, greaterThan(before));
+    });
+  });
+
+  group('who counts as a group or a venue', () {
+    SocialProfile profile(Map<String, dynamic> row) => parseSocialProfile(row)!;
+
+    test('a group is an event group or a promoter that is a business and not suspended', () {
+      expect(isOrganizerProfile(profile(groupProfile())), isTrue);
+      expect(isOrganizerProfile(profile({...groupProfile(), 'category': 'promoter'})), isTrue);
+      expect(isOrganizerProfile(profile({...groupProfile(), 'status': 'suspended'})), isFalse);
+      expect(isOrganizerProfile(profile({...groupProfile(), 'category': 'dj'})), isFalse);
+      expect(isOrganizerProfile(profile({...groupProfile(), 'kind': 'personal', 'category': null})), isFalse);
+    });
+
+    test('a venue is a venue that is a business and not suspended', () {
+      expect(isVenueProfile(profile(clubProfile())), isTrue);
+      expect(isVenueProfile(profile({...clubProfile(), 'status': 'suspended'})), isFalse);
+      expect(isVenueProfile(profile({...clubProfile(), 'category': 'dj'})), isFalse);
+      expect(isVenueProfile(profile({...clubProfile(), 'kind': 'personal', 'category': null})), isFalse);
+    });
+  });
+
+  test('the hires are not asked for while hiring a venue is off', () async {
+    final off = FakeWebsite();
+    off.rpcs['site_features'] = (_) => ok({'social': true, 'marketplace': true});
+    off.rpcs['hires_mine'] = (_) => ok([hireRow()]);
+    off.rpcs['hires_for'] = (_) => ok([hireRow()]);
+    final container = ProviderContainer(overrides: [siteClientProvider.overrideWithValue(off.client)]);
+    addTearDown(container.dispose);
+    await container.read(featuresProvider.future);
+    expect(await container.read(hiresMineProvider('grp').future), isEmpty);
+    expect(await container.read(hiresForProvider('club').future), isEmpty);
+    expect(off.forRpc('hires_mine'), isEmpty);
+    expect(off.forRpc('hires_for'), isEmpty);
+  });
+
 }

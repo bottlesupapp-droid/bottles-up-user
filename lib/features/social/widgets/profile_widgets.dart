@@ -8,6 +8,7 @@ import '../../../site/models/social_profile.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
+import '../../recognition/widgets/rank_badge.dart';
 
 /// A round picture, or the person's initials when there is none.
 class ProfileAvatar extends StatelessWidget {
@@ -34,12 +35,15 @@ class ProfileAvatar extends StatelessWidget {
 
 /// The small tick beside a name that BottlesUp has verified.
 class VerifiedTick extends StatelessWidget {
-  const VerifiedTick({super.key, this.size = 16});
+  const VerifiedTick({super.key, this.size = 16, this.rank});
 
   final double size;
 
+  /// The rank the profile holds (`elite`...). A plain Verified tick when it is not said.
+  final String? rank;
+
   @override
-  Widget build(BuildContext context) => Icon(Icons.verified, key: const Key('verified-tick'), size: size, color: Theme.of(context).colorScheme.primary, semanticLabel: 'Verified');
+  Widget build(BuildContext context) => RankBadge(rank: rank ?? 'verified', size: size);
 }
 
 /// One profile in a list: picture, name with its tick, username (and what kind of business it is), and whatever goes at the end.
@@ -60,7 +64,7 @@ class ProfileTile extends StatelessWidget {
       leading: ProfileAvatar(profile: profile),
       title: Row(children: [
         Flexible(child: Text(profile.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700))),
-        if (profile.verified) ...[const SizedBox(width: 4), const VerifiedTick()],
+        if (profile.verified) ...[const SizedBox(width: 4), VerifiedTick(rank: profile.rank)],
         if (profile.isPrivate) ...[const SizedBox(width: 4), Icon(Icons.lock_outline, size: 14, color: theme.colorScheme.onSurfaceVariant, semanticLabel: 'Private')],
       ]),
       subtitle: Text(

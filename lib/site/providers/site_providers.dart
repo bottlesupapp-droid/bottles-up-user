@@ -2,10 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/billing.dart';
 import '../models/features.dart';
 import '../models/hire.dart';
 import '../models/hiring.dart';
 import '../models/inbox.dart';
+import '../models/jobs.dart';
+import '../models/recognition.dart';
 import '../models/safety.dart';
 import '../models/site_event.dart';
 import '../models/split.dart';
@@ -18,10 +21,13 @@ import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
+import '../services/billing_service.dart';
 import '../services/booking_actions_service.dart';
 import '../services/caption_ideas_service.dart';
 import '../services/features_service.dart';
 import '../services/inbox_service.dart';
+import '../services/jobs_service.dart';
+import '../services/recognition_service.dart';
 import '../services/posts_service.dart';
 import '../services/reviews_service.dart';
 import '../services/safety_service.dart';
@@ -445,3 +451,104 @@ final hiresForProvider = FutureProvider.autoDispose.family<List<Hire>, String>((
 
 /// One hire's workspace, read as the profile that has it open.
 final hireWorkspaceProvider = FutureProvider.autoDispose.family<Workspace, ({String actor, String hire})>((ref, key) => ref.watch(hireServiceProvider).workspace(actor: key.actor, hire: key.hire));
+
+// ---- Subscriptions, referrals, tips and earnings
+
+final billingServiceProvider = Provider<BillingService>((ref) => BillingService(ref.watch(siteClientProvider)));
+
+/// What a subscription costs and changes. Nothing while subscriptions are off.
+final billingPlansProvider = FutureProvider.autoDispose<BillingPlans?>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.subscriptions))) return null;
+  return ref.watch(billingServiceProvider).plans();
+});
+
+/// The subscription of a professional's own profile: the live one or the latest, null if there never was one.
+final subscriptionProvider = FutureProvider.autoDispose.family<Subscription?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.subscriptions))) return null;
+  return ref.watch(billingServiceProvider).status(profile);
+});
+
+/// Who sent the person, if they used a code.
+final referralClaimProvider = FutureProvider.autoDispose<ReferralClaim?>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.referrals))) return null;
+  return ref.watch(billingServiceProvider).myReferral();
+});
+
+final referralCodeProvider = FutureProvider.autoDispose.family<String, String>((ref, profile) => ref.watch(billingServiceProvider).referralCode(profile));
+
+final referralStatsProvider = FutureProvider.autoDispose.family<ReferralStats, String>((ref, profile) => ref.watch(billingServiceProvider).referralStats(profile));
+
+/// Earnings are worth a page when hiring, tips or referrals can bring money in.
+final earningsOnProvider = Provider<bool>((ref) => ref.watch(featureOnProvider(Feature.marketplace)) || ref.watch(featureOnProvider(Feature.creatorEarnings)) || ref.watch(featureOnProvider(Feature.referrals)));
+
+final earningsProvider = FutureProvider.autoDispose.family<Earnings, String>((ref, profile) => ref.watch(billingServiceProvider).earnings(profile));
+
+// ---- Verification, ranks, awards, plaques and jobs
+
+final recognitionServiceProvider = Provider<RecognitionService>((ref) => RecognitionService(ref.watch(siteClientProvider)));
+final jobsServiceProvider = Provider<JobsService>((ref) => JobsService(ref.watch(siteClientProvider)));
+
+/// The ranks with their names, counts and colours. Empty while ranks are off, and when the website cannot be asked (the badge then uses the ranks in the client's plan).
+final rankLevelsProvider = FutureProvider<List<RankLevel>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <RankLevel>[];
+  return ref.watch(recognitionServiceProvider).levels();
+});
+
+final verificationProvider = FutureProvider.autoDispose.family<VerificationInfo?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return null;
+  return ref.watch(recognitionServiceProvider).verification(profile);
+});
+
+final rankStatusProvider = FutureProvider.autoDispose.family<RankStatus?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return null;
+  return ref.watch(recognitionServiceProvider).rankStatus(profile);
+});
+
+/// The ranks a profile holds, as the profile the person is acting as sees them.
+final awardsProvider = FutureProvider.autoDispose.family<List<Award>, ({String actor, String profile})>((ref, key) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <Award>[];
+  return ref.watch(recognitionServiceProvider).awards(actor: key.actor, profile: key.profile);
+});
+
+final plaquesProvider = FutureProvider.autoDispose.family<List<Plaque>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <Plaque>[];
+  return ref.watch(recognitionServiceProvider).plaques(profile);
+});
+
+/// What the person is looking for in Opportunities.
+class JobsQuery {
+  const JobsQuery({required this.actor, this.kind, this.query, this.remote});
+
+  final String actor;
+  final JobKind? kind;
+  final String? query;
+  final bool? remote;
+
+  @override
+  bool operator ==(Object other) => other is JobsQuery && other.actor == actor && other.kind == kind && other.query == query && other.remote == remote;
+
+  @override
+  int get hashCode => Object.hash(actor, kind, query, remote);
+}
+
+/// The first page of open jobs for a search. Empty while jobs are off.
+final jobsListProvider = FutureProvider.autoDispose.family<List<Job>, JobsQuery>((ref, q) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <Job>[];
+  return ref.watch(jobsServiceProvider).list(actor: q.actor, kind: q.kind, query: q.query, remote: q.remote);
+});
+
+final jobProvider = FutureProvider.autoDispose.family<Job, ({String actor, String id})>((ref, key) => ref.watch(jobsServiceProvider).job(actor: key.actor, id: key.id));
+
+/// The listings of a business profile the person manages.
+final jobsMineProvider = FutureProvider.autoDispose.family<List<Job>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <Job>[];
+  return ref.watch(jobsServiceProvider).mine(actor);
+});
+
+final jobApplicationsProvider = FutureProvider.autoDispose.family<List<JobApplication>, ({String actor, String job})>((ref, key) => ref.watch(jobsServiceProvider).applications(actor: key.actor, job: key.job));
+
+/// The applications a profile has sent.
+final myApplicationsProvider = FutureProvider.autoDispose.family<List<JobApplication>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <JobApplication>[];
+  return ref.watch(jobsServiceProvider).myApplications(actor);
+});

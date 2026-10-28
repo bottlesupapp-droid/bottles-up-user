@@ -19,6 +19,7 @@ class SocialProfile {
     this.isPrivate = false,
     this.suspended = false,
     this.verified = false,
+    this.rank,
     this.interests = const [],
     this.followers = 0,
     this.following = 0,
@@ -46,6 +47,9 @@ class SocialProfile {
   final bool isPrivate;
   final bool suspended;
   final bool verified;
+
+  /// The rank the profile holds (`verified`, `elite`...), or null when it has none. It comes from BottlesUp's decision, never from payment.
+  final String? rank;
 
   /// Only the person's own profile carries these.
   final List<String> interests;
@@ -99,6 +103,7 @@ SocialProfile? parseSocialProfile(Object? json) {
     isPrivate: json['privacy'] == 'private',
     suspended: json['status'] == 'suspended',
     verified: json['verified'] == true,
+    rank: json['verified'] == true ? readText(json['rank']) : null,
     interests: readTexts(json['interests']),
     followers: readInt(json['followers']) ?? 0,
     following: readInt(json['following']) ?? 0,

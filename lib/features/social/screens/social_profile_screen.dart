@@ -9,8 +9,10 @@ import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/profile_rules.dart';
 import '../../../site/site_error.dart';
 import '../../../site/models/features.dart';
+import '../../billing/widgets/tip_button.dart';
 import '../../hire/widgets/hire_section.dart';
 import '../../hiring/widgets/pro_services_section.dart';
+import '../../recognition/widgets/awards_section.dart';
 import '../widgets/profile_grid.dart';
 import '../widgets/report_sheet.dart';
 import '../widgets/profile_widgets.dart';
@@ -139,7 +141,7 @@ class _ProfileView extends ConsumerWidget {
             const SizedBox(height: 12),
             Row(children: [
               Flexible(child: Text(p.displayName, key: const Key('profile-name'), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
-              if (p.verified) ...[const SizedBox(width: 6), const VerifiedTick(size: 20)],
+              if (p.verified) ...[const SizedBox(width: 6), VerifiedTick(size: 20, rank: p.rank)],
               if (p.isPrivate) ...[const SizedBox(width: 6), Icon(Icons.lock_outline, size: 18, color: theme.colorScheme.onSurfaceVariant, semanticLabel: 'Private')],
             ]),
             const SizedBox(height: 2),
@@ -150,10 +152,12 @@ class _ProfileView extends ConsumerWidget {
             if (p.followsMe && !p.isMine) Padding(padding: const EdgeInsets.only(top: 4), child: Text('Follows you', key: const Key('follows-you'), style: theme.textTheme.bodySmall)),
             if (p.bio != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(p.bio!, key: const Key('profile-bio'))),
             if (p.links.isNotEmpty) _Links(links: p.links),
+            AwardsSection(actor: actor, profile: p),
             const SizedBox(height: 16),
             _Actions(actor: actor, profile: p, onUnblock: () => _setBlocked(context, ref, false)),
             ProServicesSection(profile: p),
             HireSection(profile: p),
+            TipSection(profile: p),
             const SizedBox(height: 16),
             if ((p.canSeeContent || p.isMine) && !p.blockedByMe) ProfileGrid(key: ValueKey('grid-${p.id}-${actor.id}'), actor: actor, profile: p),
             if (!p.canSeeContent && !p.isMine)

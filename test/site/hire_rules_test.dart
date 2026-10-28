@@ -111,6 +111,8 @@ void main() {
       expect(parseBarShareBps('0'), 0);
       expect(parseBarShareBps('100'), 10000);
       expect(parseBarShareBps('0.01'), 1);
+      expect(parseBarShareBps('0.29'), 29, reason: '0.29 * 100 is 28.999999999999996: the percentage is rounded, not cut');
+      expect(parseBarShareBps('4.35'), 435);
     });
 
     test('is nothing when it is not a share', () {

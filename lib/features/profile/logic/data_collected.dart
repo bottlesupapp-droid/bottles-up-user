@@ -29,6 +29,18 @@ const List<DataSection> dataCollected = [
     'If you run a professional\'s profile and invite people to its team: their usernames, the role you give them and when they accepted or left. Every invitation and change is logged for the owner and for BottlesUp.',
     'The money in a venue hire is agreed here and settled between you and the venue: BottlesUp does not take it.',
   ]),
+  DataSection('Subscriptions, referrals and tips', [
+    'If you are a professional and subscribe: which profile, the plan, when it renews or ends and whether the last payment went through. Your card is handled by Stripe, our payment partner: BottlesUp never sees the card number.',
+    'A referral code for each profile you use, and if you use someone\'s code: whose it was and when. The person who sent you is paid a credit for your first purchase. They are shown that you used their code, and your first name.',
+    'If you tip a profile: the profile, the amount, the words you add and whether the payment went through. The profile sees the amount and your words and your name. BottlesUp keeps a share and pays the rest by transfer.',
+    'If you earn money here: what customers paid, what BottlesUp holds, what is earned, and what was paid out and when, with the transfer reference.',
+  ]),
+  DataSection('Verification, ranks and jobs', [
+    'If you ask to be verified: your profile and what you write about yourself. BottlesUp decides, and keeps the answer and the reason. No ID document goes through the app.',
+    'If you ask for a rank: your profile, your follower count at that moment, and BottlesUp\'s answer with the reason. The ranks you hold are listed on your profile.',
+    'If you ask for a plaque: the name, address and phone number you give for the parcel, and the tracking number. The address is deleted 90 days after the plaque arrives, or at once if you cancel.',
+    'If you post a job: the listing, which is public to people in the app. If you apply for one: your message, the link you add and the profile you apply as. Only the business sees them. The business\'s answer and reply are kept for you.',
+  ]),
   DataSection('Your profile', [
     'A username, and if you add them a short bio, your city, links to your pages and up to ten interests. Your profile is public unless you make it private in Privacy settings.',
     'If you open a business profile (a DJ, a photographer, an event group), its name, its category and the same details.',

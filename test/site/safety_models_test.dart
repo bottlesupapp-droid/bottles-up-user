@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('every kind and reason has the name the website uses', () {
-    expect([for (final k in ReportKind.values) k.wire], ['post', 'comment', 'profile', 'message', 'review']);
+    expect([for (final k in ReportKind.values) k.wire], ['post', 'comment', 'profile', 'message', 'review', 'job']);
     expect([for (final r in ReportReason.values) r.wire], ['spam', 'harassment', 'hate', 'sexual', 'violence', 'scam', 'impersonation', 'self_harm', 'other']);
   });
 

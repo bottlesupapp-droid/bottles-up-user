@@ -295,7 +295,7 @@ class _PostCardViewState extends ConsumerState<PostCardView> {
             onTap: () => context.push('/u/${p.author.handle}'),
             child: Row(children: [
               Flexible(child: Text(p.author.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700))),
-              if (p.author.verified) ...[const SizedBox(width: 4), const VerifiedTick(size: 14)],
+              if (p.author.verified) ...[const SizedBox(width: 4), VerifiedTick(size: 14, rank: p.author.rank)],
             ]),
           ),
           subtitle: Text('@${p.author.handle} · ${timeAgo(p.createdAt, now)}${p.audience == PostAudience.public ? '' : ' · ${audienceLabel(p.audience)}'}'),

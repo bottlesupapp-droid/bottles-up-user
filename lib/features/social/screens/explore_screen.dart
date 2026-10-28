@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/features.dart';
 import '../../../site/models/site_event.dart';
 import '../../../site/models/venue.dart';
 import '../../../site/providers/site_providers.dart';
@@ -102,6 +103,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/explore/professionals'),
               ),
+              if (ref.watch(featureOnProvider(Feature.jobs)))
+                ListTile(
+                  key: const Key('open-opportunities'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.work_outline),
+                  title: const Text('Opportunities'),
+                  subtitle: const Text('Jobs, shifts and gigs from businesses'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/jobs'),
+                ),
               const _Heading('Events'),
               Wrap(spacing: 8, children: [
                 for (final f in DateFilter.values)

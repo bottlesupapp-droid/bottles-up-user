@@ -168,6 +168,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Take back the invitation'));
       await tester.pumpAndSettle();
+      expect(find.text('Take back the invitation?'), findsOneWidget);
+      expect(find.text('They will not be able to accept it.'), findsOneWidget);
       await tap(tester, 'revoke-confirm');
       await tester.pumpAndSettle();
       await settleCalls(tester);
@@ -194,6 +196,9 @@ void main() {
       await settleCalls(tester);
       expect(site.forRpc('team_leave').single.body, {'p_team': 'tm1'});
       expect(path(router), '/me/team');
+      final scope = ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
+      expect(scope.read(selectedProfileIdProvider), isNull, reason: 'the person goes back to acting as themselves');
+      expect(site.forRpc('profile_my_profiles').length, greaterThanOrEqualTo(2), reason: 'the profiles they can act as are read again');
     });
 
     testWidgets('the team chat opens as the person, not as the profile', (tester) async {
@@ -204,6 +209,7 @@ void main() {
       await tap(tester, 'team-chat');
       await tester.pumpAndSettle();
       expect(path(router), '/inbox/c1');
+      expect(ProviderScope.containerOf(tester.element(find.byType(Scaffold).first)).read(selectedProfileIdProvider), 'me');
     });
 
     testWidgets('has no chat button while there is no chat', (tester) async {
@@ -324,6 +330,7 @@ void main() {
       await openSocial(tester, site, '/', features: on, home: const TeamInvitationsCard());
       await settleCalls(tester);
       expect(find.byType(Card), findsNothing);
+      expect(tester.getSize(find.byType(TeamInvitationsCard)), Size.zero, reason: 'not even a gap');
       await tester.pumpWidget(const SizedBox());
       site.rpcs['team_invitations_mine'] = (_) => ok([teamInvitationRow()]);
       site.rpcs['site_features'] = (_) => ok({'social': true});
@@ -400,6 +407,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(path(router), '/me/hire-requests');
       expect(find.byKey(const Key('open-team')), findsNothing);
+    });
+
+    testWidgets('a group does not see its hires while hiring a venue is off', (tester) async {
+      site.rpcs['profile_my_profiles'] = (_) => ok([myPersonal(), groupProfile()]);
+      site.rpcs['site_features'] = (_) => ok({'social': true, 'marketplace': true});
+      await openSocial(tester, site, '/', features: {'social': true, 'marketplace': true}, overrides: [selectedProfileIdProvider.overrideWith((ref) => 'grp')], home: const SocialEntryCard());
+      await settleCalls(tester);
+      expect(find.byKey(const Key('open-hires')), findsNothing);
     });
 
     testWidgets('shows none of these while teams and hiring a venue are off', (tester) async {

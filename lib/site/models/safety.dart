@@ -6,7 +6,8 @@ enum ReportKind {
   comment('comment'),
   profile('profile'),
   message('message'),
-  review('review');
+  review('review'),
+  job('job');
 
   const ReportKind(this.wire);
 

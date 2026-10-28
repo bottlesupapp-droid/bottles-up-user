@@ -148,6 +148,12 @@ void main() {
       expect(parseWorkspace(null), isNull);
     });
 
+    test('a lineup entry is confirmed only when the website says so', () {
+      expect(parseLineupEntry({'id': 'pb', 'title': 'DJ set'})!.confirmed, isFalse);
+      expect(parseLineupEntry({'id': 'pb', 'confirmed': 'yes'})!.confirmed, isFalse);
+      expect(parseLineupEntry({'id': 'pb', 'confirmed': true})!.confirmed, isTrue);
+    });
+
     test('drops items and lineup entries that cannot be read', () {
       final w = parseWorkspace(workspaceRow(
         items: [hireItemRow(kind: 'schedule', at: null), hireItemRow(kind: 'note'), hireItemRow(title: ''), hireItemRow(side: 'both'), hireItemRow(id: 'ok')],

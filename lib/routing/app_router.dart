@@ -39,7 +39,18 @@ import 'package:bottles_up_user/features/social/screens/people_search_screen.dar
 import 'package:bottles_up_user/features/social/screens/social_profile_screen.dart';
 import 'package:bottles_up_user/features/social/screens/social_setup_screen.dart';
 import 'package:bottles_up_user/features/hire/screens/hire_form_screen.dart';
+import 'package:bottles_up_user/features/billing/screens/earnings_screen.dart';
+import 'package:bottles_up_user/features/billing/screens/referrals_screen.dart';
+import 'package:bottles_up_user/features/billing/screens/subscription_screen.dart';
+import 'package:bottles_up_user/features/billing/screens/tip_screen.dart';
 import 'package:bottles_up_user/features/hire/screens/hire_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/job_applications_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/job_form_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/job_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/my_applications_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/my_jobs_screen.dart';
+import 'package:bottles_up_user/features/jobs/screens/opportunities_screen.dart';
+import 'package:bottles_up_user/features/recognition/screens/recognition_screen.dart';
 import 'package:bottles_up_user/features/hire/screens/hires_screen.dart';
 import 'package:bottles_up_user/features/hire/screens/team_screen.dart';
 import 'package:bottles_up_user/features/hiring/screens/hiring_booking_screen.dart';
@@ -366,6 +377,20 @@ final List<RouteBase> appRoutes = [
   GoRoute(path: '/me/hire-requests', builder: (context, state) => const HiresScreen(asVenue: true)),
   GoRoute(path: '/venues/:id/host', builder: (context, state) => HireFormScreen(venueId: state.pathParameters['id']!)),
   GoRoute(path: '/hires/:id', builder: (context, state) => HireScreen(hireId: state.pathParameters['id']!, actorId: state.uri.queryParameters['as'])),
+  // Subscriptions, referrals, tips and earnings.
+  GoRoute(path: '/me/subscription', builder: (context, state) => const SubscriptionScreen()),
+  GoRoute(path: '/me/earnings', builder: (context, state) => const EarningsScreen()),
+  GoRoute(path: '/me/referrals', builder: (context, state) => const ReferralsScreen()),
+  GoRoute(path: '/tip/:id', builder: (context, state) => TipScreen(profileId: state.pathParameters['id']!)),
+  // Verification, ranks and awards; jobs and applications. A job's business pages are opened as the business profile (`as`).
+  GoRoute(path: '/me/recognition', builder: (context, state) => const RecognitionScreen()),
+  GoRoute(path: '/jobs', builder: (context, state) => const OpportunitiesScreen()),
+  GoRoute(path: '/jobs/:id', builder: (context, state) => JobScreen(jobId: state.pathParameters['id']!)),
+  GoRoute(path: '/me/jobs', builder: (context, state) => const MyJobsScreen()),
+  GoRoute(path: '/me/jobs/new', builder: (context, state) => JobFormScreen(asId: state.uri.queryParameters['as'] ?? '')),
+  GoRoute(path: '/me/jobs/:id/edit', builder: (context, state) => JobFormScreen(asId: state.uri.queryParameters['as'] ?? '', jobId: state.pathParameters['id'])),
+  GoRoute(path: '/me/jobs/:id/applications', builder: (context, state) => JobApplicationsScreen(jobId: state.pathParameters['id']!, asId: state.uri.queryParameters['as'] ?? '')),
+  GoRoute(path: '/me/applications', builder: (context, state) => const MyApplicationsScreen()),
   GoRoute(path: '/explore', builder: (context, state) => const ExploreScreen()),
   GoRoute(path: '/explore/professionals', builder: (context, state) => const ProfessionalsScreen()),
   GoRoute(

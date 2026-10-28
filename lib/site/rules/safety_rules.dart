@@ -19,6 +19,7 @@ String reportKindLabel(ReportKind kind) => switch (kind) {
       ReportKind.profile => 'profile',
       ReportKind.message => 'message',
       ReportKind.review => 'review',
+      ReportKind.job => 'job',
     };
 
 const int reportDetailsMax = 500;
