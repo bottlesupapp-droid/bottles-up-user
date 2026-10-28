@@ -93,4 +93,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+    // The launch and normal themes in res/values extend Theme.MaterialComponents. The Stripe plugin used to bring this library in; nothing else does now.
+    implementation("com.google.android.material:material:1.12.0")
 }

@@ -124,6 +124,18 @@ void main() {
       expect(const EarningsPart(commissionCents: 5).isEmpty, isTrue);
     });
 
+    test('are not empty when any one source has something, and empty only when all three have nothing', () {
+      const none = EarningsPart();
+      const some = EarningsPart(paidCents: 1);
+      expect(const Earnings(hiring: none, tips: none, referrals: none).isEmpty, isTrue);
+      expect(const Earnings(hiring: some, tips: none, referrals: none).isEmpty, isFalse);
+      expect(const Earnings(hiring: none, tips: some, referrals: none).isEmpty, isFalse);
+      expect(const Earnings(hiring: none, tips: none, referrals: some).isEmpty, isFalse);
+      expect(const Earnings(hiring: none, tips: some, referrals: some).isEmpty, isFalse);
+      expect(const Earnings(hiring: some, tips: none, referrals: some).isEmpty, isFalse);
+      expect(const Earnings(hiring: some, tips: some, referrals: none).isEmpty, isFalse);
+    });
+
     test('a missing or negative figure is nothing, and a missing section makes them unreadable', () {
       final e = parseEarnings(earningsRow(hiring: {'collected_cents': -5, 'held_cents': 'x'}))!;
       expect([e.hiring.collectedCents, e.hiring.heldCents, e.hiring.earnedCents], [0, 0, 0]);

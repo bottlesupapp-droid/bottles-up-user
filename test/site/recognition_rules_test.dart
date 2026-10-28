@@ -93,6 +93,7 @@ void main() {
       expect(progressTowards(150, 100), 1);
       expect(progressTowards(-5, 100), 0);
       expect(progressTowards(5, 0), 1);
+      expect(progressTowards(0, 0), 1, reason: 'nothing needed, nothing had: already there');
     });
   });
 }

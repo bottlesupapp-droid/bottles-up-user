@@ -92,6 +92,19 @@ void main() {
       expect(site.forRpc('jobs_list').last.body['p_query'], isNull);
     });
 
+    testWidgets('a job that is no longer open says Filled or Closed instead of the days left, and the list shows no counts', (tester) async {
+      site.rpcs['jobs_list'] = (_) => ok([
+            jobRow(deadline: fiveDays, applications: 4, waiting: 1),
+            jobRow(id: 'job2', title: 'Door staff', status: 'filled', open: false, deadline: fiveDays),
+            jobRow(id: 'job3', title: 'Cloakroom', status: 'closed', open: false, deadline: fiveDays),
+          ]);
+      await open(tester, '/jobs');
+      expect(textOf(tester, 'job-deadline-job1'), '5 days left');
+      expect(textOf(tester, 'job-deadline-job2'), 'Filled');
+      expect(textOf(tester, 'job-deadline-job3'), 'Closed');
+      expect(find.byKey(const Key('job-counts-job1')), findsNothing, reason: 'counts belong to the business\'s own list');
+    });
+
     testWidgets('a job opens its page', (tester) async {
       final router = await open(tester, '/jobs');
       await tap(tester, 'job-job1');
@@ -124,7 +137,52 @@ void main() {
       expect([second['p_before'], second['p_before_id']], ['2026-11-02T10:00:00.000Z', 'j19']);
       await tester.dragUntilVisible(find.byKey(const Key('job-j20')), find.byType(ListView).last, const Offset(0, -300));
       expect(find.byKey(const Key('job-j20')), findsOneWidget);
+      await tester.drag(find.byType(ListView).last, const Offset(0, -3000));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('jobs-more')), findsNothing, reason: 'a short page is the last');
+    });
+
+    testWidgets('a list that is not a full page has no Show more', (tester) async {
+      await open(tester, '/jobs');
+      await tester.drag(find.byType(ListView).last, const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('jobs-more')), findsNothing);
+    });
+
+    Future<void> openFullPage(WidgetTester tester) async {
+      site.rpcs['jobs_list'] = (b) => b['p_before'] == null
+          ? ok([for (var i = 0; i < 20; i++) jobRow(id: 'j$i', title: 'Job $i', kind: 'freelance', remote: true, deadline: fiveDays)])
+          : ok([jobRow(id: 'j20', title: 'Job 20', deadline: fiveDays)]);
+      // Twenty jobs are a big answer: the phone reads it on another thread, which a test lets finish with settleCalls.
+      await openSocial(tester, site, '/jobs', features: on, settle: false);
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Show more keeps the filters of the list it continues', (tester) async {
+      await openFullPage(tester);
+      await tap(tester, 'kind-freelance');
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      await tap(tester, 'kind-remote');
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(find.byKey(const Key('jobs-more')), find.byType(ListView), const Offset(0, -400));
+      await tap(tester, 'jobs-more');
+      await settleCalls(tester);
+      final second = site.forRpc('jobs_list').last.body;
+      expect(second['p_before_id'], 'j19');
+      expect(second['p_kind'], 'freelance');
+      expect(second['p_remote'], true);
+    });
+
+    testWidgets('a double tap on Show more asks for one more page', (tester) async {
+      await openFullPage(tester);
+      await tester.dragUntilVisible(find.byKey(const Key('jobs-more')), find.byType(ListView), const Offset(0, -400));
+      await tester.tap(find.byKey(const Key('jobs-more')));
+      await tester.tap(find.byKey(const Key('jobs-more')));
+      await settleCalls(tester);
+      expect(site.forRpc('jobs_list').where((c) => c.body['p_before'] != null).length, 1);
     });
 
     testWidgets('a page that cannot be loaded says why, and tries again', (tester) async {
@@ -333,6 +391,18 @@ void main() {
         await tester.pumpAndSettle();
         expect(router.routerDelegate.currentConfiguration.last.matchedLocation, '/me/jobs/job1/applications');
         expect(site.forRpc('job_applications').single.body, {'p_actor': 'p-club', 'p_job': 'job1'});
+      });
+
+      testWidgets('a team member who is not the business itself closes it as the business', (tester) async {
+        site.rpcs['job_get'] = (_) => ok(jobRow(deadline: fiveDays, mine: true, applications: 3, waiting: 2));
+        site.rpcs['job_close'] = (_) => ok(jobRow(status: 'closed', open: false));
+        await open(tester, '/jobs/job1');
+        await tap(tester, 'close-job');
+        await tester.pumpAndSettle();
+        await tap(tester, 'close-plain');
+        await tester.pumpAndSettle();
+        await settleCalls(tester);
+        expect(site.forRpc('job_close').single.body, {'p_actor': 'p-club', 'p_job': 'job1', 'p_filled': false});
       });
 
       testWidgets('closing asks whether somebody was found, and sends it as the business', (tester) async {

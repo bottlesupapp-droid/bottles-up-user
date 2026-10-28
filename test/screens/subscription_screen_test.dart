@@ -54,6 +54,12 @@ void main() {
       expect(site.forRpc('sub_plans'), isEmpty);
     });
 
+    testWidgets('while subscriptions are off, a personal profile is told they are not open yet, not asked to switch', (tester) async {
+      await openIt(tester, features: {'social': true}, overrides: [selectedProfileIdProvider.overrideWith((ref) => null)]);
+      expect(find.text('Subscriptions are not open yet.'), findsOneWidget);
+      expect(find.text('Switch to a professional profile'), findsNothing);
+    });
+
     testWidgets('a personal profile is asked to switch to a professional one', (tester) async {
       await openIt(tester, overrides: [selectedProfileIdProvider.overrideWith((ref) => null)]);
       expect(find.text('Switch to a professional profile'), findsOneWidget);
@@ -196,6 +202,17 @@ void main() {
       expect(find.byKey(const Key('subscription-done')), findsOneWidget);
     });
 
+    testWidgets('it gives up at the give-up time itself, not a tick later', (tester) async {
+      await openIt(tester, giveUpAfter: const Duration(seconds: 3));
+      await tap(tester, 'subscribe');
+      await settleCalls(tester);
+      await tick(tester);
+      await tick(tester);
+      expect(find.text('Waiting for Stripe to confirm your payment'), findsOneWidget);
+      await tick(tester);
+      expect(find.text('We have not heard from Stripe yet'), findsOneWidget);
+    });
+
     testWidgets('stepping back to the plans stops the asking', (tester) async {
       await openIt(tester);
       await tap(tester, 'subscribe');
@@ -219,6 +236,14 @@ void main() {
       expect(textOf(tester, 'subscription-line'), startsWith('It renews on '));
       expect(textOf(tester, 'subscription-commission'), 'Commission on your bookings: 0% instead of 5%.');
       expect(find.byKey(const Key('subscribe')), findsNothing);
+    });
+
+    testWidgets('a subscription that changes nothing shows no commission line', (tester) async {
+      site.rpcs['sub_status'] = (_) => ok(subscriptionRow());
+      site.rpcs['sub_plans'] = (_) => ok(plansRow(subscribedBps: 500));
+      await openIt(tester);
+      expect(find.byKey(const Key('subscription-card')), findsOneWidget);
+      expect(find.byKey(const Key('subscription-commission')), findsNothing);
     });
 
     testWidgets('says when it will end, and when the last payment failed', (tester) async {

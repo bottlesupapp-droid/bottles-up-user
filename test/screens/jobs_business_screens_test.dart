@@ -136,6 +136,21 @@ void main() {
       expect(router.canPop(), isFalse, reason: 'the form is replaced by the job');
     });
 
+    testWidgets('a job that was posted shows up in my jobs without leaving the app', (tester) async {
+      site.rpcs['job_create'] = (_) => ok(jobRow(mine: true));
+      site.rpcs['job_get'] = (_) => ok(jobRow(mine: true, applications: 0, waiting: 0));
+      final router = await open(tester, '/me/jobs', overrides: picking(soon));
+      expect(site.forRpc('jobs_mine').length, 1);
+      router.push('/me/jobs/new?as=p-club');
+      await tester.pumpAndSettle();
+      await fillAll(tester);
+      await tap(tester, 'job-save');
+      await settleCalls(tester);
+      await tester.pumpAndSettle();
+      expect(path(router), '/jobs/job1');
+      expect(site.forRpc('jobs_mine').length, greaterThanOrEqualTo(2), reason: 'the list of my jobs is read again');
+    });
+
     testWidgets('leaves out what was not filled in, and a remote job needs no place', (tester) async {
       site.rpcs['job_create'] = (_) => ok(jobRow(mine: true));
       site.rpcs['job_get'] = (_) => ok(jobRow(mine: true));
@@ -295,6 +310,28 @@ void main() {
       await settleCalls(tester);
       expect(site.forRpc('job_application_set').single.body, {'p_actor': 'p-club', 'p_application': 'ap1', 'p_state': 'shortlisted', 'p_reply': null});
       expect(site.forRpc('job_applications').length, greaterThanOrEqualTo(2), reason: 'the list is read again');
+    });
+
+    testWidgets('a double tap on Shortlist sends one answer', (tester) async {
+      site.rpcs['job_application_set'] = (_) => ok(applicationRow(state: 'shortlisted'));
+      await open(tester, '/me/jobs/job1/applications?as=p-club');
+      await tester.ensureVisible(find.byKey(const Key('shortlist-ap1')));
+      await tester.tap(find.byKey(const Key('shortlist-ap1')));
+      await tester.tap(find.byKey(const Key('shortlist-ap1')));
+      await settleCalls(tester);
+      expect(site.forRpc('job_application_set').length, 1);
+    });
+
+    testWidgets('an answer also refreshes my jobs, whose counts it changes', (tester) async {
+      site.rpcs['job_application_set'] = (_) => ok(applicationRow(state: 'shortlisted'));
+      final router = await open(tester, '/me/jobs', overrides: asClub);
+      expect(site.forRpc('jobs_mine').length, 1);
+      router.push('/me/jobs/job1/applications?as=p-club');
+      await tester.pumpAndSettle();
+      await settleCalls(tester);
+      await tap(tester, 'shortlist-ap1');
+      await settleCalls(tester);
+      expect(site.forRpc('jobs_mine').length, greaterThanOrEqualTo(2), reason: 'the list of my jobs is read again');
     });
 
     testWidgets('accepting asks for an optional reply and sends it, trimmed', (tester) async {

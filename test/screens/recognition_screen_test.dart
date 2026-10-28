@@ -195,6 +195,23 @@ void main() {
       expect(find.text('BottlesUp will look at your followers and answer here.'), findsOneWidget);
     });
 
+    testWidgets('a level the website says cannot be asked for yet is not offered, even when it is named', (tester) async {
+      site.rpcs['rank_status'] = (_) => ok(rankStatusRow(canRequest: false, target: {'key': 'elite', 'name': 'Elite', 'min_followers': 100000, 'colour': '#2E9E5B'}));
+      await openIt(tester);
+      expect(find.byKey(const Key('ask-rank')), findsNothing);
+      expect(find.byKey(const Key('rank-hint')), findsOneWidget);
+    });
+
+    testWidgets('a double tap on asking for a rank sends one request', (tester) async {
+      site.rpcs['rank_status'] = (_) => ok(rankStatusRow(target: {'key': 'elite', 'name': 'Elite', 'min_followers': 100000, 'colour': '#2E9E5B'}));
+      await openIt(tester);
+      await tester.ensureVisible(find.byKey(const Key('ask-rank')));
+      await tester.tap(find.byKey(const Key('ask-rank')));
+      await tester.tap(find.byKey(const Key('ask-rank')));
+      await settleCalls(tester);
+      expect(site.forRpc('rank_request').length, 1);
+    });
+
     testWidgets('a refusal is shown as it came', (tester) async {
       site.rpcs['rank_status'] = (_) => ok(rankStatusRow(target: {'key': 'elite', 'name': 'Elite', 'min_followers': 100000, 'colour': '#2E9E5B'}));
       site.rpcs['rank_request'] = (_) => raised('You have not reached the next level yet.');

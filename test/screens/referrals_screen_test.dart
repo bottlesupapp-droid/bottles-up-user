@@ -63,6 +63,14 @@ void main() {
     expect(find.text('Friends who use your code and make their first purchase earn you a credit.'), findsOneWidget);
   });
 
+  testWidgets('a code worth nothing is not promised as money', (tester) async {
+    site.rpcs['referral_stats'] = (_) => ok(statsRow(credit: 0));
+    await openIt(tester);
+    expect(find.text('Friends who use your code and make their first purchase earn you a credit.'), findsOneWidget);
+    expect(find.textContaining('you earn'), findsNothing);
+    expect(textOf(tester, 'referral-referred'), '3');
+  });
+
   testWidgets('sharing hands the phone a sentence with the code in it', (tester) async {
     await openIt(tester);
     await tap(tester, 'referral-share');
@@ -116,6 +124,17 @@ void main() {
       expect(find.byKey(const Key('referral-used')), findsOneWidget);
       expect(find.text('You used the code of Ann Lee.'), findsOneWidget);
       expect(find.byKey(const Key('referral-input')), findsNothing);
+    });
+
+    testWidgets('the box goes at once when the code is used, without leaving the screen', (tester) async {
+      await openIt(tester);
+      expect(find.byKey(const Key('referral-input')), findsOneWidget);
+      site.rpcs['referral_mine'] = (_) => ok({'referrer': profileRow(id: 'p-ann', handle: 'ann', name: 'Ann Lee'), 'claimed_at': '2026-11-02T10:00:00Z'});
+      await tester.enterText(find.byKey(const Key('referral-input')), 'ABCD5678');
+      await tap(tester, 'referral-use');
+      await settleCalls(tester);
+      expect(find.byKey(const Key('referral-input')), findsNothing);
+      expect(find.text('You used the code of Ann Lee.'), findsOneWidget);
     });
 
     testWidgets('says what is wrong with a code before sending it', (tester) async {
