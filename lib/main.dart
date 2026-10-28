@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bottles_up_user/core/error/global_error_handler.dart';
+import 'package:bottles_up_user/core/startup_problem.dart';
 import 'package:bottles_up_user/features/auth/services/deep_link_listener.dart';
 import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:bottles_up_user/theme/app_theme.dart';
@@ -39,20 +40,25 @@ Future<void> main() async {
       const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
       const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
-      if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-        throw StateError(
-          'Supabase credentials not configured.\n'
-          'Pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=... when building.',
-        );
+      // A build without its settings says so on the screen. It used to throw here, before anything was drawn: a white screen on a phone.
+      final problem = missingSettingsProblem(supabaseUrl: supabaseUrl, supabaseAnonKey: supabaseAnonKey);
+      if (problem != null) {
+        runApp(StartupProblemApp(detail: '$problem Build it with --dart-define-from-file=env.json.'));
+        return;
       }
 
-      await Supabase.initialize(
-        url: supabaseUrl,
-        authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.implicit,
-        ),
-        anonKey: supabaseAnonKey,
-      );
+      try {
+        await Supabase.initialize(
+          url: supabaseUrl,
+          authOptions: const FlutterAuthClientOptions(
+            authFlowType: AuthFlowType.implicit,
+          ),
+          anonKey: supabaseAnonKey,
+        );
+      } catch (error) {
+        runApp(StartupProblemApp(detail: 'The connection to BottlesUp could not be set up: $error'));
+        return;
+      }
 
       runApp(
         const ProviderScope(
