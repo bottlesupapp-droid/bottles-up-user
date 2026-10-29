@@ -8,6 +8,7 @@ import 'package:bottles_up_user/features/bookings_site/screens/add_bottles_scree
 import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
 import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart';
 import 'package:bottles_up_user/features/main_navigation/screens/main_navigation_screen.dart';
+import 'package:bottles_up_user/features/profile/screens/complete_profile_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/data_collected_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/edit_profile_screen.dart';
 import 'package:bottles_up_user/features/profile/screens/privacy_policy_screen.dart';
@@ -67,6 +68,7 @@ import 'package:bottles_up_user/features/tables/screens/venue_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/payment_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_purchase_screen.dart';
 import 'package:bottles_up_user/features/tickets_site/screens/ticket_screen.dart';
+import 'package:bottles_up_user/routing/profile_gate.dart';
 import 'package:bottles_up_user/site/models/post.dart';
 import 'package:bottles_up_user/site/models/review.dart';
 import 'package:flutter/material.dart';
@@ -104,7 +106,8 @@ final _authRefreshNotifier = _AuthRefreshNotifier();
 
 final appRouter = GoRouter(
   initialLocation: '/',
-  refreshListenable: _authRefreshNotifier,
+  // The profile gate is made here, so it starts reading the profile while the splash screen is still showing.
+  refreshListenable: Listenable.merge([_authRefreshNotifier, profileGate]),
   redirect: (context, state) {
     final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
     final path = state.uri.path;
@@ -122,6 +125,11 @@ final appRouter = GoRouter(
 
     if (isLoggedIn && (path == '/login' || path == '/signup' || path == '/phone-login')) {
       return '/home';
+    }
+
+    // Anyone signed in whose profile lacks an e-mail, a phone number or a date of birth completes it before reaching any screen. The sign-in pages and the password reset are left alone.
+    if (!isPublic) {
+      return profileGateRedirect(loggedIn: isLoggedIn, uri: state.uri, state: profileGate.state);
     }
 
     return null;
@@ -163,6 +171,10 @@ final List<RouteBase> appRoutes = [
   GoRoute(
     path: '/phone-login',
     builder: (context, state) => const PhoneLoginScreen(),
+  ),
+  GoRoute(
+    path: completeProfilePath,
+    builder: (context, state) => CompleteProfileScreen(redirectTo: state.uri.queryParameters['redirect']),
   ),
   GoRoute(
     path: '/forgot-password',

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:bottles_up_user/features/profile/widgets/date_of_birth_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +24,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _ageController = TextEditingController();
+  DateTime? _dateOfBirth;
   final _phoneController = TextEditingController();
   
   bool _obscurePassword = true;
@@ -31,22 +32,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _acceptTerms = false;
   Country? _selectedCountry;
   
-  final List<Country> _countries = [
-    Country(name: 'United States', code: 'US', phoneCode: '+1'),
-    Country(name: 'United Kingdom', code: 'GB', phoneCode: '+44'),
-    Country(name: 'Canada', code: 'CA', phoneCode: '+1'),
-    Country(name: 'Australia', code: 'AU', phoneCode: '+61'),
-    Country(name: 'India', code: 'IN', phoneCode: '+91'),
-    Country(name: 'Germany', code: 'DE', phoneCode: '+49'),
-    Country(name: 'France', code: 'FR', phoneCode: '+33'),
-    Country(name: 'Japan', code: 'JP', phoneCode: '+81'),
-    Country(name: 'Singapore', code: 'SG', phoneCode: '+65'),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _selectedCountry = _countries.first;
+    _selectedCountry = supportedCountries.first;
   }
 
   @override
@@ -55,7 +44,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _ageController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -100,20 +88,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return null;
   }
 
-  String? _validateAge(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Age is required';
-    }
-    final age = int.tryParse(value);
-    if (age == null) {
-      return 'Please enter a valid age';
-    }
-    if (age < 13 || age > 120) {
-      return 'Age must be between 13 and 120';
-    }
-    return null;
-  }
-
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {
       return 'Phone number is required';
@@ -142,7 +116,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
-        age: int.parse(_ageController.text),
+        dateOfBirth: _dateOfBirth!,
         phoneNumber: phoneNumber,
       );
     }
@@ -356,20 +330,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             
                             const SizedBox(height: 16),
                             
-                            // Age Field
-                            TextFormField(
-                              controller: _ageController,
-                              decoration: InputDecoration(
-                                labelText: 'Age',
-                                hintText: '25',
-                                prefixIcon: const Icon(Iconsax.calendar),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              keyboardType: TextInputType.number,
-                              validator: _validateAge,
+                            // Date of birth (the age is worked out from it)
+                            DateOfBirthField(
+                              initialValue: _dateOfBirth,
                               enabled: !authState.isLoading,
+                              onChanged: (day) => _dateOfBirth = day,
                             ),
                             
                             const SizedBox(height: 16),
@@ -387,7 +352,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<Country>(
                                       value: _selectedCountry,
-                                      items: _countries.map((country) {
+                                      items: supportedCountries.map((country) {
                                         return DropdownMenuItem<Country>(
                                           value: country,
                                           child: Text('${country.code} ${country.phoneCode}'),

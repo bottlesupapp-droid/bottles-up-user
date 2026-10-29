@@ -76,6 +76,9 @@ class FakeWebsite {
 
   /// Tables that answer with a failure while the others keep working.
   final Set<String> failTables = {};
+
+  /// A particular answer for one kind of request to one table, keyed 'METHOD table' (for example 'POST profiles'), such as the database refusing a duplicate.
+  final Map<String, ({int status, Object body})> tableErrors = {};
   bool networkDown = false;
 
   /// Made when the pretend website is, because a call to a website function hands its JSON to a separate isolate: that has to start outside a widget test's fake clock
@@ -90,6 +93,21 @@ class FakeWebsite {
       // The client's token-refresh clock would still be ticking when a screen test ends.
       authOptions: const AuthClientOptions(autoRefreshToken: false),
     );
+  }
+
+  /// Signs [id] in on the pretend website's client, so code that asks who is signed in (`auth.currentUser`) finds someone. [email] null is a phone sign-up.
+  Future<void> signIn({String id = 'u1', String? email = 'dana@example.com', Map<String, dynamic> metadata = const {}}) async {
+    String part(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+    final exp = DateTime.now().add(const Duration(days: 3650)).millisecondsSinceEpoch ~/ 1000;
+    final jwt = '${part({'alg': 'HS256', 'typ': 'JWT'})}.${part({'sub': id, 'exp': exp, 'role': 'authenticated'})}.signature';
+    await client.auth.recoverSession(jsonEncode({
+      'access_token': jwt,
+      'token_type': 'bearer',
+      'expires_in': 3600,
+      'expires_at': exp,
+      'refresh_token': 'refresh',
+      'user': {'id': id, 'aud': 'authenticated', 'email': email, 'app_metadata': <String, dynamic>{}, 'user_metadata': metadata, 'created_at': '2026-01-01T00:00:00Z'},
+    }));
   }
 
   List<TableRequest> forTable(String table) => [
@@ -157,6 +175,8 @@ class FakeWebsite {
       Object? body;
       if (request.body.isNotEmpty) body = jsonDecode(request.body);
       tableRequests.add(TableRequest(request.method, table, request.url.queryParameters, body));
+      final custom = tableErrors['${request.method} $table'];
+      if (custom != null) return _json(request, custom.status, custom.body);
       if (failAllWith != null || failTables.contains(table)) return _json(request, failAllWith ?? 500, {'message': 'failed'});
       return _json(request, 200, tables[table] ?? const []);
     }

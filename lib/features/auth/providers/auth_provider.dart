@@ -244,7 +244,7 @@ class Auth extends _$Auth {
     required String name,
     required String email,
     required String password,
-    required int age,
+    required DateTime dateOfBirth,
     required String phoneNumber,
   }) async {
     state = const AsyncLoading();
@@ -255,7 +255,7 @@ class Auth extends _$Auth {
         name: name,
         email: email,
         password: password,
-        age: age,
+        dateOfBirth: dateOfBirth,
         phoneNumber: phoneNumber,
       );
 

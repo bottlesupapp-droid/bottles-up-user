@@ -21,6 +21,7 @@ import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
+import '../services/profile_completion_service.dart';
 import '../services/billing_service.dart';
 import '../services/booking_actions_service.dart';
 import '../services/caption_ideas_service.dart';
@@ -57,6 +58,7 @@ final guestPassesServiceProvider = Provider<GuestPassesService>((ref) => GuestPa
 final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => BookingActionsService(ref.watch(siteClientProvider)));
 final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
+final profileCompletionServiceProvider = Provider<ProfileCompletionService>((ref) => ProfileCompletionService(ref.watch(siteClientProvider)));
 final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
 final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
 final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));

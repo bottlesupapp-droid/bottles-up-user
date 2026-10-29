@@ -1,3 +1,5 @@
+import 'package:bottles_up_user/features/profile/logic/profile_completion.dart';
+import 'package:clock/clock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../site/site_config.dart';
 import 'google_sign_in_service.dart';
@@ -84,7 +86,7 @@ class AuthService {
     required String name,
     required String email,
     required String password,
-    required int age,
+    required DateTime dateOfBirth,
     required String phoneNumber,
   }) async {
     try {
@@ -107,7 +109,9 @@ class AuthService {
             'name': name,
             'email': email,
             'phone_number': phoneNumber,
-            'age': age,
+            'date_of_birth': dateToIso(dateOfBirth),
+            // The database works the age out from the date; sending it too keeps the row right where that trigger is not in place yet.
+            'age': ageOn(dateOfBirth, clock.now()),
           });
         } catch (profileError) {
           // If profile creation fails after successful auth creation

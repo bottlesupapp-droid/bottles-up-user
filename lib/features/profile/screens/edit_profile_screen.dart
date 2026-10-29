@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:bottles_up_user/features/profile/logic/profile_completion.dart';
+import 'package:bottles_up_user/features/profile/widgets/date_of_birth_field.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -20,7 +23,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _ageController = TextEditingController();
+  DateTime? _dateOfBirth;
   
   bool _isLoading = false;
   bool _isUploadingImage = false;
@@ -38,7 +41,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _ageController.dispose();
     super.dispose();
   }
 
@@ -57,7 +59,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         try {
           final profileData = await Supabase.instance.client
               .from('profiles')
-              .select('name, phone_number, age, avatar_url')
+              .select('name, phone_number, date_of_birth, avatar_url')
               .eq('id', user.id)
               .maybeSingle();
               
@@ -65,7 +67,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             setState(() {
               _nameController.text = profileData['name'] ?? _nameController.text;
               _phoneController.text = profileData['phone_number'] ?? '';
-              _ageController.text = profileData['age']?.toString() ?? '';
+              _dateOfBirth = dateFromIso(profileData['date_of_birth']);
               _currentAvatarUrl = profileData['avatar_url'] ?? _currentAvatarUrl;
             });
           }
@@ -227,9 +229,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 'phone_number': _phoneController.text.trim().isEmpty 
                     ? null 
                     : _phoneController.text.trim(),
-                'age': _ageController.text.trim().isEmpty 
-                    ? null 
-                    : int.tryParse(_ageController.text.trim()),
+                'date_of_birth': dateToIso(_dateOfBirth!),
+                // The database works the age out from the date; sending it too keeps the row right where that trigger is not in place yet.
+                'age': ageOn(_dateOfBirth!, clock.now()),
                 'avatar_url': avatarUrl,
                 'updated_at': DateTime.now().toIso8601String(),
               });
@@ -422,23 +424,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             const Gap(16),
 
-            TextFormField(
-              controller: _ageController,
-              decoration: const InputDecoration(
-                labelText: 'Age (Optional)',
-                prefixIcon: Icon(Iconsax.calendar),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value != null && value.trim().isNotEmpty) {
-                  final age = int.tryParse(value);
-                  if (age == null || age < 18 || age > 100) {
-                    return 'Please enter a valid age (18-100)';
-                  }
-                }
-                return null;
-              },
+            // The age is worked out from the date of birth, so the two cannot disagree.
+            DateOfBirthField(
+              key: ValueKey(_dateOfBirth),
+              initialValue: _dateOfBirth,
+              onChanged: (day) => _dateOfBirth = day,
             ),
             const Gap(32),
 
