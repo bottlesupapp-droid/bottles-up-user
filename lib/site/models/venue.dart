@@ -105,6 +105,7 @@ class TableType {
     this.seatingType,
     this.amenities,
     this.policyNote,
+    this.includedAdmissions,
   });
 
   final String id;
@@ -133,6 +134,9 @@ class TableType {
   final String? seatingType;
   final String? amenities;
   final String? policyNote;
+
+  /// How many entry passes the table comes with, when the venue says (a table that seats ten does not automatically include ten passes).
+  final int? includedAdmissions;
   final int sortOrder;
 
   bool get isHourly => pricingMode == PricingMode.hourly;
@@ -189,6 +193,7 @@ TableType? parseTableType(Map<String, dynamic> row, {String? venueId}) {
     seatingType: readText(row['seating_type']),
     amenities: readText(row['amenities']),
     policyNote: readText(row['policy_note']),
+    includedAdmissions: readInt(row['included_admissions']),
     sortOrder: readInt(row['sort_order']) ?? 0,
   );
 }
@@ -257,6 +262,13 @@ class Venue {
     this.bookingEnd,
     this.tables = const [],
     this.slots = const [],
+    this.amenities = const [],
+    this.parkingInfo,
+    this.minAge,
+    this.idRequired = false,
+    this.lastEntry,
+    this.kitchenHours,
+    this.menuUrl,
   });
 
   final String id;
@@ -273,6 +285,15 @@ class Venue {
   final String? dressCode;
   final int? capacity;
   final String? musicGenres;
+
+  /// What the venue says about itself (set by its owner or manager): features by their keys, parking, the age rule, whether ID is asked, last entry, kitchen hours, a menu link.
+  final List<String> amenities;
+  final String? parkingInfo;
+  final int? minAge;
+  final bool idRequired;
+  final String? lastEntry;
+  final String? kitchenHours;
+  final String? menuUrl;
   final int taxRateBps;
   final BottlePaymentMode bottlePaymentMode;
   final bool depositIsCredit;
@@ -300,6 +321,14 @@ class Venue {
 }
 
 /// A venue, with `site_table_types` and `site_venue_time_slots` read under their own names. Null when it has no id or name.
+/// The features a venue can list, by the names the website keeps (a test reads them from its migration). Anything else is ignored.
+const List<String> venueAmenityKeys = ['parking', 'valet', 'coat_check', 'wifi', 'accessible', 'outdoor', 'vip_area', 'food', 'smoking_area', 'private_rooms', 'live_music', 'dance_floor', 'bottle_service'];
+
+String? _secure(Object? v) {
+  final t = readText(v);
+  return t != null && t.startsWith('https://') ? t : null;
+}
+
 Venue? parseVenue(Map<String, dynamic> row) {
   final id = readText(row['id']);
   final name = readText(row['name']);
@@ -338,6 +367,13 @@ Venue? parseVenue(Map<String, dynamic> row) {
     showBottleImages: row['show_bottle_images'] != false,
     bookingStart: readDay(row['booking_start_date']),
     bookingEnd: readDay(row['booking_end_date']),
+    amenities: [for (final a in readTexts(row['amenities'])) if (venueAmenityKeys.contains(a)) a],
+    parkingInfo: readText(row['parking_info']),
+    minAge: readInt(row['min_age']),
+    idRequired: row['id_required'] == true,
+    lastEntry: readText(row['last_entry']),
+    kitchenHours: readText(row['kitchen_hours']),
+    menuUrl: _secure(row['menu_url']),
     tables: tables,
     slots: slots,
   );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
+import '../../../site/models/review.dart';
 import '../../../site/models/venue.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/rules/table_rules.dart';
@@ -45,6 +46,7 @@ class _TablesScreenState extends ConsumerState<TablesScreen> {
         error: (error, _) => LoadFailed(message: error is SiteException ? error.message : loadFailedMessage('venues'), onRetry: () => ref.invalidate(venuesProvider)),
         data: (all) {
           final shown = filterVenues(all, _search.text);
+          final ratings = ref.watch(venueRatingsProvider([for (final v in shown) v.id].join(','))).valueOrNull ?? const <String, VenueRating>{};
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(venuesProvider);
@@ -77,7 +79,7 @@ class _TablesScreenState extends ConsumerState<TablesScreen> {
                 else if (shown.isEmpty)
                   const SizedBox(height: 300, child: EmptyState(icon: Icons.search_off, title: 'Nothing matches', text: 'Try a different word, or clear the search.'))
                 else
-                  for (final v in shown) VenueCard(venue: v, onTap: () => _open(v)),
+                  for (final v in shown) VenueCard(venue: v, rating: ratings[v.id], onTap: () => _open(v)),
               ],
             ),
           );

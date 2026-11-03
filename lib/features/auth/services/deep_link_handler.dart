@@ -25,12 +25,6 @@ class DeepLinkHandler {
         isResetPasswordLink = true;
       }
 
-      if ((uri.scheme == 'http' || uri.scheme == 'https') &&
-          (uri.host == 'bottlesupapp.com' || uri.host == 'www.bottlesupapp.com') &&
-          uri.path.contains('reset-password')) {
-        isResetPasswordLink = true;
-      }
-
       if (isResetPasswordLink) {
         debugPrint('🔗 [DLH-3] Identified as password reset link');
         final params = extractParams(uri);

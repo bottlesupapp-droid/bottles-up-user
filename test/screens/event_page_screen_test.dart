@@ -13,8 +13,8 @@ String textOf(WidgetTester tester, String key) => tester.widget<Text>(find.byKey
 void main() {
   late FakeWebsite site;
 
-  Future<void> open(WidgetTester tester, {void Function(BuildContext, SiteEvent, TicketTier)? onBuy, Future<void> Function(String)? share, String id = 'e1'}) =>
-      pumpSite(tester, EventPageScreen(eventId: id, onBuy: onBuy, share: share), site: site);
+  Future<void> open(WidgetTester tester, {void Function(BuildContext, SiteEvent, TicketTier)? onBuy, void Function(BuildContext, SiteEvent)? onBookTable, Future<void> Function(String)? share, String id = 'e1'}) =>
+      pumpSite(tester, EventPageScreen(eventId: id, onBuy: onBuy, onBookTable: onBookTable, share: share), site: site);
 
   setUp(() {
     site = FakeWebsite();
@@ -122,5 +122,27 @@ void main() {
     expect(shared, allOf(contains('Friday Night'), contains(formatWhen(parseWhen('2099-10-24T23:00:00Z')!)), contains('/events/e1')));
     expect(shared, startsWith('Friday Night'));
     expect(shared!.contains('https://'), isTrue);
+  });
+
+  group('book a table from the event', () {
+    testWidgets('offers a table at the event\'s venue and hands over the event (its venue and night)', (tester) async {
+      SiteEvent? asked;
+      await open(tester, onBookTable: (c, e) => asked = e);
+      expect(find.text('Book a table at Club A'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('book-table')));
+      expect([asked?.id, asked?.venueId], ['e1', 'v1']);
+    });
+
+    testWidgets('an event that is over offers no table', (tester) async {
+      site.tables['site_events'] = [eventRow(cover: null, start: '2020-01-01T20:00:00Z', end: '2020-01-02T02:00:00Z')];
+      await open(tester);
+      expect(find.byKey(const Key('book-table')), findsNothing);
+    });
+
+    testWidgets('an event with no venue on the website offers no table', (tester) async {
+      site.tables['site_events'] = [{...eventRow(cover: null), 'venue_id': null}];
+      await open(tester);
+      expect(find.byKey(const Key('book-table')), findsNothing);
+    });
   });
 }

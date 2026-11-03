@@ -22,27 +22,25 @@ class AppTheme {
   
   // Semantic Colors
   static const Color _errorColor = Color(0xFFFF5449);
-  static const Color _successColor = Color(0xFF4CAF50);
-  static const Color _warningColor = Color(0xFFFFC107);
 
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.dark(
       // Primary Colors
       primary: _primaryColor,
       onPrimary: Colors.white,
-      primaryContainer: _primaryColor.withOpacity(0.2),
-      onPrimaryContainer: _primaryColor.withOpacity(0.8),
+      primaryContainer: _primaryColor.withValues(alpha: 0.2),
+      onPrimaryContainer: _primaryColor.withValues(alpha: 0.8),
       
       // Secondary Colors
       secondary: _secondaryColor,
       onSecondary: Colors.white,
-      secondaryContainer: _secondaryColor.withOpacity(0.2),
+      secondaryContainer: _secondaryColor.withValues(alpha: 0.2),
       onSecondaryContainer: _secondaryColor,
       
       // Tertiary Colors
       tertiary: _tertiaryColor,
       onTertiary: Colors.white,
-      tertiaryContainer: _tertiaryColor.withOpacity(0.2),
+      tertiaryContainer: _tertiaryColor.withValues(alpha: 0.2),
       onTertiaryContainer: _tertiaryColor,
       
       // Surface Colors
@@ -56,8 +54,8 @@ class AppTheme {
       onError: Colors.white,
       
       // Outline Colors
-      outline: _onSurfaceVariantColor.withOpacity(0.3),
-      outlineVariant: _onSurfaceVariantColor.withOpacity(0.15),
+      outline: _onSurfaceVariantColor.withValues(alpha: 0.3),
+      outlineVariant: _onSurfaceVariantColor.withValues(alpha: 0.15),
     );
 
     return ThemeData(
@@ -228,14 +226,14 @@ class AppTheme {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: _onSurfaceVariantColor.withOpacity(0.3),
+            color: _onSurfaceVariantColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: _onSurfaceVariantColor.withOpacity(0.3),
+            color: _onSurfaceVariantColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -263,7 +261,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: _surfaceColor,
         selectedColor: _primaryColor,
-        disabledColor: _surfaceColor.withOpacity(0.5),
+        disabledColor: _surfaceColor.withValues(alpha: 0.5),
         labelStyle: const TextStyle(
           color: _onSurfaceColor,
           fontSize: 14,
@@ -279,7 +277,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
         ),
         side: BorderSide(
-          color: _onSurfaceVariantColor.withOpacity(0.2),
+          color: _onSurfaceVariantColor.withValues(alpha: 0.2),
           width: 1,
         ),
         elevation: 2,
@@ -336,7 +334,7 @@ class AppTheme {
       
       // Divider Theme
       dividerTheme: DividerThemeData(
-        color: _onSurfaceVariantColor.withOpacity(0.2),
+        color: _onSurfaceVariantColor.withValues(alpha: 0.2),
         thickness: 1,
       ),
       

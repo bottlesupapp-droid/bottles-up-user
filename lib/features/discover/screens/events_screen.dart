@@ -12,12 +12,13 @@ import '../widgets/event_card.dart';
 /// Events (the first tab): the events still to come, read from the website's published events, with a search and the categories they have. Tapping one opens its page, where the
 /// ticket types are.
 class EventsScreen extends ConsumerStatefulWidget {
-  const EventsScreen({super.key, this.scrollController, this.onOpenEvent});
+  const EventsScreen({super.key, this.scrollController, this.onOpenEvent, DateTime? now}) : _now = now;
 
   final ScrollController? scrollController;
 
   /// Where tapping an event goes. The app opens the event page; tests give their own.
   final void Function(BuildContext context, SiteEvent event)? onOpenEvent;
+  final DateTime? _now;
 
   @override
   ConsumerState<EventsScreen> createState() => _EventsScreenState();
@@ -26,6 +27,7 @@ class EventsScreen extends ConsumerStatefulWidget {
 class _EventsScreenState extends ConsumerState<EventsScreen> {
   final _search = TextEditingController();
   String? _category;
+  DateFilter _when = DateFilter.any;
 
   @override
   void dispose() {
@@ -49,7 +51,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
           onRetry: () => ref.invalidate(upcomingEventsProvider),
         ),
         data: (all) {
-          final shown = filterEvents(all, query: _search.text, category: _category);
+          final shown = filterEventsByDate(filterEvents(all, query: _search.text, category: _category), _when, widget._now ?? DateTime.now());
           final categories = categoriesOf(all);
           return RefreshIndicator(
             onRefresh: () async {
@@ -80,6 +82,15 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                           ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(key: const Key('when-any'), label: const Text('Any date'), selected: _when == DateFilter.any, onSelected: (_) => setState(() => _when = DateFilter.any)),
+                    ChoiceChip(key: const Key('when-tonight'), label: const Text('Tonight'), selected: _when == DateFilter.tonight, onSelected: (_) => setState(() => _when = DateFilter.tonight)),
+                    ChoiceChip(key: const Key('when-weekend'), label: const Text('This weekend'), selected: _when == DateFilter.weekend, onSelected: (_) => setState(() => _when = DateFilter.weekend)),
+                  ],
                 ),
                 if (categories.length > 1) ...[
                   const SizedBox(height: 10),

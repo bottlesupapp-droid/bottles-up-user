@@ -111,8 +111,9 @@ When running from Xcode, add custom arguments:
 
 **Verify the build:**
 ```bash
-# Check if build was created with env vars
-unzip -p build/ios/ipa/*.ipa "Payload/Runner.app/Info.plist" | grep -A 2 "DartDefines"
+# Look inside the build for the Supabase address and key (it prints only yes or NO, never the key):
+./scripts/check_build_has_settings.sh                      # the newest Xcode archive
+./scripts/check_build_has_settings.sh build/ios/ipa/*.ipa  # or a built .ipa
 ```
 
 ### Problem: App Works Locally But Not on TestFlight

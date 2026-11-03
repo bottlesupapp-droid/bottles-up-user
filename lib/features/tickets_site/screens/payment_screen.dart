@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../site/models/checkout.dart';
+import '../../../site/models/features.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
 import '../../../site/site_error.dart';
@@ -142,13 +143,37 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> with WidgetsBindi
   }
 
   void _viewTickets() {
-    final go = widget.onViewTickets ??
-        (c) {
-          ref.read(bookingsSegmentProvider.notifier).state = widget.args.kind == PaymentKind.table ? BookingsSegment.tables : BookingsSegment.tickets;
-          ref.read(mainNavIndexProvider.notifier).state = MainTab.bookings;
-          c.go('/home');
-        };
+    final go = widget.onViewTickets ?? _openBookings;
     go(context);
+  }
+
+  /// To the Bookings tab, on the side that was just paid for. A table that was just booked opens its own page (the night, the guests, the bottles), found by its confirmation code.
+  Future<void> _openBookings(BuildContext c) async {
+    final isTable = widget.args.kind == PaymentKind.table;
+    ref.read(bookingsSegmentProvider.notifier).state = isTable ? BookingsSegment.tables : BookingsSegment.tickets;
+    ref.read(mainNavIndexProvider.notifier).state = MainTab.bookings;
+    String? bookingId;
+    final code = _booking?.confirmationCode;
+    if (isTable && code != null) {
+      try {
+        ref.invalidate(myTableBookingsProvider);
+        final all = await ref.read(myTableBookingsProvider.future);
+        for (final b in all) {
+          if (b.confirmationCode == code) bookingId = b.id;
+        }
+      } catch (_) {
+        // The tab still opens; the booking is in its list.
+      }
+    }
+    if (!c.mounted) return;
+    final social = ref.read(featureOnProvider(Feature.social));
+    c.go('/home');
+    if (bookingId != null) {
+      c.push('/bookings/$bookingId');
+    } else if (social) {
+      // The social layout has no Bookings tab: the tickets are a page of their own.
+      c.push('/me/bookings');
+    }
   }
 
   void _back() => (widget.onBackToEvent ?? (c) => c.go(widget.args.backPath))(context);

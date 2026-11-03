@@ -31,6 +31,27 @@ class RpcRequest {
   final Map<String, dynamic> body;
 }
 
+/// What the app asked storage to do: upload a file, sign addresses, remove files.
+class StorageRequest {
+  StorageRequest(this.method, this.action, this.path, this.contentType, this.size, this.paths, [this.body = '']);
+
+  final String method;
+
+  /// 'upload', 'sign' or 'remove'.
+  final String action;
+
+  /// For an upload: the path in the bucket.
+  final String? path;
+  final String? contentType;
+  final int size;
+
+  /// For sign and remove: the paths asked about.
+  final List<String> paths;
+
+  /// The start of an upload's body as text (a multipart upload carries the file's own type in it).
+  final String body;
+}
+
 typedef FunctionHandler = ({int status, Object? body}) Function(Map<String, dynamic> body);
 
 /// A pretend BottlesUp website: the real Supabase client talks to it over HTTP, so a test sees exactly the requests the app makes (the address, the filters, the body) and decides
@@ -44,9 +65,20 @@ class FakeWebsite {
   final List<RpcRequest> rpcRequests = [];
   final List<TableRequest> tableRequests = [];
   final List<FunctionRequest> functionRequests = [];
+  final List<StorageRequest> storageRequests = [];
+
+  /// Paths storage will not sign (the website refuses them), and whether uploads fail.
+  final Set<String> unsignable = {};
+  bool failUploads = false;
 
   /// Makes every request fail with this status (a dropped connection is [networkDown]).
   int? failAllWith;
+
+  /// Tables that answer with a failure while the others keep working.
+  final Set<String> failTables = {};
+
+  /// A particular answer for one kind of request to one table, keyed 'METHOD table' (for example 'POST profiles'), such as the database refusing a duplicate.
+  final Map<String, ({int status, Object body})> tableErrors = {};
   bool networkDown = false;
 
   /// Made when the pretend website is, because a call to a website function hands its JSON to a separate isolate: that has to start outside a widget test's fake clock
@@ -63,6 +95,21 @@ class FakeWebsite {
     );
   }
 
+  /// Signs [id] in on the pretend website's client, so code that asks who is signed in (`auth.currentUser`) finds someone. [email] null is a phone sign-up.
+  Future<void> signIn({String id = 'u1', String? email = 'dana@example.com', Map<String, dynamic> metadata = const {}}) async {
+    String part(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+    final exp = DateTime.now().add(const Duration(days: 3650)).millisecondsSinceEpoch ~/ 1000;
+    final jwt = '${part({'alg': 'HS256', 'typ': 'JWT'})}.${part({'sub': id, 'exp': exp, 'role': 'authenticated'})}.signature';
+    await client.auth.recoverSession(jsonEncode({
+      'access_token': jwt,
+      'token_type': 'bearer',
+      'expires_in': 3600,
+      'expires_at': exp,
+      'refresh_token': 'refresh',
+      'user': {'id': id, 'aud': 'authenticated', 'email': email, 'app_metadata': <String, dynamic>{}, 'user_metadata': metadata, 'created_at': '2026-01-01T00:00:00Z'},
+    }));
+  }
+
   List<TableRequest> forTable(String table) => [
         for (final r in tableRequests)
           if (r.table == table) r,
@@ -71,6 +118,11 @@ class FakeWebsite {
   List<RpcRequest> forRpc(String name) => [
         for (final r in rpcRequests)
           if (r.name == name) r,
+      ];
+
+  List<StorageRequest> storageOf(String action) => [
+        for (final r in storageRequests)
+          if (r.action == action) r,
       ];
 
   List<FunctionRequest> forFunction(String name) => [
@@ -94,12 +146,38 @@ class FakeWebsite {
       final r = handler(decoded);
       return _json(request, r.status, r.body);
     }
+    if (segments.length >= 4 && segments[0] == 'storage' && segments[1] == 'v1' && segments[2] == 'object') {
+      if (failAllWith != null) return _json(request, failAllWith!, {'message': 'failed'});
+      if (segments[3] == 'sign' && segments.length == 5) {
+        final body = jsonDecode(request.body) as Map;
+        final paths = [for (final p in body['paths'] as List) p as String];
+        storageRequests.add(StorageRequest('POST', 'sign', null, null, 0, paths));
+        return _json(request, 200, [
+          for (final p in paths)
+            unsignable.contains(p) ? {'error': 'Object not found', 'path': p, 'signedURL': null} : {'error': null, 'path': p, 'signedURL': '/object/sign/social-media/$p?token=t-$p'},
+        ]);
+      }
+      if (request.method == 'DELETE') {
+        final body = jsonDecode(request.body) as Map;
+        final paths = [for (final p in body['prefixes'] as List) p as String];
+        storageRequests.add(StorageRequest('DELETE', 'remove', null, null, 0, paths));
+        return _json(request, 200, <Object>[]);
+      }
+      if (request.method == 'POST' && segments[3] == 'social-media') {
+        final path = segments.sublist(4).join('/');
+        storageRequests.add(StorageRequest('POST', 'upload', path, request.headers['content-type'], request.bodyBytes.length, const [], latin1.decode(request.bodyBytes.take(400).toList(), allowInvalid: true)));
+        if (failUploads) return _json(request, 500, {'message': 'storage is down'});
+        return _json(request, 200, {'Key': 'social-media/$path'});
+      }
+    }
     if (segments.length >= 3 && segments[0] == 'rest' && segments[1] == 'v1') {
       final table = segments[2];
       Object? body;
       if (request.body.isNotEmpty) body = jsonDecode(request.body);
       tableRequests.add(TableRequest(request.method, table, request.url.queryParameters, body));
-      if (failAllWith != null) return _json(request, failAllWith!, {'message': 'failed'});
+      final custom = tableErrors['${request.method} $table'];
+      if (custom != null) return _json(request, custom.status, custom.body);
+      if (failAllWith != null || failTables.contains(table)) return _json(request, failAllWith ?? 500, {'message': 'failed'});
       return _json(request, 200, tables[table] ?? const []);
     }
     if (segments.length >= 3 && segments[0] == 'functions' && segments[1] == 'v1') {
@@ -288,6 +366,7 @@ Map<String, dynamic> tableTypeRow({
       'seating_type': null,
       'amenities': null,
       'policy_note': null,
+      'included_admissions': null,
       'sort_order': sort,
     };
 
@@ -389,11 +468,11 @@ Map<String, dynamic> bookingRow({
       'cancellation_reason': cancelReason,
       'created_at': created,
       'site_table_types': {'name': tableName},
-      'site_venues': {'name': venueName, 'address': '1 King St W, Toronto'},
+      'site_venues': {'name': venueName, 'address': '1 King St W, Toronto', 'phone': '416-555-0199'},
       'site_venue_time_slots': {'start_time': time, 'label': slotLabel},
     };
 
-Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose', String? size = '1.75L', int qty = 1, int unit = 25000, String payment = 'paid', bool addon = false, String? cancelledAt}) => {
+Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose', String? size = '1.75L', int qty = 1, int unit = 25000, String payment = 'paid', bool addon = false, String? cancelledAt, String service = 'awaiting_prep', int delivered = 0}) => {
       'id': id,
       'bottle_name': name,
       'size': size,
@@ -403,6 +482,8 @@ Map<String, dynamic> bottleLineRow({String id = 'l1', String name = 'Grey Goose'
       'payment_status': payment,
       'is_addon': addon,
       'cancelled_at': cancelledAt,
+      'service_status': service,
+      'delivered_quantity': delivered,
       'created_at': '2099-10-20T12:01:00Z',
     };
 
@@ -411,3 +492,360 @@ Map<String, dynamic> clubPaymentRow({String id = 'cp1', String token = 'tok-1', 
 
 Map<String, dynamic> bookingRefundRow({String type = 'full', int amount = 11300, String reason = 'Cancelled by the guest', String at = '2099-10-25T10:00:00Z'}) =>
     {'refund_type': type, 'amount_cents': amount, 'reason': reason, 'recorded_at': at};
+
+/// A pending bottle replacement as the customer's own read returns it.
+Map<String, dynamic> substitutionRow({String id = 's1', String lineId = 'l1', String reason = 'Out of stock tonight', String name = 'Belvedere', String? size = '1.75L', int diff = 2000, String token = 'sub-tok-1', String status = 'pending'}) => {
+      'id': id,
+      'bottle_line_id': lineId,
+      'reason': reason,
+      'replacement_bottle_name': name,
+      'replacement_size': size,
+      'price_diff_cents': diff,
+      'status': status,
+      'confirm_token': token,
+    };
+
+/// What `manage-guest-tickets` answers to `list`.
+Map<String, dynamic> rosterAnswer({int max = 6, int remaining = 4, List<Map<String, dynamic>>? guests}) => {
+      'booking': {'customerName': 'Dana Lee', 'venueName': 'Club A', 'tableTypeName': 'Booth 1', 'maxGuests': max, 'remainingCapacity': remaining},
+      'guests': guests ?? [guestRow()],
+    };
+
+Map<String, dynamic> guestRow({String id = 'g1', String name = 'Sam Park', String email = 'sam@example.com', String? sent = '2099-10-21T10:00:00Z', String? checkedIn}) => {'id': id, 'guest_name': name, 'guest_email': email, 'ticket_sent_at': sent, 'checked_in_at': checkedIn};
+
+/// A profile as the website's `profile_card` shows it. [follow] is 'none', 'active' or 'pending'.
+Map<String, dynamic> profileRow({
+  String id = 'p1',
+  String kind = 'personal',
+  String handle = 'dana',
+  String? name = 'Dana Lee',
+  String? category,
+  String? bio,
+  String? city = 'Toronto',
+  String? avatar,
+  String? cover,
+  String privacy = 'public',
+  String status = 'active',
+  bool verified = false,
+  int followers = 0,
+  int following = 0,
+  bool mine = false,
+  String follow = 'none',
+  bool followsMe = false,
+  bool blocked = false,
+  bool canSee = true,
+  List<String> interests = const [],
+  Map<String, dynamic> links = const {},
+  Map<String, dynamic> extra = const {},
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'handle': handle,
+      'display_name': name,
+      'category': category,
+      'bio': bio,
+      'city': city,
+      'avatar_url': avatar,
+      'cover_url': cover,
+      'social_links': links,
+      'privacy': privacy,
+      'status': status,
+      'verified': verified,
+      'interests': interests,
+      'followers': followers,
+      'following': following,
+      'is_mine': mine,
+      'relation': {'follow': follow, 'follows_me': followsMe, 'blocked': blocked},
+      'can_see_content': canSee,
+      ...extra,
+    };
+
+/// The answer of an rpc that returns a value or a list.
+({int status, Object? body}) ok(Object? body) => (status: 200, body: body);
+
+/// What the database says when a function raises a sentence (`raise exception '...'`): PostgREST answers 400 with code P0001.
+({int status, Object? body}) raised(String sentence) => (status: 400, body: {'code': 'P0001', 'message': sentence, 'details': null, 'hint': null});
+
+/// A media item of a post.
+Map<String, dynamic> mediaRow({String id = 'm1', int position = 0, String type = 'image', String path = 'author/file.jpg', String? poster, int? width = 1080, int? height = 1350, int? durationMs}) =>
+    {'id': id, 'position': position, 'type': type, 'path': path, 'poster_path': poster, 'width': width, 'height': height, 'duration_ms': durationMs};
+
+/// A post as the website's `post_card` shows it.
+Map<String, dynamic> postRow({
+  String id = 'post1',
+  String kind = 'post',
+  String? caption = 'Friday vibes',
+  String audience = 'public',
+  bool comments = true,
+  String createdAt = '2099-10-24T22:00:00Z',
+  String? expiresAt,
+  Map<String, dynamic>? author,
+  List<Map<String, dynamic>>? media,
+  List<Map<String, dynamic>> tags = const [],
+  int likes = 0,
+  int commentCount = 0,
+  bool liked = false,
+  bool saved = false,
+  bool mine = false,
+  Map<String, dynamic> extra = const {},
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'caption': caption,
+      'audience': audience,
+      'comments_enabled': comments,
+      'created_at': createdAt,
+      'expires_at': expiresAt,
+      'author': author ?? profileRow(id: 'a1', handle: 'ann', name: 'Ann Lee'),
+      'media': media ?? [mediaRow(path: 'a1/$id.jpg')],
+      'tags': tags,
+      'likes': likes,
+      'comments': commentCount,
+      'liked': liked,
+      'saved': saved,
+      'is_mine': mine,
+      ...extra,
+    };
+
+Map<String, dynamic> commentRow({String id = 'c1', String post = 'post1', String? replyTo, String body = 'Great night!', String createdAt = '2099-10-24T23:00:00Z', Map<String, dynamic>? author, int replies = 0, bool mine = false, bool canDelete = false}) => {
+      'id': id,
+      'post': post,
+      'reply_to': replyTo,
+      'body': body,
+      'created_at': createdAt,
+      'author': author ?? profileRow(id: 'b1', handle: 'bob', name: 'Bob Ray'),
+      'replies': replies,
+      'is_mine': mine,
+      'can_delete': canDelete,
+    };
+
+Map<String, dynamic> railRow({Map<String, dynamic>? profile, String latest = '2099-10-24T23:00:00Z', bool unseen = true, bool membersOnly = false, int count = 1, bool mine = false}) =>
+    {'profile': profile ?? profileRow(id: 'a1', handle: 'ann', name: 'Ann Lee'), 'latest_at': latest, 'unseen': unseen, 'members_only': membersOnly, 'count': count, 'is_mine': mine};
+
+/// A review as the website's `review_card` shows it.
+Map<String, dynamic> reviewRow({
+  String id = 'r1',
+  String kind = 'venue',
+  int rating = 4,
+  String? body = 'Great night, slow bar.',
+  String createdAt = '2099-10-24T23:00:00Z',
+  Map<String, dynamic>? author,
+  bool mine = false,
+  bool canReply = false,
+  Map<String, dynamic>? reply,
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'rating': rating,
+      'body': body,
+      'created_at': createdAt,
+      'updated_at': createdAt,
+      'author': author ?? profileRow(id: 'u1', handle: 'ann', name: 'Ann Lee'),
+      'is_mine': mine,
+      'can_reply': canReply,
+      'reply': reply,
+    };
+
+Map<String, dynamic> reviewsPage({List<Map<String, dynamic>> items = const [], int count = 0, double average = 0, List<int> stars = const [0, 0, 0, 0, 0]}) => {
+      'summary': {'count': count, 'average': average, 'stars': stars},
+      'items': items,
+    };
+
+/// A conversation as the website's inbox lists it.
+Map<String, dynamic> convRow({
+  String id = 'c1',
+  String kind = 'direct',
+  String? title,
+  String status = 'active',
+  bool muted = false,
+  String lastAt = '2099-10-24T23:00:00Z',
+  int members = 2,
+  List<Map<String, dynamic>>? others,
+  Map<String, dynamic>? last,
+  int unread = 0,
+  String? bookingId,
+}) =>
+    {
+      'id': id,
+      'kind': kind,
+      'title': title,
+      'booking_id': bookingId,
+      'status': status,
+      'muted': muted,
+      'last_message_at': lastAt,
+      'member_count': members,
+      'others': others ?? [profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray')],
+      'last': last ?? {'kind': 'text', 'body': 'See you there', 'removed': false, 'created_at': lastAt, 'sender': profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray'), 'is_mine': false},
+      'unread': unread,
+    };
+
+/// A message as the website's `dm_message_card` shows it.
+Map<String, dynamic> dmRow({
+  String id = 'm1',
+  String conversation = 'c1',
+  String kind = 'text',
+  String? body = 'Hello',
+  bool removed = false,
+  String createdAt = '2099-10-24T23:00:00Z',
+  Map<String, dynamic>? sender,
+  bool mine = false,
+  Map<String, dynamic>? ref,
+}) =>
+    {
+      'id': id,
+      'conversation': conversation,
+      'kind': kind,
+      'body': body,
+      'removed': removed,
+      'created_at': createdAt,
+      'sender': sender ?? (mine ? profileRow(id: 'me', handle: 'dana', name: 'Dana Lee') : profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray')),
+      'is_mine': mine,
+      'ref': ref,
+    };
+
+Map<String, dynamic> notificationRow({String id = 'n1', String kind = 'like', String createdAt = '2099-10-24T23:00:00Z', Map<String, dynamic>? actor, bool read = false, Map<String, dynamic>? post, String? commentBody, bool followsBack = false}) => {
+      'id': id,
+      'kind': kind,
+      'created_at': createdAt,
+      'read': read,
+      'actor': actor ?? profileRow(id: 'u-bob', handle: 'bob', name: 'Bob Ray'),
+      'post': post,
+      'comment_body': commentBody,
+      'review_id': null,
+      'follows_back': followsBack,
+    };
+
+/// One friend's share as the host's card lists it (`split_card`).
+Map<String, dynamic> shareLineRow({String id = 'sh1', Map<String, dynamic>? payer, int amount = 5000, String status = 'unpaid', String? paidAt}) =>
+    {'id': id, 'payer': payer ?? profileRow(id: 'p-bob', handle: 'bob', name: 'Bob Ray'), 'amount_cents': amount, 'status': status, 'paid_at': paidAt};
+
+/// A split as its host sees it (`split_for_booking`, `split_create`, `split_cancel`).
+Map<String, dynamic> splitPlanRow({
+  String id = 'sp1',
+  String booking = 'bk1',
+  String state = 'open',
+  String deadline = '2099-11-05T22:00:00Z',
+  int balance = 20000,
+  int collected = 0,
+  int outstanding = 10000,
+  List<Map<String, dynamic>>? shares,
+}) =>
+    {
+      'id': id,
+      'booking_id': booking,
+      'state': state,
+      'deadline': deadline,
+      'currency': 'cad',
+      'balance_cents': balance,
+      'collected_cents': collected,
+      'outstanding_cents': outstanding,
+      'shares': shares ?? [shareLineRow(id: 'sh1'), shareLineRow(id: 'sh2', payer: profileRow(id: 'p-cy', handle: 'cy', name: 'Cy Rus'))],
+      'created_at': '2099-11-01T12:00:00Z',
+    };
+
+/// A request to pay a share as the friend sees it (`split_my_shares`).
+Map<String, dynamic> shareRequestRow({
+  String id = 'sh1',
+  String state = 'unpaid',
+  int amount = 5000,
+  String deadline = '2099-11-05T22:00:00Z',
+  String host = 'Ann',
+  String venue = 'Club A',
+  String date = '2099-11-06',
+  String time = '22:00',
+  String? paidAt,
+}) =>
+    {'id': id, 'state': state, 'amount_cents': amount, 'currency': 'cad', 'deadline': deadline, 'host': host, 'venue': venue, 'booking_date': date, 'start_time': time, 'paid_at': paidAt};
+
+/// A service a professional lists (`pro_services_of`).
+Map<String, dynamic> proServiceRow({String id = 'sv1', String title = 'Wedding DJ set', String? description = 'Four hours with lights', int? from = 100000, String? note = 'from', bool active = true}) =>
+    {'id': id, 'title': title, 'description': description, 'from_cents': from, 'price_note': note, 'active': active};
+
+/// A quote as it sits on a request.
+Map<String, dynamic> proQuoteRow({String id = 'q1', int total = 100000, int deposit = 30000, String? due = '2099-11-01', String scope = 'Four hours of music, lights and sound', String valid = '2099-10-30T12:00:00Z', String status = 'sent'}) =>
+    {'id': id, 'total_cents': total, 'deposit_cents': deposit, 'balance_due_by': deposit >= total ? null : due, 'scope': scope, 'valid_until': valid, 'status': status, 'created_at': '2099-10-25T12:00:00Z'};
+
+/// A booking with a professional, from either side: pass [net] to see it as the professional does.
+Map<String, dynamic> proBookingRow({
+  String id = 'pb1',
+  String request = 'pr1',
+  String state = 'awaiting_deposit',
+  String title = 'Wedding DJ set',
+  String date = '2099-11-08',
+  int total = 100000,
+  int deposit = 30000,
+  int paid = 0,
+  String? due = '2099-11-01',
+  String? payBy = '2099-10-26T12:00:00Z',
+  String? doneAt,
+  String? cancelledBy,
+  String? cancelReason,
+  int freeDays = 7,
+  Map<String, dynamic>? provider,
+  Map<String, dynamic>? client,
+  int? net,
+  Map<String, dynamic>? dispute,
+}) =>
+    {
+      'id': id,
+      'request_id': request,
+      'state': state,
+      'title': title,
+      'event_date': date,
+      'currency': 'cad',
+      'total_cents': total,
+      'deposit_cents': deposit,
+      'balance_due_by': deposit >= total ? null : due,
+      'paid_cents': paid,
+      'owed_cents': total - paid,
+      'pay_by': payBy,
+      'provider_done_at': doneAt,
+      'completed_at': null,
+      'cancelled_by': cancelledBy,
+      'cancel_reason': cancelReason,
+      'free_cancel_days': freeDays,
+      'provider': provider ?? profileRow(id: 'p-dj', kind: 'business', handle: 'djdee', name: 'DJ Dee', category: 'dj'),
+      'client': client,
+      'net_cents': net,
+      'commission_bps': net == null ? null : 500,
+      'dispute': dispute,
+      'created_at': '2099-10-25T12:00:00Z',
+    };
+
+/// A request to hire a professional (`pro_request_get` and the lists). Pass [client] to see it as the professional does.
+Map<String, dynamic> proRequestRow({
+  String id = 'pr1',
+  String status = 'requested',
+  String date = '2099-11-08',
+  String message = 'A birthday night for 120',
+  String? timeNote = '9pm to 1am',
+  String? location = 'Club A',
+  int? guests = 120,
+  int? budget = 150000,
+  String? declineNote,
+  Map<String, dynamic>? service = const {'id': 'sv1', 'title': 'Wedding DJ set'},
+  Map<String, dynamic>? provider,
+  Map<String, dynamic>? client,
+  Map<String, dynamic>? quote,
+  Map<String, dynamic>? booking,
+}) =>
+    {
+      'id': id,
+      'status': status,
+      'event_date': date,
+      'time_note': timeNote,
+      'location': location,
+      'guests': guests,
+      'message': message,
+      'budget_cents': budget,
+      'decline_note': declineNote,
+      'created_at': '2099-10-24T12:00:00Z',
+      'service': service,
+      'provider': provider ?? profileRow(id: 'p-dj', kind: 'business', handle: 'djdee', name: 'DJ Dee', category: 'dj'),
+      'client': client,
+      'quote': quote,
+      'booking': booking,
+    };

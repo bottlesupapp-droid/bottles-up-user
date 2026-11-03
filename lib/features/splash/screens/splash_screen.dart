@@ -114,7 +114,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             const SizedBox(height: 40),
             // App Name with custom font
             Text(
-              'Bottles Up',
+              'BottlesUp',
               style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 32,

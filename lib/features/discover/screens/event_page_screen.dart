@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../site/models/review.dart';
+import '../../social/widgets/reviews_widgets.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/site_event.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
+import '../../../site/rules/event_rules.dart';
+import '../../../site/rules/table_rules.dart';
 import '../../../site/rules/ticket_rules.dart';
 import '../../../site/site_config.dart';
 import '../../../site/site_error.dart';
@@ -15,12 +19,15 @@ import '../../../site/when.dart';
 /// One event: the picture, when and where, what it is, who plays, what to know, and the ticket types with what is left. Choosing one opens the purchase. Reads the website's published
 /// event and its ticket types, so it always shows what the website shows.
 class EventPageScreen extends ConsumerStatefulWidget {
-  const EventPageScreen({super.key, required this.eventId, this.onBuy, this.share});
+  const EventPageScreen({super.key, required this.eventId, this.onBuy, this.onBookTable, this.share});
 
   final String eventId;
 
   /// Where "Get tickets" goes. The app opens the purchase; tests give their own.
   final void Function(BuildContext context, SiteEvent event, TicketTier tier)? onBuy;
+
+  /// Where "Book a table" goes: the event's venue, on the event's night. The app opens the venue page; tests give their own.
+  final void Function(BuildContext context, SiteEvent event)? onBookTable;
 
   /// Shares the event's web address. Replaced in tests.
   final Future<void> Function(String text)? share;
@@ -137,12 +144,26 @@ class _EventPageScreenState extends ConsumerState<EventPageScreen> {
                           disabled: over || t.soldOut,
                           onTap: () => setState(() => _tierId = t.id),
                         ),
+                    ReviewsSection(kind: ReviewKind.event, targetId: e.id),
                   ],
                 ),
               ),
             ],
           ),
         ),
+        if (!over && e.venueId != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('book-table'),
+                onPressed: () => (widget.onBookTable ?? (c, ev) => c.push('/venues/${ev.venueId}?night=${dayKey(nightOfInstant(ev.start))}'))(context, e),
+                icon: const Icon(Icons.table_restaurant_outlined),
+                label: Text('Book a table${e.venueName.isEmpty ? '' : ' at ${e.venueName}'}'),
+              ),
+            ),
+          ),
         if (!over && e.tiers.isNotEmpty)
           SafeArea(
             top: false,

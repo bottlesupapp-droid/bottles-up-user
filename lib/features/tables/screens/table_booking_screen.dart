@@ -12,6 +12,7 @@ import '../../../site/read.dart';
 import '../../../site/rules/table_rules.dart';
 import '../../../site/site_error.dart';
 import '../../tickets_site/screens/ticket_purchase_screen.dart' show PaymentWaitArgs;
+import '../widgets/bottle_widgets.dart';
 
 enum _Step { table, bottles, review }
 
@@ -347,12 +348,12 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             final subtotal = _bottleSubtotal(list);
             return Column(
               children: [
-                for (final b in list) _BottleTile(bottle: b, showImage: v.showBottleImages, quantity: _cart[b.id] ?? 0, onChanged: (n) => setState(() => n <= 0 ? _cart.remove(b.id) : _cart[b.id] = n)),
+                for (final b in list) BottleTile(bottle: b, showImage: v.showBottleImages, quantity: _cart[b.id] ?? 0, onChanged: (n) => setState(() => n <= 0 ? _cart.remove(b.id) : _cart[b.id] = n)),
                 if (subtotal > 0) ...[
                   const Divider(height: 24),
                   Row(children: [Expanded(child: Text('Bottles', style: theme.textTheme.titleSmall)), Text(formatMoney(subtotal, currency: t.currency), key: const Key('bottle-subtotal'), style: theme.textTheme.titleMedium)]),
                   const SizedBox(height: 12),
-                  _paymentChoice(v),
+                  BottlePaymentChoiceTiles(mode: v.bottlePaymentMode, choice: _choice, onChanged: (c) => setState(() => _choice = c)),
                 ],
               ],
             );
@@ -366,36 +367,6 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
             Expanded(child: FilledButton(key: const Key('to-review'), onPressed: () => _go(_Step.review), child: const Text('Review order'))),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _paymentChoice(Venue v) {
-    final theme = Theme.of(context);
-    if (v.bottlePaymentMode == BottlePaymentMode.payAtClub) {
-      return Text('At this venue bottles are paid at the club. Only the table is charged now.', key: const Key('bottles-at-club'), style: theme.textTheme.bodyMedium);
-    }
-    if (v.bottlePaymentMode == BottlePaymentMode.payAhead) {
-      return Text('Bottles are charged with your table now.', key: const Key('bottles-ahead'), style: theme.textTheme.bodyMedium);
-    }
-    Widget option(String key, String title, String text, BottlePaymentChoice value) => Expanded(
-          child: InkWell(
-            key: Key(key),
-            onTap: () => setState(() => _choice = value),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(border: Border.all(color: _choice == value ? theme.colorScheme.primary : theme.dividerColor, width: _choice == value ? 2 : 1), borderRadius: BorderRadius.circular(10)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: theme.textTheme.titleSmall), Text(text, style: theme.textTheme.bodySmall)]),
-            ),
-          ),
-        );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('How do you want to pay for your bottles?', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        Row(children: [option('pay-ahead', 'Pay now', 'Bottles charged online today.', BottlePaymentChoice.payAhead), const SizedBox(width: 8), option('pay-at-club', 'Pay at the club', 'Only the table is charged now.', BottlePaymentChoice.payAtClub)]),
       ],
     );
   }
@@ -419,6 +390,22 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
       children: [
         _steps(theme),
         _summary(v, t, night, slot),
+        if (!t.isHourly && t.minSpendCents > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(border: Border.all(color: theme.dividerColor), borderRadius: BorderRadius.circular(10)),
+              child: Text(
+                v.depositIsCredit
+                    ? 'This table has a minimum spend of ${money(t.minSpendCents)}. Your ${money(t.depositCents)} deposit counts toward it, so ${money((t.minSpendCents - t.depositCents) < 0 ? 0 : t.minSpendCents - t.depositCents)} is left to spend at the venue.'
+                    : 'This table has a minimum spend of ${money(t.minSpendCents)}, spent at the venue. Your ${money(t.depositCents)} deposit does not count toward it.',
+                key: const Key('min-spend-note'),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          ),
+        if (t.includedAdmissions != null && t.includedAdmissions! > 0) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Includes ${t.includedAdmissions} entry ${t.includedAdmissions == 1 ? 'pass' : 'passes'}. Your table seating ${t.maxGuests} does not mean ${t.maxGuests} passes.', key: const Key('passes-note'), style: theme.textTheme.bodySmall)),
         const SizedBox(height: 14),
         if (policy != null)
           Container(
@@ -484,46 +471,6 @@ class _TableBookingScreenState extends ConsumerState<TableBookingScreen> {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _BottleTile extends StatelessWidget {
-  const _BottleTile({required this.bottle, required this.showImage, required this.quantity, required this.onChanged});
-
-  final Bottle bottle;
-  final bool showImage;
-  final int quantity;
-  final void Function(int quantity) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      key: Key('bottle-${bottle.id}'),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            if (showImage && bottle.imageUrl != null) NetworkPicture(url: bottle.imageUrl, height: 56, width: 56, radius: 8) else Container(height: 56, width: 56, decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.wine_bar_outlined)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(bottle.displayName, key: Key('bottle-name-${bottle.id}'), style: theme.textTheme.titleSmall),
-                  if (bottle.description != null) Text(bottle.description!, style: theme.textTheme.bodySmall),
-                  Text(formatMoney(bottle.priceCents, currency: bottle.currency), key: Key('bottle-price-${bottle.id}'), style: theme.textTheme.bodyMedium),
-                ],
-              ),
-            ),
-            IconButton(key: Key('bottle-minus-${bottle.id}'), onPressed: quantity <= 0 ? null : () => onChanged(quantity - 1), icon: const Icon(Icons.remove_circle_outline)),
-            Text('$quantity', key: Key('bottle-qty-${bottle.id}')),
-            IconButton(key: Key('bottle-plus-${bottle.id}'), onPressed: quantity >= 99 ? null : () => onChanged(quantity + 1), icon: const Icon(Icons.add_circle_outline)),
-          ],
-        ),
-      ),
     );
   }
 }

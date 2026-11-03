@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bottles_up_user/site/models/table_booking.dart';
 import 'package:bottles_up_user/site/services/my_bookings_service.dart';
 import 'package:bottles_up_user/site/services/my_tickets_service.dart';
+import 'package:bottles_up_user/site/services/site_contact_service.dart';
 import 'package:bottles_up_user/site/services/site_events_service.dart';
 import 'package:bottles_up_user/site/services/venues_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,7 +47,7 @@ void main() {
 
   test('every column the app reads exists in production, in every table it reads', () async {
     final site = FakeWebsite();
-    for (final t in ['site_events', 'site_orders', 'site_venues', 'site_venue_floors', 'site_bottles', 'site_table_bookings', 'site_table_booking_bottles', 'site_table_booking_club_payments', 'site_table_booking_refunds']) {
+    for (final t in ['site_events', 'site_orders', 'site_venues', 'site_venue_floors', 'site_bottles', 'site_table_bookings', 'site_table_booking_bottles', 'site_table_booking_club_payments', 'site_table_booking_refunds', 'site_table_booking_bottle_substitutions']) {
       site.tables[t] = [];
     }
     site.tables['site_content'] = [];
@@ -58,6 +59,7 @@ void main() {
     await venues.floors('v1');
     await venues.bottles('v1');
     await venues.feeBasisPoints();
+    await SiteContactService(site.client).load();
     final bookings = MyBookingsService(site.client);
     await bookings.bookings();
     await bookings.booking('bk1');
@@ -77,7 +79,9 @@ void main() {
     expectColumns('site_venue_time_slots', inside(venueSelect, 'site_venue_time_slots'));
     expectColumns('site_venue_floors', plain(site.forTable('site_venue_floors').single.query['select']!));
     expectColumns('site_bottles', plain(site.forTable('site_bottles').single.query['select']!));
-    expectColumns('site_content', plain(site.forTable('site_content').single.query['select']!));
+    for (final r in site.forTable('site_content')) {
+      expectColumns('site_content', plain(r.query['select']!));
+    }
 
     final bookingSelects = {for (final r in site.forTable('site_table_bookings')) r.query['select']!};
     expect(bookingSelects.length, 1, reason: 'the list and the detail read the same columns');
@@ -89,6 +93,7 @@ void main() {
     expectColumns('site_table_booking_bottles', plain(site.forTable('site_table_booking_bottles').single.query['select']!));
     expectColumns('site_table_booking_club_payments', plain(site.forTable('site_table_booking_club_payments').single.query['select']!));
     expectColumns('site_table_booking_refunds', plain(site.forTable('site_table_booking_refunds').single.query['select']!));
+    expectColumns('site_table_booking_bottle_substitutions', plain(site.forTable('site_table_booking_bottle_substitutions').single.query['select']!));
   });
 
   test('the columns the app filters and sorts on exist too', () {
@@ -96,6 +101,7 @@ void main() {
     expectColumns('site_table_booking_bottles', {'booking_id', 'payment_status', 'created_at'});
     expectColumns('site_table_booking_club_payments', {'booking_id', 'customer_confirmation_status'});
     expectColumns('site_table_booking_refunds', {'booking_id', 'recorded_at'});
+    expectColumns('site_table_booking_bottle_substitutions', {'booking_id', 'status', 'requested_at'});
     expectColumns('site_venues', {'status'});
     expectColumns('site_bottles', {'venue_id', 'is_available', 'is_sold_out', 'sort_order'});
     expectColumns('site_venue_floors', {'venue_id', 'sort_order'});

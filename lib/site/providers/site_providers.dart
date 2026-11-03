@@ -2,14 +2,45 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/billing.dart';
+import '../models/features.dart';
+import '../models/hire.dart';
+import '../models/hiring.dart';
+import '../models/inbox.dart';
+import '../models/jobs.dart';
+import '../models/recognition.dart';
+import '../models/safety.dart';
 import '../models/site_event.dart';
+import '../models/split.dart';
+import '../models/post.dart';
+import '../models/review.dart';
+import '../models/social_profile.dart';
+import '../models/my_night.dart';
+import '../models/site_contact.dart';
 import '../models/table_booking.dart';
 import '../models/venue.dart';
 import '../models/ticket_order.dart';
 import '../services/account_service.dart';
+import '../services/profile_completion_service.dart';
+import '../services/billing_service.dart';
+import '../services/booking_actions_service.dart';
+import '../services/caption_ideas_service.dart';
+import '../services/features_service.dart';
+import '../services/inbox_service.dart';
+import '../services/jobs_service.dart';
+import '../services/recognition_service.dart';
+import '../services/posts_service.dart';
+import '../services/reviews_service.dart';
+import '../services/safety_service.dart';
+import '../services/guest_passes_service.dart';
+import '../services/hire_service.dart';
+import '../services/hiring_service.dart';
 import '../services/my_bookings_service.dart';
 import '../services/my_tickets_service.dart';
+import '../services/site_contact_service.dart';
 import '../services/site_events_service.dart';
+import '../services/split_service.dart';
+import '../services/social_profiles_service.dart';
 import '../services/table_checkout_service.dart';
 import '../services/ticket_checkout_service.dart';
 import '../services/venues_service.dart';
@@ -23,7 +54,229 @@ final myTicketsServiceProvider = Provider<MyTicketsService>((ref) => MyTicketsSe
 final venuesServiceProvider = Provider<VenuesService>((ref) => VenuesService(ref.watch(siteClientProvider)));
 final tableCheckoutServiceProvider = Provider<TableCheckoutService>((ref) => TableCheckoutService(ref.watch(siteClientProvider)));
 final myBookingsServiceProvider = Provider<MyBookingsService>((ref) => MyBookingsService(ref.watch(siteClientProvider)));
+final guestPassesServiceProvider = Provider<GuestPassesService>((ref) => GuestPassesService(ref.watch(siteClientProvider)));
+final bookingActionsServiceProvider = Provider<BookingActionsService>((ref) => BookingActionsService(ref.watch(siteClientProvider)));
+final siteContactServiceProvider = Provider<SiteContactService>((ref) => SiteContactService(ref.watch(siteClientProvider)));
 final accountServiceProvider = Provider<AccountService>((ref) => AccountService(ref.watch(siteClientProvider)));
+final profileCompletionServiceProvider = Provider<ProfileCompletionService>((ref) => ProfileCompletionService(ref.watch(siteClientProvider)));
+final postsServiceProvider = Provider<PostsService>((ref) => PostsService(ref.watch(siteClientProvider)));
+final reviewsServiceProvider = Provider<ReviewsService>((ref) => ReviewsService(ref.watch(siteClientProvider)));
+final inboxServiceProvider = Provider<InboxService>((ref) => InboxService(ref.watch(siteClientProvider)));
+final captionIdeasServiceProvider = Provider<CaptionIdeasService>((ref) => CaptionIdeasService(ref.watch(siteClientProvider)));
+final splitServiceProvider = Provider<SplitService>((ref) => SplitService(ref.watch(siteClientProvider)));
+final hiringServiceProvider = Provider<HiringService>((ref) => HiringService(ref.watch(siteClientProvider)));
+final hireServiceProvider = Provider<HireService>((ref) => HireService(ref.watch(siteClientProvider)));
+final safetyServiceProvider = Provider<SafetyService>((ref) => SafetyService(ref.watch(siteClientProvider)));
+final featuresServiceProvider = Provider<FeaturesService>((ref) => FeaturesService(ref.watch(siteClientProvider)));
+final socialProfilesServiceProvider = Provider<SocialProfilesService>((ref) => SocialProfilesService(ref.watch(siteClientProvider)));
+
+/// Which parts of the app BottlesUp has switched on. Read once per run; a failed read keeps everything new switched off.
+final featuresProvider = FutureProvider<SiteFeatures>((ref) => ref.watch(featuresServiceProvider).features());
+
+/// Is this feature on right now? False while the switches are still loading.
+final featureOnProvider = Provider.family<bool, String>((ref, key) => ref.watch(featuresProvider).valueOrNull?.isOn(key) ?? false);
+
+/// Every profile the signed-in person may act as, their own first. Forget it when someone signs out ([resetSocialState]).
+final myProfilesProvider = FutureProvider<List<SocialProfile>>((ref) => ref.watch(socialProfilesServiceProvider).myProfiles());
+
+/// The profile the person chose to act as, by id. Null means their own.
+final selectedProfileIdProvider = StateProvider<String?>((ref) => null);
+
+/// The profile the person is acting as now: the one they picked while they still may, otherwise their own. Null while the list loads or when they have none yet.
+final actorProfileProvider = Provider<SocialProfile?>((ref) {
+  final mine = ref.watch(myProfilesProvider).valueOrNull;
+  if (mine == null || mine.isEmpty) return null;
+  final picked = ref.watch(selectedProfileIdProvider);
+  for (final p in mine) {
+    if (p.id == picked && !p.suspended) return p;
+  }
+  for (final p in mine) {
+    if (!p.isBusiness && !p.suspended) return p;
+  }
+  return null;
+});
+
+/// Who is looked at: a username, or an id. [actor] is in the key so a profile is read again when the person switches.
+class ProfileKey {
+  const ProfileKey({required this.actor, this.handle, this.id});
+
+  final String actor;
+  final String? handle;
+  final String? id;
+
+  @override
+  bool operator ==(Object other) => other is ProfileKey && other.actor == actor && other.handle == handle && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, handle, id);
+}
+
+final socialProfileProvider = FutureProvider.autoDispose.family<SocialProfile, ProfileKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).profile(actor: k.actor, handle: k.handle, id: k.id),
+);
+
+/// Who follows a profile, or who it follows ([followers]); the first page.
+class PeopleKey {
+  const PeopleKey({required this.actor, required this.profile, required this.followers});
+
+  final String actor;
+  final String profile;
+  final bool followers;
+
+  @override
+  bool operator ==(Object other) => other is PeopleKey && other.actor == actor && other.profile == profile && other.followers == followers;
+
+  @override
+  int get hashCode => Object.hash(actor, profile, followers);
+}
+
+final peopleProvider = FutureProvider.autoDispose.family<List<SocialProfile>, PeopleKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).people(actor: k.actor, profile: k.profile, followers: k.followers),
+);
+
+/// A search of profiles, as the acting profile.
+class SearchKey {
+  const SearchKey({required this.actor, required this.query});
+
+  final String actor;
+  final String query;
+
+  @override
+  bool operator ==(Object other) => other is SearchKey && other.actor == actor && other.query == query;
+
+  @override
+  int get hashCode => Object.hash(actor, query);
+}
+
+final profileSearchProvider = FutureProvider.autoDispose.family<List<SocialProfile>, SearchKey>(
+  (ref, k) => ref.watch(socialProfilesServiceProvider).search(actor: k.actor, query: k.query),
+);
+
+final followRequestsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).requests(actor));
+
+final blockedProfilesProvider = FutureProvider.autoDispose.family<List<SocialProfile>, String>((ref, actor) => ref.watch(socialProfilesServiceProvider).blocked(actor));
+
+/// The community rules as BottlesUp published them (the version to accept, and the text). Read again when the person opens the rules.
+final communityRulesProvider = FutureProvider.autoDispose<CommunityRules>((ref) => ref.watch(safetyServiceProvider).rules());
+
+/// Has the person accepted the community rules? Read again after they accept.
+final rulesAcceptedProvider = FutureProvider<bool>((ref) => ref.watch(postsServiceProvider).rulesAccepted());
+
+/// The address a private picture or video is shown from, or null when it could not be signed.
+final signedMediaUrlProvider = FutureProvider.autoDispose.family<String?, String>((ref, path) => ref.watch(postsServiceProvider).signedUrl(path));
+
+final storyRailProvider = FutureProvider.autoDispose.family<List<StoryRailItem>, String>((ref, actor) => ref.watch(postsServiceProvider).storyRail(actor));
+
+/// A post, as the acting profile sees it.
+class PostKey {
+  const PostKey({required this.actor, required this.id});
+
+  final String actor;
+  final String id;
+
+  @override
+  bool operator ==(Object other) => other is PostKey && other.actor == actor && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, id);
+}
+
+final postProvider = FutureProvider.autoDispose.family<SocialPost, PostKey>((ref, k) => ref.watch(postsServiceProvider).post(actor: k.actor, id: k.id));
+
+/// One profile's stories that are up, as the acting profile sees them.
+final storiesOfProvider = FutureProvider.autoDispose.family<List<SocialPost>, PeopleKey>(
+  (ref, k) => ref.watch(postsServiceProvider).storiesOf(actor: k.actor, profile: k.profile),
+);
+
+/// Which reviews: of a venue or an event, as a profile sees them.
+class ReviewsKey {
+  const ReviewsKey({required this.actor, required this.kind, required this.target});
+
+  final String actor;
+  final ReviewKind kind;
+  final String target;
+
+  @override
+  bool operator ==(Object other) => other is ReviewsKey && other.actor == actor && other.kind == kind && other.target == target;
+
+  @override
+  int get hashCode => Object.hash(actor, kind, target);
+}
+
+/// The first page of reviews of a venue or event, with the summary.
+final reviewsPageProvider = FutureProvider.autoDispose.family<ReviewsPage, ReviewsKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).reviews(actor: k.actor, kind: k.kind, target: k.target, limit: 5),
+);
+
+/// May the profile review this? Read again after it writes or deletes one.
+final reviewEligibilityProvider = FutureProvider.autoDispose.family<ReviewEligibility, ReviewsKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).eligibility(actor: k.actor, kind: k.kind, target: k.target),
+);
+
+/// Ratings of the venues on screen, by venue id. The key is the ids joined with commas (a list would be a new key every time it was built). Empty while reviews are off or when
+/// they cannot be read.
+final venueRatingsProvider = FutureProvider.autoDispose.family<Map<String, VenueRating>, String>((ref, ids) {
+  if (!ref.watch(featureOnProvider(Feature.reviews)) || ids.isEmpty) return const {};
+  return ref.watch(reviewsServiceProvider).ratings(ids.split(','));
+});
+
+final hotVenuesProvider = FutureProvider.autoDispose<List<HotItem>>((ref) => ref.watch(reviewsServiceProvider).hotVenues());
+final hotEventsProvider = FutureProvider.autoDispose<List<HotItem>>((ref) => ref.watch(reviewsServiceProvider).hotEvents());
+
+/// A directory search of professionals.
+class DirectoryKey {
+  const DirectoryKey({required this.actor, this.category, this.city = '', this.query = ''});
+
+  final String actor;
+  final String? category;
+  final String city;
+  final String query;
+
+  @override
+  bool operator ==(Object other) => other is DirectoryKey && other.actor == actor && other.category == category && other.city == city && other.query == query;
+
+  @override
+  int get hashCode => Object.hash(actor, category, city, query);
+}
+
+final professionalsProvider = FutureProvider.autoDispose.family<List<SocialProfile>, DirectoryKey>(
+  (ref, k) => ref.watch(reviewsServiceProvider).professionals(actor: k.actor, category: k.category, city: k.city, query: k.query),
+);
+
+/// The badge on the Inbox tab: conversations with something new and requests waiting. Zero while messages are switched off.
+final inboxCountsProvider = FutureProvider.autoDispose.family<InboxCounts, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.inbox))) return const InboxCounts();
+  return ref.watch(inboxServiceProvider).counts(actor);
+});
+
+/// Which conversation, as the acting profile sees it.
+class ConversationKey {
+  const ConversationKey({required this.actor, required this.id});
+
+  final String actor;
+  final String id;
+
+  @override
+  bool operator ==(Object other) => other is ConversationKey && other.actor == actor && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(actor, id);
+}
+
+final conversationProvider = FutureProvider.autoDispose.family<Conversation, ConversationKey>((ref, k) => ref.watch(inboxServiceProvider).conversation(actor: k.actor, id: k.id));
+
+/// Which kinds of notification the profile gets.
+final notificationPrefsProvider = FutureProvider.autoDispose.family<Map<String, bool>, String>((ref, actor) => ref.watch(inboxServiceProvider).notificationPrefs(actor));
+
+/// How many notifications the profile has not read.
+final unreadNotificationsProvider = FutureProvider.autoDispose.family<int, String>((ref, actor) => ref.watch(inboxServiceProvider).unreadNotifications(actor));
+
+/// Forget everything about the person who was signed in (their profiles, which one they were acting as) so the next person starts clean.
+void resetSocialState(WidgetRef ref) {
+  ref.invalidate(myProfilesProvider);
+  ref.invalidate(rulesAcceptedProvider);
+  ref.read(selectedProfileIdProvider.notifier).state = null;
+}
 
 /// The events still to come. Read again each time the screen opens: ticket counts change with every sale.
 final upcomingEventsProvider = FutureProvider.autoDispose<List<SiteEvent>>((ref) => ref.watch(siteEventsServiceProvider).upcoming());
@@ -69,6 +322,53 @@ final myTableBookingsProvider = FutureProvider.autoDispose<List<TableBooking>>((
 
 /// One booking with its bottles, club payments and refunds.
 final tableBookingProvider = FutureProvider.autoDispose.family<TableBooking?, String>((ref, id) => ref.watch(myBookingsServiceProvider).booking(id));
+
+/// The split of a table's bill, as its host sees it; null when there is none or splitting is not open.
+final splitForBookingProvider = FutureProvider.autoDispose.family<SplitPlan?, String>((ref, bookingId) {
+  if (!ref.watch(featureOnProvider(Feature.splitPayments))) return null;
+  return ref.watch(splitServiceProvider).forBooking(bookingId);
+});
+
+/// The requests to pay a share of someone's table that the signed-in person has had; empty when splitting is not open.
+final myShareRequestsProvider = FutureProvider.autoDispose<List<ShareRequest>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.splitPayments))) return const <ShareRequest>[];
+  return ref.watch(splitServiceProvider).myShares();
+});
+
+/// The services a professional offers (all of them for their own team, the active ones for everyone else). Empty when hiring is not open.
+final proServicesProvider = FutureProvider.autoDispose.family<List<ProService>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProService>[];
+  return ref.watch(hiringServiceProvider).services(profile);
+});
+
+/// The days a professional is not free, from today, for the next 120 days.
+final proBusyDaysProvider = FutureProvider.autoDispose.family<List<DateTime>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <DateTime>[];
+  final now = DateTime.now();
+  return ref.watch(hiringServiceProvider).busyDays(profile, from: DateTime(now.year, now.month, now.day));
+});
+
+/// The requests the signed-in person has made to professionals. Empty when hiring is not open.
+final myProRequestsProvider = FutureProvider.autoDispose<List<ProRequest>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProRequest>[];
+  return ref.watch(hiringServiceProvider).myRequests();
+});
+
+/// The requests a professional profile has received.
+final proRequestsForProvider = FutureProvider.autoDispose.family<List<ProRequest>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.marketplace))) return const <ProRequest>[];
+  return ref.watch(hiringServiceProvider).requestsFor(actor);
+});
+
+final proRequestProvider = FutureProvider.autoDispose.family<ProRequest, String>((ref, id) => ref.watch(hiringServiceProvider).request(id));
+
+final proBookingProvider = FutureProvider.autoDispose.family<ProBooking, String>((ref, id) => ref.watch(hiringServiceProvider).booking(id));
+
+/// The guests on a table booking, by the booking's confirmation code.
+final guestRosterProvider = FutureProvider.autoDispose.family<GuestRoster, String>((ref, code) => ref.watch(guestPassesServiceProvider).roster(code));
+
+/// How to reach BottlesUp, from the CMS.
+final siteContactProvider = FutureProvider.autoDispose<SiteContact>((ref) => ref.watch(siteContactServiceProvider).load());
 
 final myTicketOrdersProvider = FutureProvider.autoDispose<List<TicketOrder>>((ref) => ref.watch(myTicketsServiceProvider).orders());
 
@@ -120,4 +420,137 @@ final urlOpenerProvider = Provider<OpenUrl>((ref) {
       return false;
     }
   };
+});
+
+// ---- teams, venue hire and the event workspace
+
+/// Teams are open when either hiring professionals or hosting events at venues is.
+final teamsOnProvider = Provider<bool>((ref) => ref.watch(featureOnProvider(Feature.marketplace)) || ref.watch(featureOnProvider(Feature.venueHire)));
+
+/// The team of a professional's profile.
+final teamProvider = FutureProvider.autoDispose.family<TeamInfo, String>((ref, actor) => ref.watch(hireServiceProvider).team(actor));
+
+/// Invitations to join somebody's team. Empty when teams are not open.
+final teamInvitationsProvider = FutureProvider.autoDispose<List<TeamInvitation>>((ref) {
+  if (!ref.watch(teamsOnProvider)) return const <TeamInvitation>[];
+  return ref.watch(hireServiceProvider).invitations();
+});
+
+/// What the person may do as a profile they act as (everything for an owner, a role's share for a team member).
+final profileAccessProvider = FutureProvider.autoDispose.family<ProfileAccess, String>((ref, profile) => ref.watch(hireServiceProvider).access(profile));
+
+/// The hires an event group or promoter has asked for. Empty when hiring a venue is not open.
+final hiresMineProvider = FutureProvider.autoDispose.family<List<Hire>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.venueHire))) return const <Hire>[];
+  return ref.watch(hireServiceProvider).hiresMine(actor);
+});
+
+/// The requests a venue has had. Empty when hiring a venue is not open.
+final hiresForProvider = FutureProvider.autoDispose.family<List<Hire>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.venueHire))) return const <Hire>[];
+  return ref.watch(hireServiceProvider).hiresFor(actor);
+});
+
+/// One hire's workspace, read as the profile that has it open.
+final hireWorkspaceProvider = FutureProvider.autoDispose.family<Workspace, ({String actor, String hire})>((ref, key) => ref.watch(hireServiceProvider).workspace(actor: key.actor, hire: key.hire));
+
+// ---- Subscriptions, referrals, tips and earnings
+
+final billingServiceProvider = Provider<BillingService>((ref) => BillingService(ref.watch(siteClientProvider)));
+
+/// What a subscription costs and changes. Nothing while subscriptions are off.
+final billingPlansProvider = FutureProvider.autoDispose<BillingPlans?>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.subscriptions))) return null;
+  return ref.watch(billingServiceProvider).plans();
+});
+
+/// The subscription of a professional's own profile: the live one or the latest, null if there never was one.
+final subscriptionProvider = FutureProvider.autoDispose.family<Subscription?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.subscriptions))) return null;
+  return ref.watch(billingServiceProvider).status(profile);
+});
+
+/// Who sent the person, if they used a code.
+final referralClaimProvider = FutureProvider.autoDispose<ReferralClaim?>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.referrals))) return null;
+  return ref.watch(billingServiceProvider).myReferral();
+});
+
+final referralCodeProvider = FutureProvider.autoDispose.family<String, String>((ref, profile) => ref.watch(billingServiceProvider).referralCode(profile));
+
+final referralStatsProvider = FutureProvider.autoDispose.family<ReferralStats, String>((ref, profile) => ref.watch(billingServiceProvider).referralStats(profile));
+
+/// Earnings are worth a page when hiring, tips or referrals can bring money in.
+final earningsOnProvider = Provider<bool>((ref) => ref.watch(featureOnProvider(Feature.marketplace)) || ref.watch(featureOnProvider(Feature.creatorEarnings)) || ref.watch(featureOnProvider(Feature.referrals)));
+
+final earningsProvider = FutureProvider.autoDispose.family<Earnings, String>((ref, profile) => ref.watch(billingServiceProvider).earnings(profile));
+
+// ---- Verification, ranks, awards, plaques and jobs
+
+final recognitionServiceProvider = Provider<RecognitionService>((ref) => RecognitionService(ref.watch(siteClientProvider)));
+final jobsServiceProvider = Provider<JobsService>((ref) => JobsService(ref.watch(siteClientProvider)));
+
+/// The ranks with their names, counts and colours. Empty while ranks are off, and when the website cannot be asked (the badge then uses the ranks in the client's plan).
+final rankLevelsProvider = FutureProvider<List<RankLevel>>((ref) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <RankLevel>[];
+  return ref.watch(recognitionServiceProvider).levels();
+});
+
+final verificationProvider = FutureProvider.autoDispose.family<VerificationInfo?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return null;
+  return ref.watch(recognitionServiceProvider).verification(profile);
+});
+
+final rankStatusProvider = FutureProvider.autoDispose.family<RankStatus?, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return null;
+  return ref.watch(recognitionServiceProvider).rankStatus(profile);
+});
+
+/// The ranks a profile holds, as the profile the person is acting as sees them.
+final awardsProvider = FutureProvider.autoDispose.family<List<Award>, ({String actor, String profile})>((ref, key) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <Award>[];
+  return ref.watch(recognitionServiceProvider).awards(actor: key.actor, profile: key.profile);
+});
+
+final plaquesProvider = FutureProvider.autoDispose.family<List<Plaque>, String>((ref, profile) {
+  if (!ref.watch(featureOnProvider(Feature.ranks))) return const <Plaque>[];
+  return ref.watch(recognitionServiceProvider).plaques(profile);
+});
+
+/// What the person is looking for in Opportunities.
+class JobsQuery {
+  const JobsQuery({required this.actor, this.kind, this.query, this.remote});
+
+  final String actor;
+  final JobKind? kind;
+  final String? query;
+  final bool? remote;
+
+  @override
+  bool operator ==(Object other) => other is JobsQuery && other.actor == actor && other.kind == kind && other.query == query && other.remote == remote;
+
+  @override
+  int get hashCode => Object.hash(actor, kind, query, remote);
+}
+
+/// The first page of open jobs for a search. Empty while jobs are off.
+final jobsListProvider = FutureProvider.autoDispose.family<List<Job>, JobsQuery>((ref, q) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <Job>[];
+  return ref.watch(jobsServiceProvider).list(actor: q.actor, kind: q.kind, query: q.query, remote: q.remote);
+});
+
+final jobProvider = FutureProvider.autoDispose.family<Job, ({String actor, String id})>((ref, key) => ref.watch(jobsServiceProvider).job(actor: key.actor, id: key.id));
+
+/// The listings of a business profile the person manages.
+final jobsMineProvider = FutureProvider.autoDispose.family<List<Job>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <Job>[];
+  return ref.watch(jobsServiceProvider).mine(actor);
+});
+
+final jobApplicationsProvider = FutureProvider.autoDispose.family<List<JobApplication>, ({String actor, String job})>((ref, key) => ref.watch(jobsServiceProvider).applications(actor: key.actor, job: key.job));
+
+/// The applications a profile has sent.
+final myApplicationsProvider = FutureProvider.autoDispose.family<List<JobApplication>, String>((ref, actor) {
+  if (!ref.watch(featureOnProvider(Feature.jobs))) return const <JobApplication>[];
+  return ref.watch(jobsServiceProvider).myApplications(actor);
 });

@@ -92,4 +92,33 @@ void main() {
       expect(find.byKey(const Key('send-entry-code')), findsNothing);
     });
   });
+
+  group('getting there and sharing', () {
+    testWidgets('directions open the event\'s address in maps', (tester) async {
+      site.tables['site_orders'] = [orderRow()];
+      final opened = <Uri>[];
+      await pumpSite(tester, TicketScreen(orderId: 'o1', now: DateTime.utc(2099, 10, 24, 12)), site: site, opened: opened);
+      expect(textOf(tester, 'ticket-address'), '1 King St W, Toronto');
+      await tester.ensureVisible(find.byKey(const Key('ticket-maps')));
+      await tester.tap(find.byKey(const Key('ticket-maps')));
+      await tester.pump();
+      expect(opened.single.toString(), 'https://www.google.com/maps/search/?api=1&query=1+King+St+W%2C+Toronto');
+    });
+
+    testWidgets('sharing says where the guest is going, with the event\'s page on the website', (tester) async {
+      site.tables['site_orders'] = [orderRow()];
+      final shared = <String>[];
+      await pumpSite(tester, TicketScreen(orderId: 'o1', now: DateTime.utc(2099, 10, 24, 12), share: (t) async => shared.add(t)), site: site);
+      await tester.tap(find.byKey(const Key('ticket-share')));
+      await tester.pump();
+      expect(shared.single, allOf(startsWith('I am going to Friday Night on '), contains('/events/e1')));
+    });
+
+    testWidgets('a refunded order offers no directions and cannot be shared', (tester) async {
+      site.tables['site_orders'] = [orderRow(status: 'refunded')];
+      await pumpSite(tester, TicketScreen(orderId: 'o1', now: DateTime.utc(2099, 10, 24, 12)), site: site);
+      expect(find.byKey(const Key('ticket-maps')), findsNothing);
+      expect(find.byKey(const Key('ticket-share')), findsNothing);
+    });
+  });
 }

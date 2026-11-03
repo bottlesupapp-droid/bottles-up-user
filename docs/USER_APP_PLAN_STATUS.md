@@ -1,0 +1,68 @@
+# The client's user-app plan (15 Oct 2026) against what exists (25 Oct 2026)
+
+Source: `BottlesUp_User_App_Plan_and_Flows.pdf` (18 pages: "Social first. A complete night out, connected."). This file maps each section to what is built in `bottles-up-user`, what the shared backend already supports, and what is missing. The plan says itself that it is "a requirements plan, not a statement that every feature is live" and lists five delivery phases and decisions still needed; both are used below.
+
+Status words: **Built** (written, tested against a pretend website; never run on a phone), **Partial**, **Not started**, **Needs backend** (the production database has nothing to hold it), **Needs decision** (the plan or the client has not settled it).
+
+## The one fact that sizes everything
+
+Production holds **no social data at all**: no posts, stories, reels, follows, likes, comments, tags, saves, member lists, direct messages between customers, provider profiles, quotes, services, referral campaigns, subscriptions or creator earnings. Read on 25 Oct 2026 (`select` on the table list, 129 tables, 59 of them `site_*`). What exists: the `site_*` booking, ticket, venue, staff-workspace and payment tables; a **staff-only** chat (`site_chat_*`: venue chat, event chat, and a direct chat between two people who work at a club together, all reached through functions); and the old app's legacy tables (`conversations`, `messages`, `reviews`, `venue_ratings`, `split_payment_participants`, `ticket_transfers`, `vendor_*`, `partner_*`, `payout_records`, `subscription_plans`, `profiles` with `username`, `bio`, `city`, `social_links`), none of which the website or the vendor app uses today. So everything social is greenfield: new tables with row level security, storage for photos and video, moderation, notifications, and the app screens. That is a project of its own, and larger than everything built in the app so far.
+
+## Phase 1: reliable bookings (the plan's phase 1 and the "first success target")
+
+First success target: *discover an event → view the venue → book a ticket/table → invite guests → use My Night → share the experience.*
+
+| Plan item | Status | Where / what is missing |
+|---|---|---|
+| Event page, ticket types, quantity, codes, total, pay, QR ticket (p7) | **Built** | `features/discover`, `features/tickets_site`. Hosted Stripe page. Each ticket has its own status from the website; repeat payment notices are the website's (idempotent fulfilment). |
+| "Show friends attending only when they share it", save events (p7) | Not started / Needs backend | no attendance or saved-event table. Sharing an event works (website link). |
+| Table, booth, room booking: night, arrival, group, table, package, extras, pay, confirm (p7) | **Built** | `features/tables`: venue page, floor plan, live availability, bottles, promo code, hosted payment. Rooms/private-room options are whatever the venue lists as tables. |
+| Before paying: location, capacity, minimum spend, deposit and whether it is credited, amount due, fees and taxes, cancellation and arrival rules, included passes (p7) | **Built** | review step shows the deposit, the minimum spend and whether the deposit counts toward it (`deposit_is_credit`), included entry passes, tax and BottlesUp fee, the venue's refund terms. Arrival rules and last entry are not data the website has. |
+| Shared availability between venue and event pages, expiring hold (p7) | **Built** (by the website) | one inventory count (`site_table_taken_count`) incl. a 10-minute checkout hold; "Book a table" on an event page opens the venue on the event's night. |
+| After-midnight arrivals show the right date (p7) | **Built** | night versus arrival date, tested against the website's code. |
+| Guest passes: invite, accept, check in; stay within the allowance (p8) | **Partial** | by e-mail only (name + e-mail, up to the table's seats less the host), each guest gets their own QR by e-mail, host sees Ticket sent / Checked in, can send again. Invite by username or phone: Needs backend (no username lookup, no accounts-to-invite). A guest "accepting" is not a step: the ticket is the pass. |
+| Transfer or share an eligible **event ticket** to a friend (p8) | **Needs decision** | the website's tickets are non-transferable by design (`is_non_transferable`); the old `ticket_transfers` table is legacy. The plan itself says "define transfer and cancellation restrictions before launch". |
+| Equal or custom contributions, split payments (p8) | **Needs decision** + Needs backend | the plan: "Final partial-payment and refund handling needs product approval before release". Only a legacy `split_payment_participants` table exists. |
+| My Night: entry, reservation, guests and chat, payments, orders, getting there, help (p9) | **Partial, mostly built** | `features/bookings_site`: Entry (QR), Reservation, Guests, Payments (every line, what is owed at the club, club payments to confirm or report, refunds, terms, ask for a refund), Orders (bottles, order more, replacements to approve), Getting there (address, directions, call), share. Missing: "Guests and chat" (no customer chat backend), parking (no data), live occupancy (the plan says do not imply it). For event tickets the ticket page has the QR, directions, share and the entry code. |
+| Bottle ordering during or after booking, pay ahead / at the venue only when enabled, payment status separate from service status (p9) | **Built** | pay-now on Stripe or pay-at-club per the venue's setting; each bottle shows Paid / Pay at the club and, separately, Order received / Being prepared / Ready / On the way / Delivered (`service_status`; the labels for `picked_up` and `served` are my reading and should be confirmed). |
+| Live order updates, service estimates (p9) | Partial / Needs backend | status refreshes on pull-down and on the refresh button; no push or realtime, no estimates (the website has none, and the plan says do not invent them). |
+| Staff-recorded purchases paid outside the app, with receipt; customer can flag discrepancies (p9) | **Built** | the guest confirms or reports a payment the club recorded. |
+| After the night: receipts, support, review, rebook, follow venue, recap (p9, p14) | Partial | Book again is built; receipts: the Stripe receipt e-mail is the website's; reviews, following and recaps: Needs backend. |
+| Customer cancellation | **By design, not a button** | `cancel-table-booking` is for staff only. A guest asks for a refund (`guest_request_refund`) and the venue decides; built. |
+| Venue/ticket/table "short booking link and QR" (p6) | Partial | the website's venue and event pages are the links; sharing opens them. |
+| Failure outcomes: declined payment, expired hold, sold out, duplicate scan, cancelled booking (p16, p18) | **Built** for payment, hold, sold out, cancelled; duplicate scans are the door's | the app says plainly the booking is unpaid and offers a safe retry; the website's refusal sentences are shown as they come. |
+
+## Phase 2: connected experience (social)
+
+| Plan item | Status | Needs |
+|---|---|---|
+| Five tabs: Home, Explore, Create (+), Inbox, Profile (p3) | **Partial** | today: Events, Tables, Bookings, Profile. Explore is today's Events and Tables tabs; Bookings is My Night. Home feed, Create and Inbox do not exist. |
+| Sign-up: account, username, personal or business, city and interests, public or private (p3) | Not started / Needs backend | `profiles` has username, bio, city but nothing for account type, interests, privacy, or business profiles. Business profiles map to the staff workspaces (`site_organizations`, memberships) that the vendor app uses. |
+| One login, switch between profiles you own or manage (p3) | Not started | the vendor app has workspaces; a shared "which profile am I" does not exist across the two apps. |
+| Social profiles, follow counts, highlights, grid (p4) | Needs backend | nothing to store follows or posts. |
+| Home feed, stories, reels, like, comment, save, share, tags linking to events, venues, providers (p4) | Needs backend | posts, media, tags, reactions and comments tables, storage, video handling, a feed query. |
+| Create content: caption, tags, audience, preview, publish (p4) | Needs backend | the same, plus uploads. |
+| Members Only audience, who can see what, orange ring (p5) | Needs backend + Needs decision | a member list and an audience on every post, enforced in the database (the plan is explicit that a shared link must still check access). |
+| Inbox: direct messages, groups, booking conversations with a booking card (p5) | Needs backend | the existing chat is staff-only by design ("the app cannot read or write any chat table"). A customer chat is a new system with the same safety rules (rate limit, access from current membership, deletion window). |
+| Explore: What's Hot, Hot Venues/Events, filters by Tonight / This Weekend / date, music, location, price, atmosphere, availability; ratings and counts; sponsored labels (p6) | **Partial** | Events: search, category, Tonight, This weekend. Venues: search. Missing: Hot (needs activity or ratings), music/price/atmosphere filters, city filter (one city today), ratings (no `site_*` reviews), sponsored placements, professionals, jobs. |
+| Venue profile: photos, reels, followers, description, address, directions, hours, music, atmosphere, events, ratings and replies; floor plans, tables, age/ID, dress code, last entry; amenities, parking, valet, coat check, Wi-Fi, accessibility; Book a Table and Host Your Event Here (p6) | **Partial** | built: photo, description, address, directions, hours note, dress code, music, capacity, phone, floor plan, tables. Missing: reels, followers, ratings/replies, upcoming events on the venue page, age/ID rules, last entry, amenities, parking (no such columns in `site_venues`), Host Your Event Here (venue hire: Phase 4). |
+| Menus and extras: bottle brands, sizes, prices, mixers, packages; cocktails, food; kitchen hours; guest entry included with packages (p6) | **Partial** | bottles with size and price per venue. Mixers, packages, cocktails, food, kitchen hours: no data model. Included entry passes: shown. |
+| Notifications: useful alerts linked to records, social alerts, user controls (p17) | Not started | needs a Firebase account and the Apple push capability (decision A5 in `REMAINING_WORK.md`). |
+| Reviews, report an issue, follow, rebook, reporting and blocking, message requests, tagging controls, privacy and notification settings, moderation (p14) | Needs backend | and, for any app with user-generated content, the stores require reporting, blocking, a content policy and a way to remove content before release. |
+
+## Phase 3: service marketplace, Phase 4: event coordination, Phase 5: growth and income
+
+All **Not started / Needs backend / Needs decision**. The plan's own list of decisions still needed (p16) is the gate:
+- Phase 3, hire professionals (p10): provider profiles and services, requests, quotes with scope and payment schedule, accept and pay a deposit or the full amount before the service, balance before a deadline, payout after the service under a release policy, availability and manager access. Needs: provider data model, quotes, a payments model with held funds and payouts (Stripe Connect or equivalent; BottlesUp already makes venue payouts itself from the website's CMS), dispute and completion rules, 5% commission or CAD $29.99/month or $299/year subscription at 0% (final approval required).
+- Phase 4 (p11): venue hire requests and agreements, event workspace that ties venue, talent, tickets and tasks together, team roles and automatic chats (the website's roles and staff chat already cover venue teams).
+- Phase 5 (p13, p14): referrals and Book With Me with funded commissions, subscriptions, advertising and creator income, verification ranks (Verified, Elite 100K, Icon 1M, Legend 10M, Global Icon 50M, BottlesUp Immortal 100M followers), awards with physical plaques, jobs and opportunities. The plan marks pricing, funding, attribution, eligibility and fulfilment as undecided.
+
+## What the screens in the recording need (p17)
+
+Done: BottlesUp spelled consistently (the old "Bottles Up" is gone from headings, the splash, the app name on both stores' icons, the settings mail subject and the terms text); no demo or placeholder records in the app; the invented privacy text is replaced by the website's page. Not done: the tab structure and social profile (Phase 2); Terms still holds text nobody at the client wrote (decision A6).
+
+## Recommended order, and the decisions that unblock it
+
+1. **Finish and prove Phase 1** (what the app has now): run it on a phone with Stripe test cards (book a ticket, book a table with bottles, invite a guest, scan, order a bottle, ask for a refund), fix what that finds, store readiness (privacy manifest, signing, links, listing). This is the plan's own first success target and it is what the store review will test. Needs the user's go-ahead to build.
+2. **Decide the social layer before building it** (it changes the database, the website and the vendor app, not only this app): (a) is the first store release booking-only, with social to follow (the plan's phase order says phase 1 can ship on its own), or does it wait for social; (b) if social is in, who owns the new tables (the website repo's migrations, like everything else), how photos and video are stored and paid for, and the moderation approach (report, block, remove, a content policy and terms the client has approved); (c) Members Only, username search and private accounts need the identity model above settled first.
+3. Phases 3 to 5 only after the client answers the decisions on p16.
