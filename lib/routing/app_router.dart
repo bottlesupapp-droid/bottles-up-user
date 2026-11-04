@@ -3,6 +3,7 @@ import 'package:bottles_up_user/features/auth/screens/forgot_password_screen.dar
 import 'package:bottles_up_user/features/auth/screens/login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/phone_login_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/reset_password_screen.dart';
+import 'package:bottles_up_user/features/auth/screens/verify_reset_code_screen.dart';
 import 'package:bottles_up_user/features/auth/screens/signup_screen.dart';
 import 'package:bottles_up_user/features/bookings_site/screens/add_bottles_screen.dart';
 import 'package:bottles_up_user/features/bookings_site/screens/table_booking_detail_screen.dart';
@@ -82,6 +83,7 @@ const _publicRoutes = {
   '/signup',
   '/phone-login',
   '/forgot-password',
+  '/verify-reset-code',
   '/reset-password',
 };
 
@@ -178,34 +180,17 @@ final List<RouteBase> appRoutes = [
   ),
   GoRoute(
     path: '/forgot-password',
-    builder: (context, state) => const ForgotPasswordScreen(),
+    // ?expired=1: the person came from a reset link that no longer works.
+    builder: (context, state) => ForgotPasswordScreen(linkExpired: state.uri.queryParameters['expired'] == '1'),
+  ),
+  GoRoute(
+    path: '/verify-reset-code',
+    builder: (context, state) => VerifyResetCodeScreen(email: state.uri.queryParameters['email'] ?? ''),
   ),
   GoRoute(
     path: '/reset-password',
-    builder: (context, state) {
-      // Extract parameters from both query and fragment
-      final params = <String, String>{};
-      params.addAll(state.uri.queryParameters);
-
-      // Parse fragment parameters (Supabase uses fragments)
-      if (state.uri.fragment.isNotEmpty) {
-        final fragmentParts = state.uri.fragment.split('&');
-        for (final part in fragmentParts) {
-          final keyValue = part.split('=');
-          if (keyValue.length == 2) {
-            params[keyValue[0]] = Uri.decodeComponent(keyValue[1]);
-          }
-        }
-      }
-
-      final accessToken = params['access_token'];
-      final refreshToken = params['refresh_token'];
-
-      return ResetPasswordScreen(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-    },
+    // The session this screen needs was opened before getting here: by the code screen, or by a link that reached the app.
+    builder: (context, state) => const ResetPasswordScreen(),
   ),
   GoRoute(
     path: '/home',

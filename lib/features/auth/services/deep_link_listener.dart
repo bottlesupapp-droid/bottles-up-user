@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import '../logic/password_reset_logic.dart';
 import 'deep_link_handler.dart';
 
 class DeepLinkListener {
@@ -28,7 +29,7 @@ class DeepLinkListener {
     // Handle links while the app is already running / in background
     _linkStreamSubscription = _appLinks.uriLinkStream.listen(
       (Uri uri) {
-        debugPrint('🔗 [DL-STREAM] uriLinkStream fired: $uri');
+        debugPrint('🔗 [DL-STREAM] uriLinkStream fired: ${redactLink(uri.toString())}');
         _handleDeepLink(uri.toString());
       },
       onError: (err) {
@@ -43,7 +44,7 @@ class DeepLinkListener {
     try {
       debugPrint('🔗 [DL-INIT-1] Calling getInitialLink...');
       final Uri? initialLink = await _appLinks.getInitialLink();
-      debugPrint('🔗 [DL-INIT-2] getInitialLink result: $initialLink');
+      debugPrint('🔗 [DL-INIT-2] getInitialLink result: ${redactLink(initialLink.toString())}');
       if (initialLink != null) {
         _handleDeepLink(initialLink.toString());
       } else {
@@ -57,14 +58,14 @@ class DeepLinkListener {
 
   /// Handle the incoming deep link (navigation via appRouter, no context needed)
   void _handleDeepLink(String link) {
-    debugPrint('🔗 [DL-HANDLE-1] _handleDeepLink called with: $link');
+    debugPrint('🔗 [DL-HANDLE-1] _handleDeepLink called with: ${redactLink(link)}');
     try {
       final handled = DeepLinkHandler.handleDeepLink(link);
       debugPrint('🔗 [DL-HANDLE-2] DeepLinkHandler.handleDeepLink returned: $handled');
       if (handled) {
         debugPrint('✅ [DL-HANDLE-3] Deep link handled successfully');
       } else {
-        debugPrint('⚠️ [DL-HANDLE-3] Deep link not recognized: $link');
+        debugPrint('⚠️ [DL-HANDLE-3] Deep link not recognized: ${redactLink(link)}');
       }
     } catch (e, stack) {
       debugPrint('❌ [DL-HANDLE-ERR] Error handling deep link: $e');
