@@ -1,11 +1,28 @@
+import 'dart:async';
+
 import 'package:bottles_up_user/routing/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+
+import '../logic/password_reset_logic.dart';
+import 'password_reset_service.dart';
 
 class DeepLinkHandler {
   static final DeepLinkHandler _instance = DeepLinkHandler._internal();
   factory DeepLinkHandler() => _instance;
   DeepLinkHandler._internal();
+
+  /// Where a handled link goes. A test swaps it to see the destination without a real router.
+  @visibleForTesting
+  static void Function(String location) navigate = _safeGo;
+
+  /// The reset flow a link's token is spent with. A test swaps it for a fake.
+  @visibleForTesting
+  static PasswordResetService Function() resetService = PasswordResetService.new;
+
+  /// How long a link that arrives with its own session is given to be read by the Supabase library before the link counts as dead.
+  @visibleForTesting
+  static Duration sessionWait = const Duration(milliseconds: 3000);
 
   /// Handle incoming deep link URLs.
   ///
@@ -13,41 +30,57 @@ class DeepLinkHandler {
   /// always goes through [appRouter] directly so it works regardless of where
   /// in the widget tree the caller lives (avoids "no GoRouter in scope" crash).
   static bool handleDeepLink(String link, [BuildContext? context]) {
-    debugPrint('🔗 [DLH-1] handleDeepLink entry: $link');
+    debugPrint('🔗 [DLH-1] handleDeepLink entry: ${redactLink(link)}');
     try {
       final uri = Uri.parse(link);
-      debugPrint('🔗 [DLH-2] Parsed URI — scheme:${uri.scheme} host:${uri.host} path:${uri.path} query:${uri.queryParameters}');
+      debugPrint('🔗 [DLH-2] Parsed URI — scheme:${uri.scheme} host:${uri.host} path:${uri.path} query keys:${uri.queryParameters.keys.toList()}');
 
-      // Handle password reset deep links from multiple schemes
-      bool isResetPasswordLink = false;
-
-      if (uri.scheme == 'bottlesup' && uri.host == 'reset-password') {
-        isResetPasswordLink = true;
+      // The link in a password-reset email, handed back to the app by the website's /reset-password page (see password_reset_logic.dart).
+      switch (resetLinkActionFor(uri)) {
+        case NotAResetLink():
+          break;
+        case VerifyResetToken(:final tokenHash):
+          debugPrint('🔗 [DLH-3] Password reset link with a token');
+          unawaited(_openResetWithToken(tokenHash));
+          return true;
+        case UseOpenedSession():
+          debugPrint('🔗 [DLH-3] Password reset link that brought its own session');
+          unawaited(_openResetWithOpenedSession());
+          return true;
+        case ResetLinkUnusable():
+          debugPrint('🔗 [DLH-3] Password reset link that cannot be used');
+          navigate('/forgot-password?expired=1');
+          return true;
       }
 
-      if (isResetPasswordLink) {
-        debugPrint('🔗 [DLH-3] Identified as password reset link');
-        final params = extractParams(uri);
-        final accessToken = params['access_token'] ?? '';
-        final refreshToken = params['refresh_token'] ?? '';
-        final type = params['type'] ?? '';
-
-        if (accessToken.isNotEmpty && type == 'recovery') {
-          _safeGo('/reset-password?access_token=$accessToken&refresh_token=$refreshToken');
-          return true;
-        } else {
-          _safeGo('/forgot-password');
-          return true;
-        }
-      }
-
-      debugPrint('⚠️ [DLH-8] No handler matched for: $link');
+      debugPrint('⚠️ [DLH-8] No handler matched for: ${redactLink(link)}');
       return false;
     } catch (e, stack) {
       debugPrint('❌ [DLH-ERR] DeepLinkHandler error: $e');
       debugPrint('❌ Stack: $stack');
       return false;
     }
+  }
+
+  static Future<void> _openResetWithToken(String tokenHash) async {
+    try {
+      await resetService().verifyLink(tokenHash);
+      navigate('/reset-password');
+    } on PasswordResetException catch (e) {
+      // No connection: the token is not spent, so the same link still works. Anything else means it is dead.
+      navigate(e.problem == ResetProblem.network ? '/forgot-password' : '/forgot-password?expired=1');
+    } catch (_) {
+      navigate('/forgot-password?expired=1');
+    }
+  }
+
+  static Future<void> _openResetWithOpenedSession() async {
+    final service = resetService();
+    final deadline = DateTime.now().add(sessionWait);
+    while (!service.hasRecoverySession && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    navigate(service.hasRecoverySession ? '/reset-password' : '/forgot-password?expired=1');
   }
 
   /// Navigate safely regardless of current frame phase.

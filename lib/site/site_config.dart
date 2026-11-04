@@ -36,6 +36,8 @@ Uri venuePageUri(String venueId, {String? origin}) => Uri.parse('${origin ?? sit
 /// A map search for an address, which opens in the phone's maps (or the browser).
 Uri mapsSearchUri(String address) => Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': address});
 
-/// Where the link in a password-reset e-mail sends the person: back into the app (its own scheme, registered on both phones). The address must be in the project's list of allowed redirect
-/// addresses (Supabase > Authentication > URL Configuration), or the e-mail sends people to the website's address instead.
-const String passwordResetRedirect = 'bottlesup://reset-password';
+/// What the app tells Supabase when it asks for a password-reset email. It is not where the person ends up: the email's button goes to the website's
+/// /reset-password page (which can open this app again on `bottlesup://reset-password`), and this address is how the email knows the request came from
+/// this app and not from the Business app (supabase/email-templates/recovery.html in the website repo matches it exactly). It must be listed in
+/// Supabase > Authentication > URL Configuration > Redirect URLs, or the email falls back to its neutral wording.
+const String passwordResetRedirect = 'https://www.bottlesupapp.com/reset-password?app=user';
