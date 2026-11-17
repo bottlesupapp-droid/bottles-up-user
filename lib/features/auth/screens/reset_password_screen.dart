@@ -6,17 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import '../logic/password_reset_logic.dart';
+import '../providers/password_reset_provider.dart';
 import '../services/password_reset_service.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
-  final String? accessToken;
-  final String? refreshToken;
-  
-  const ResetPasswordScreen({
-    super.key,
-    this.accessToken,
-    this.refreshToken,
-  });
+  const ResetPasswordScreen({super.key});
 
   @override
   ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -37,68 +32,42 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     super.dispose();
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
+  PasswordResetService get _service => ref.read(passwordResetServiceProvider);
 
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (value != _passwordController.text) {
-      return 'Passwords do not match';
-    }
-    return null;
-  }
+  // Set once the password is changed, so the screen does not flash "expired" while the phone moves on to the sign-in.
+  bool _done = false;
 
   Future<void> _handleResetPassword() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isLoading = true);
 
-      try {
-        await PasswordResetService().updatePassword(
-          newPassword: _passwordController.text,
-          accessToken: widget.accessToken,
-          refreshToken: widget.refreshToken,
+    try {
+      await _service.updatePassword(_passwordController.text);
+      // The reset session was only for this: the person signs in with the new password.
+      _done = true;
+      await _service.finish();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password updated. Sign in with your new password.'),
+            backgroundColor: Colors.green,
+          ),
         );
-        
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          // Navigate to login screen
-          context.go('/login');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString()),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        context.go('/login');
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is PasswordResetException ? e.message : resetProblemMessage(ResetProblem.other)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -106,6 +75,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
+
+    // A reset needs the session the code or the link opened. Without one (the link was used, or the app sat closed for a long time)
+    // there is nothing to change, and a form that can only fail would be worse than saying so.
+    if (!_done && !_service.hasRecoverySession) return const _ResetExpiredView();
 
     return Scaffold(
       body: SizedBox.expand(
@@ -198,6 +171,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               children: [
                                 // New Password Field
                                 TextFormField(
+                                  key: const Key('reset-new-password'),
                                   controller: _passwordController,
                                   decoration: InputDecoration(
                                     labelText: 'New Password',
@@ -218,7 +192,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                                     ),
                                   ),
                                   obscureText: _obscurePassword,
-                                  validator: _validatePassword,
+                                  validator: validateNewPassword,
                                   enabled: !_isLoading,
                                 ),
                                 
@@ -226,6 +200,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                                 
                                 // Confirm Password Field
                                 TextFormField(
+                                  key: const Key('reset-confirm-password'),
                                   controller: _confirmPasswordController,
                                   decoration: InputDecoration(
                                     labelText: 'Confirm Password',
@@ -246,7 +221,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                                     ),
                                   ),
                                   obscureText: _obscureConfirmPassword,
-                                  validator: _validateConfirmPassword,
+                                  validator: (value) => validateConfirmPassword(value, _passwordController.text),
                                   enabled: !_isLoading,
                                 ),
                               ],
@@ -257,6 +232,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                           
                           // Update Password Button
                           ElevatedButton(
+                            key: const Key('reset-submit'),
                             onPressed: _isLoading ? null : _handleResetPassword,
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -331,6 +307,56 @@ class _BlurredCircle extends StatelessWidget {
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.transparent,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when there is no reset session behind the screen: the link was used, or the reset was abandoned.
+class _ResetExpiredView extends StatelessWidget {
+  const _ResetExpiredView();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(Iconsax.timer_1, size: 64, color: colorScheme.primary),
+              const SizedBox(height: 24),
+              Text(
+                'This reset has expired',
+                style: GoogleFonts.syne(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Reset links and codes work once and only for a short time. Ask for a new one.',
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Colors.white.withValues(alpha: 0.7)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                key: const Key('reset-expired-new'),
+                onPressed: () => context.go('/forgot-password'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Ask for a new email'),
+              ),
+              TextButton(
+                onPressed: () => context.go('/login'),
+                child: const Text('Back to Login'),
+              ),
+            ],
           ),
         ),
       ),

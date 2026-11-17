@@ -9,7 +9,10 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({super.key, this.linkExpired = false});
+
+  /// True when the person arrives from a reset link that no longer works (used, or too old): the page says so before asking for a new one.
+  final bool linkExpired;
 
   @override
   ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -142,6 +145,30 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           const SizedBox(height: 32),
                           
                           if (!_emailSent) ...[
+                            if (widget.linkExpired) ...[
+                              Container(
+                                key: const Key('forgot-link-expired'),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.error.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: colorScheme.error.withValues(alpha: 0.4)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Iconsax.info_circle, color: colorScheme.error, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'That reset link has expired or was already used. Enter your email to get a new one.',
+                                        style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.white.withValues(alpha: 0.85)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                            ],
                             // Reset Password Form
                             Center(
                               child: Icon(
@@ -267,6 +294,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             
                             Text(
                               'Check Your Email',
+                              key: const Key('forgot-sent-title'),
                               style: GoogleFonts.syne(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -328,7 +356,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    '1. Check your email inbox (and spam folder)\n2. Click the reset link in the email\n3. Create your new password',
+                                    '1. Check your email inbox (and spam folder)\n2. Tap Reset password in the email, or use its 6-digit code\n3. Create your new password',
                                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                       color: Colors.white.withValues(alpha: 0.7),
                                     ),
@@ -338,6 +366,21 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             ),
                             
                             const SizedBox(height: 24),
+
+                            // The email also carries a 6-digit code, for when its button does not open the app (or it was read on another device).
+                            OutlinedButton(
+                              key: const Key('forgot-enter-code'),
+                              onPressed: () => context.push('/verify-reset-code?email=${Uri.encodeQueryComponent(_emailController.text.trim())}'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Enter the 6-digit code'),
+                            ),
+
+                            const SizedBox(height: 12),
                             
                             Row(
                               children: [

@@ -72,19 +72,21 @@ void main() {
   group('the password-reset e-mail comes back into the app', () {
     final uri = Uri.parse(passwordResetRedirect);
 
-    test('the address is on the app\'s own scheme and host', () {
-      expect([uri.scheme, uri.host], ['bottlesup', 'reset-password']);
+    test('the app asks Supabase for the website address that tells the email this is the customer app', () {
+      expect(passwordResetRedirect, 'https://www.bottlesupapp.com/reset-password?app=user');
+      expect([uri.scheme, uri.host, uri.path, uri.queryParameters], ['https', 'www.bottlesupapp.com', '/reset-password', {'app': 'user'}]);
     });
 
-    test('Android opens that address, and iOS has the scheme', () {
-      expect(manifest, contains('android:scheme="${uri.scheme}" android:host="${uri.host}"'));
-      expect(plist, contains('<string>${uri.scheme}</string>'));
+    test('the website page hands the person back on the app\'s own scheme: Android opens it and iOS has the scheme', () {
+      expect(manifest, contains('android:scheme="bottlesup" android:host="reset-password"'));
+      expect(plist, contains('<string>bottlesup</string>'));
       expect(RegExp(r'<key>CFBundleURLSchemes</key>\s*<array>\s*<string>bottlesup</string>\s*</array>').hasMatch(plist), isTrue);
     });
 
-    test('the code asks for that address, and the link handler reads that host', () {
+    test('both places that ask for the email use that address, and the link handler reads that scheme and host', () {
       expect(read('lib/features/auth/services/auth_service.dart'), contains('redirectTo: passwordResetRedirect'));
-      expect(read('lib/features/auth/services/deep_link_handler.dart'), contains("uri.scheme == 'bottlesup' && uri.host == '${uri.host}'"));
+      expect(read('lib/features/auth/services/password_reset_service.dart'), contains('redirectTo: passwordResetRedirect'));
+      expect(read('lib/features/auth/logic/password_reset_logic.dart'), contains("uri.scheme != 'bottlesup' || uri.host != 'reset-password'"));
     });
 
     test('no other address of the old kind is left anywhere in the app\'s code', () {
