@@ -18,6 +18,7 @@ Future<void> pumpSite(
   List<Uri>? opened,
   bool canOpen = true,
   bool settle = true,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = const Size(800, 2200);
   tester.view.devicePixelRatio = 1;
@@ -30,6 +31,7 @@ Future<void> pumpSite(
         opened?.add(uri);
         return canOpen;
       }),
+      ...overrides,
     ],
     child: MaterialApp(home: child),
   ));

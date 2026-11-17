@@ -224,4 +224,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('venue-page')), findsOneWidget);
   });
+
+  group('coming from an event', () {
+    Future<void> openOn(WidgetTester tester, String? night) async {
+      await pumpSite(tester, VenueScreen(venueId: 'v1', initialNight: night, now: now, pickNight: (c, v, t) async => null, onBook: (c, v, t, n, s) => booked.add((v.id, t.id, '${n.year}-${n.month}-${n.day}', s.id))), site: site);
+    }
+
+    testWidgets('starts on the event\'s night, with its first time chosen and availability asked for', (tester) async {
+      await openOn(tester, '2026-10-30');
+      expect(tester.widget<ChoiceChip>(find.byKey(const Key('night-2026-10-30'))).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(find.byKey(const Key('slot-early'))).selected, isTrue);
+      expect(site.forRpc('get_unavailable_table_types').single.body['p_booking_date'], '2026-10-30');
+      expect(find.byKey(const Key('night-note')), findsNothing);
+    });
+
+    testWidgets('a night the venue does not take bookings on says so and chooses nothing', (tester) async {
+      await openOn(tester, '2026-10-28');
+      expect(textOf(tester, 'night-note'), 'Club A does not take table bookings on a Wednesday.');
+      expect(find.byKey(const Key('slot-early')), findsNothing);
+      expect(site.forRpc('get_unavailable_table_types'), isEmpty);
+    });
+
+    testWidgets('a night that cannot be read is ignored', (tester) async {
+      await openOn(tester, 'tomorrow');
+      expect(find.byKey(const Key('night-note')), findsNothing);
+      expect(find.byKey(const Key('slot-early')), findsNothing);
+    });
+  });
+
+  testWidgets('a table that includes entry passes says so', (tester) async {
+    site.tables['site_venues'] = [
+      venueRow(tables: [
+        {...tableTypeRow(id: 'tt1'), 'included_admissions': 4},
+        {...tableTypeRow(id: 'tt2', name: 'Couch'), 'included_admissions': 1},
+        tableTypeRow(id: 'tt3', name: 'Stool'),
+      ])
+    ];
+    await open(tester);
+    expect(textOf(tester, 'table-passes-tt1'), 'Includes 4 entry passes');
+    expect(textOf(tester, 'table-passes-tt2'), 'Includes 1 entry pass');
+    expect(find.byKey(const Key('table-passes-tt3')), findsNothing);
+  });
 }

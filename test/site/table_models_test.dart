@@ -139,4 +139,11 @@ void main() {
       expect(parsePaymentStatus({'status': 'paid'}).state, PaymentState.waiting);
     });
   });
+
+  group('entry passes with a table', () {
+    test('a table says how many entry passes it includes, when the venue says', () {
+      expect(parseTableType({...tableTypeRow(), 'included_admissions': 4})!.includedAdmissions, 4);
+      expect(parseTableType(tableTypeRow())!.includedAdmissions, isNull);
+    });
+  });
 }

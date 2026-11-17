@@ -13,7 +13,7 @@ class VenuesService {
   static const String _venueColumns = 'id, name, slug, description, address, cover_image_url, gallery, category, phone, website_url, hours_note, dress_code, capacity, music_genres, '
       'tax_rate_bps, show_bottle_images, bottle_payment_mode, deposit_is_credit, booking_start_date, booking_end_date';
   static const String _tableColumns = 'id, venue_id, name, description, max_guests, min_guests, min_spend_cents, deposit_cents, currency, inventory_count, image_url, badge_label, is_featured, '
-      'floor_id, pos_x, pos_y, width, height, pricing_mode, hourly_rate_cents, min_hours, table_view, privacy_level, seating_type, amenities, policy_note, sort_order';
+      'floor_id, pos_x, pos_y, width, height, pricing_mode, hourly_rate_cents, min_hours, table_view, privacy_level, seating_type, amenities, policy_note, included_admissions, sort_order';
   static const String _slotColumns = 'id, venue_id, day_of_week, start_time, label';
   static const String _select = '$_venueColumns, site_table_types($_tableColumns), site_venue_time_slots($_slotColumns)';
 

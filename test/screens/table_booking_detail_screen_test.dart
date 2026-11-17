@@ -20,9 +20,17 @@ void main() {
     site.tables['site_table_booking_bottles'] = [];
     site.tables['site_table_booking_club_payments'] = [];
     site.tables['site_table_booking_refunds'] = [];
+    site.tables['site_table_booking_bottle_substitutions'] = [];
+    site.functions['manage-guest-tickets'] = (b) => (status: 200, body: rosterAnswer());
+    site.rpcs['public_venue_refund_policy'] = (b) => (status: 200, body: <Object>[]);
   });
 
-  Future<void> open(WidgetTester tester, {String id = 'bk1'}) => pumpSite(tester, TableBookingDetailScreen(bookingId: id, now: DateTime(2099, 11, 1)), site: site);
+  /// The guest list is a call to a website function, which needs a little real time to finish: let it.
+  Future<void> open(WidgetTester tester, {String id = 'bk1'}) async {
+    await pumpSite(tester, TableBookingDetailScreen(bookingId: id, now: DateTime(2099, 11, 1)), site: site, settle: false);
+    await settleCalls(tester);
+    await settleCalls(tester);
+  }
 
   testWidgets('shows the code as a QR to show at the door, and where and when the guests arrive', (tester) async {
     site.tables['site_table_bookings'] = [bookingRow()];
@@ -71,7 +79,7 @@ void main() {
     await open(tester);
     expect(find.text('Grey Goose (1.75L) × 1 · pay at the club'), findsOneWidget);
     expect(textOf(tester, 'bd-line-bottle-l1-value'), m(25000));
-    expect(find.text('Don Julio × 2'), findsOneWidget);
+    expect(textOf(tester, 'bd-line-bottle-l2'), 'Don Julio × 2');
     expect(textOf(tester, 'bd-line-bottle-l2-value'), m(80000));
     expect(textOf(tester, 'bd-line-due-value'), m(25000));
   });
@@ -151,7 +159,67 @@ void main() {
     expect(textOf(tester, 'load-failed-message'), 'We could not load this booking. Check your connection and try again.');
     site.failAllWith = null;
     await tester.tap(find.byKey(const Key('load-failed-retry')));
-    await tester.pumpAndSettle();
+    await settleCalls(tester);
+    await settleCalls(tester);
     expect(find.byKey(const Key('booking-detail')), findsOneWidget);
+  });
+
+  group('splitting the bill on the booking page', () {
+    void splitOn(bool on) {
+      site.rpcs['site_features'] = (_) => ok({'split_payments': on});
+      site.rpcs['split_for_booking'] = (_) => ok(null);
+    }
+
+    testWidgets('is offered on a confirmed booking with something left to pay, once BottlesUp has switched it on', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(total: 30000, paid: 10000)];
+      await open(tester);
+      expect(find.byKey(const Key('section-split')), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('split-start'))).onPressed, isNotNull);
+      expect(site.forRpc('split_for_booking').single.body, {'p_booking': 'bk1'});
+    });
+
+    testWidgets('is not there while it is switched off, and the website is not asked', (tester) async {
+      splitOn(false);
+      site.tables['site_table_bookings'] = [bookingRow(total: 30000, paid: 10000)];
+      await open(tester);
+      expect(find.byKey(const Key('section-split')), findsNothing);
+      expect(site.forRpc('split_for_booking'), isEmpty);
+    });
+
+    testWidgets('is not there on a booking that is not confirmed', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(status: 'pending', code: null, paid: 0)];
+      await open(tester);
+      expect(find.byKey(const Key('section-split')), findsNothing);
+    });
+
+    testWidgets('cannot be started on a table that is paid up', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(total: 30000, paid: 30000)];
+      await open(tester);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('split-start'))).onPressed, isNull);
+    });
+
+    testWidgets('cannot be started once the booking has ended', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(date: '2090-01-01', total: 30000, paid: 10000)];
+      await open(tester);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('split-start'))).onPressed, isNull);
+    });
+
+    testWidgets('cannot be started when less than five dollars is left', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(total: 30000, paid: 29600)];
+      await open(tester);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('split-start'))).onPressed, isNull);
+    });
+
+    testWidgets('can be started when exactly five dollars is left', (tester) async {
+      splitOn(true);
+      site.tables['site_table_bookings'] = [bookingRow(total: 30000, paid: 29500)];
+      await open(tester);
+      expect(tester.widget<FilledButton>(find.byKey(const Key('split-start'))).onPressed, isNotNull);
+    });
   });
 }

@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/ticket_order.dart';
 import '../../../site/money.dart';
 import '../../../site/providers/site_providers.dart';
+import '../../../site/site_config.dart';
 import '../../../site/site_error.dart';
 import '../../../site/when.dart';
 import '../widgets/ticket_qr.dart';
 
 /// One ticket: the QR code to show at the door, what it is for, and, for a ticket that stays with its buyer, a way to get the 6-digit code the door asks for.
 class TicketScreen extends ConsumerStatefulWidget {
-  const TicketScreen({super.key, required this.orderId, DateTime? now}) : _now = now;
+  const TicketScreen({super.key, required this.orderId, DateTime? now, this.share}) : _now = now;
 
   final String orderId;
   final DateTime? _now;
+
+  /// Shares a line of text about the ticket. Replaced in tests.
+  final Future<void> Function(String text)? share;
 
   @override
   ConsumerState<TicketScreen> createState() => _TicketScreenState();
@@ -54,8 +59,26 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
   Widget build(BuildContext context) {
     final orders = ref.watch(myTicketOrdersProvider);
     final now = widget._now ?? DateTime.now();
+    TicketOrder? mine;
+    for (final x in orders.valueOrNull ?? const <TicketOrder>[]) {
+      if (x.id == widget.orderId) mine = x;
+    }
     return Scaffold(
-      appBar: AppBar(title: const Text('Ticket')),
+      appBar: AppBar(
+        title: const Text('Ticket'),
+        actions: [
+          if (mine != null && mine.isPaid)
+            IconButton(
+              key: const Key('ticket-share'),
+              icon: const Icon(Icons.ios_share),
+              onPressed: () {
+                final o = mine!;
+                final link = o.eventId == null ? '' : '\n${eventPageUri(o.eventId!)}';
+                (widget.share ?? (t) => Share.share(t))('I am going to ${o.eventTitle}${o.eventStart == null ? '' : ' on ${formatDay(o.eventStart!)}'}.$link');
+              },
+            ),
+        ],
+      ),
       body: orders.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => LoadFailed(message: error is SiteException ? error.message : loadFailedMessage('your tickets'), onRetry: () => ref.invalidate(myTicketOrdersProvider)),
@@ -106,6 +129,14 @@ class _TicketScreenState extends ConsumerState<TicketScreen> {
             ),
           ),
         ),
+        if (!o.isRefunded && o.address != null) ...[
+          const SizedBox(height: 16),
+          Text('Getting there', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(o.address!, key: const Key('ticket-address')),
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerLeft, child: OutlinedButton.icon(key: const Key('ticket-maps'), onPressed: () => ref.read(urlOpenerProvider)(mapsSearchUri(o.address!)), icon: const Icon(Icons.directions_outlined), label: const Text('Directions'))),
+        ],
         if (usable && o.isNonTransferable) ...[
           const SizedBox(height: 16),
           Text('This ticket stays with you. The door will ask for a 6-digit code that we email to you.', style: theme.textTheme.bodyMedium),

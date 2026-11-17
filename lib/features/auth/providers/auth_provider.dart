@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:bottles_up_user/features/auth/models/auth_state.dart';
 import 'package:bottles_up_user/features/auth/services/auth_service.dart';
+import 'package:bottles_up_user/features/auth/services/social_sign_in_support.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
@@ -242,37 +244,31 @@ class Auth extends _$Auth {
     required String name,
     required String email,
     required String password,
-    required int age,
+    required DateTime dateOfBirth,
     required String phoneNumber,
   }) async {
     state = const AsyncLoading();
 
     try {
-      print('🔐 Starting signup for: $email');
       final authService = ref.read(authServiceProvider);
       final response = await authService.signUpWithProfile(
         name: name,
         email: email,
         password: password,
-        age: age,
+        dateOfBirth: dateOfBirth,
         phoneNumber: phoneNumber,
       );
-
-      print('🔐 Signup response received, user ID: ${response.user?.id}');
 
       // Check if signup was successful
       if (response.user?.id != null) {
         // Signup successful - user and profile created
-        print('✅ Signup successful!');
         state = const AsyncData(true);
       } else {
         // This shouldn't happen with our new flow, but handle it just in case
-        print('❌ Signup failed - no user ID');
         throw 'Signup completed but user verification failed. Please try logging in.';
       }
     } catch (error, stackTrace) {
-      print('❌ Signup error: $error');
-      print('Stack trace: $stackTrace');
+      debugPrint('Signup error: $error');
       state = AsyncError(error, stackTrace);
     }
   }
@@ -304,7 +300,8 @@ class Auth extends _$Auth {
         throw 'Failed to sign in with Google';
       }
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      // Closing the Google sheet is the person's choice, not a failure: they stay on the login page with no error.
+      state = isSignInCancelled(error) ? const AsyncData(false) : AsyncError(error, stackTrace);
     }
   }
 
@@ -319,7 +316,7 @@ class Auth extends _$Auth {
       // The app will need to check auth state after redirect
       state = const AsyncData(true);
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      state = isSignInCancelled(error) ? const AsyncData(false) : AsyncError(error, stackTrace);
     }
   }
 } 

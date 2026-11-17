@@ -1,5 +1,6 @@
 import '../read.dart';
 import '../when.dart';
+import 'my_night.dart';
 
 /// What a table booking is, as the website stores it (`site_table_bookings.status`). A booking that was started but never paid is `pending` and is not a booking the person has.
 enum BookingStatus {
@@ -34,6 +35,8 @@ class BookingBottle {
     this.size,
     this.isAddon = false,
     this.cancelled = false,
+    this.serviceStatus,
+    this.deliveredQuantity = 0,
   });
 
   final String id;
@@ -45,6 +48,20 @@ class BookingBottle {
   final String paymentStatus;
   final bool isAddon;
   final bool cancelled;
+
+  /// Where the venue has got to with it: `awaiting_prep`, `preparing`, `ready`, `picked_up` or `served`. Separate from whether it is paid.
+  final String? serviceStatus;
+  final int deliveredQuantity;
+
+  /// What a guest reads for [serviceStatus]. A status this code has not seen is not shown as one it knows.
+  String? get serviceLabel => switch (serviceStatus) {
+        'awaiting_prep' => 'Order received',
+        'preparing' => 'Being prepared',
+        'ready' => 'Ready',
+        'picked_up' => 'On the way',
+        'served' => 'Delivered',
+        _ => null,
+      };
 
   String get displayName => size == null ? name : '$name ($size)';
   bool get dueAtClub => paymentStatus == 'due_at_venue';
@@ -65,6 +82,8 @@ BookingBottle? parseBookingBottle(Map<String, dynamic> row) {
     paymentStatus: readText(row['payment_status']) ?? 'paid',
     isAddon: row['is_addon'] == true,
     cancelled: row['cancelled_at'] != null,
+    serviceStatus: readText(row['service_status']),
+    deliveredQuantity: readInt(row['delivered_quantity']) ?? 0,
   );
 }
 
@@ -128,6 +147,7 @@ class TableBooking {
     this.slotLabel,
     this.venueId,
     this.venueAddress,
+    this.venuePhone,
     this.bottlePaymentChoice,
     this.checkedInAt,
     this.cancelledAt,
@@ -135,6 +155,7 @@ class TableBooking {
     this.bottles = const [],
     this.clubPayments = const [],
     this.refunds = const [],
+    this.substitutions = const [],
   });
 
   final String id;
@@ -155,6 +176,7 @@ class TableBooking {
   final String? venueId;
   final String venueName;
   final String? venueAddress;
+  final String? venuePhone;
   final String currency;
   final int depositCents;
   final int bottleSubtotalCents;
@@ -171,6 +193,9 @@ class TableBooking {
   final List<BookingBottle> bottles;
   final List<ClubPaymentRequest> clubPayments;
   final List<BookingRefund> refunds;
+
+  /// Bottle replacements the club suggested that the guest has not answered yet.
+  final List<BottleSubstitution> substitutions;
 
   bool get isPaid => status == BookingStatus.paid;
   bool get isCancelled => status == BookingStatus.cancelled;
@@ -200,7 +225,7 @@ class TableBooking {
 
 /// A booking row with its table, venue and time embedded (`site_table_types`, `site_venues`, `site_venue_time_slots`) and, for the detail page, its bottles, club payments and
 /// refunds. Null when it has no id, a known status, a booking day, or a guest count.
-TableBooking? parseTableBooking(Map<String, dynamic> row, {List<BookingBottle> bottles = const [], List<ClubPaymentRequest> clubPayments = const [], List<BookingRefund> refunds = const []}) {
+TableBooking? parseTableBooking(Map<String, dynamic> row, {List<BookingBottle> bottles = const [], List<ClubPaymentRequest> clubPayments = const [], List<BookingRefund> refunds = const [], List<BottleSubstitution> substitutions = const []}) {
   final id = readText(row['id']);
   final status = BookingStatus.fromDb(row['status']);
   final day = readDay(row['booking_date']);
@@ -224,6 +249,7 @@ TableBooking? parseTableBooking(Map<String, dynamic> row, {List<BookingBottle> b
     venueId: readText(row['venue_id']),
     venueName: readText(venue['name']) ?? 'Venue',
     venueAddress: readText(venue['address']),
+    venuePhone: readText(venue['phone']),
     currency: readText(row['currency']) ?? 'cad',
     depositCents: readInt(row['deposit_cents']) ?? 0,
     bottleSubtotalCents: readInt(row['bottle_subtotal_cents']) ?? 0,
@@ -240,5 +266,6 @@ TableBooking? parseTableBooking(Map<String, dynamic> row, {List<BookingBottle> b
     bottles: bottles,
     clubPayments: clubPayments,
     refunds: refunds,
+    substitutions: substitutions,
   );
 }

@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current state (24 Oct 2026): read this first
+## Current state (25 Oct 2026): read this first
 
-The app is being moved onto the **website's `site_*` data** (source of truth; same Supabase project as the website and the vendor app). Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`. Events, tickets, VIP table booking and My bookings are done; after-purchase actions, push and store readiness are not (`REMAINING_WORK.md` is the list; see also `HANDOFF.md` at the monorepo root).
+The app is being moved onto the **website's `site_*` data** (source of truth; same Supabase project as the website and the vendor app). Bundle IDs: iOS `com.btlup.pop`, Android `com.bottlesup.user`. Events, tickets, VIP table booking, My bookings and the after-purchase actions ("My Night": guests, extra bottles, replacements, club payments, refund request) are done; push, store readiness and everything social are not (`REMAINING_WORK.md` is the list; `docs/USER_APP_PLAN_STATUS.md` maps the client's 15 Oct plan to what exists: production has no social tables; see also `HANDOFF.md` at the monorepo root).
 
 - New code lives in `lib/site/` (no codegen, hand-written Riverpod): `models/` (tolerant parsers that drop bad rows), `rules/` (plain functions), `services/` (talk to the website's tables and functions, throw `SiteException` with a plain sentence), `providers/site_providers.dart`. Screens: `lib/features/discover` (events), `lib/features/tables` (venues, tables, booking), `lib/features/tickets_site` (buy, pay, my tickets, ticket) and `lib/features/bookings_site` (the Bookings tab and a table booking's page). Tabs: Events | Tables | Bookings | Profile (`MainTab`). What production holds that the website repo does not: `docs/production_snapshot/`. The route table is `appRoutes` in `lib/routing/app_router.dart`.
 - Payment is the website's hosted Stripe Checkout, opened in an in-app browser view; the app asks `site-booking-status` how it went. There is no Stripe SDK in the app.
