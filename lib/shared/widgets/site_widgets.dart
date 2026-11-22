@@ -59,13 +59,16 @@ class EmptyState extends StatelessWidget {
 
 /// A picture from the internet with a quiet placeholder while it loads and when it cannot be shown.
 class NetworkPicture extends StatelessWidget {
-  const NetworkPicture({super.key, required this.url, this.height, this.width, this.radius = 12, this.fit = BoxFit.cover});
+  const NetworkPicture({super.key, required this.url, this.height, this.width, this.radius = 12, this.fit = BoxFit.cover, this.placeholderHeight});
 
   final String? url;
   final double? height;
   final double? width;
   final double radius;
   final BoxFit fit;
+
+  /// How tall the quiet placeholder is while the picture loads (and if it cannot be shown) when [height] is not set because the picture decides its own height.
+  final double? placeholderHeight;
 
   /// Tests put their own picture here: the real one keeps a cache on the phone's disk, which a test phone does not have.
   @visibleForTesting
@@ -75,7 +78,7 @@ class NetworkPicture extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final placeholder = Container(
-      height: height,
+      height: height ?? placeholderHeight,
       width: width,
       decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(radius)),
       child: Icon(Icons.nightlife_outlined, color: theme.colorScheme.onSurfaceVariant),

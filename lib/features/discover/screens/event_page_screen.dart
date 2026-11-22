@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../site/models/review.dart';
 import '../../social/widgets/reviews_widgets.dart';
 
+import '../../../shared/widgets/flyer.dart';
 import '../../../shared/widgets/site_widgets.dart';
 import '../../../site/models/site_event.dart';
 import '../../../site/money.dart';
@@ -95,7 +96,7 @@ class _EventPageScreenState extends ConsumerState<EventPageScreen> {
             key: const Key('event-page'),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
-              NetworkPicture(url: e.picture, height: 220, width: double.infinity, radius: 0),
+              FlyerImage(url: e.picture),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
