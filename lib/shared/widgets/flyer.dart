@@ -67,9 +67,9 @@ class FlyerImage extends StatelessWidget {
   }
 }
 
-/// The flyer on a list card: the whole picture inside a band [height] tall, over a blurred, darkened copy of itself. Never cropped.
+/// The flyer on a list card: the whole picture inside a band [height] tall (170, the height the cropped picture had, so no list moves), over a blurred, darkened copy of itself. Never cropped.
 class FlyerThumb extends StatelessWidget {
-  const FlyerThumb({super.key, required this.url, this.height = 190});
+  const FlyerThumb({super.key, required this.url, this.height = 170});
 
   final String? url;
   final double height;

@@ -174,11 +174,11 @@ void main() {
       expect(cropped, hasLength(1), reason: 'nothing else on the card is cropped');
     });
 
-    testWidgets('the blurred copy is darkened so the flyer on top stands out, and the band is 190 tall', (tester) async {
+    testWidgets('the blurred copy is darkened so the flyer on top stands out, and the band keeps the 170 px height the cropped picture had (no list moves)', (tester) async {
       await pumpSite(tester, SingleChildScrollView(child: EventCard(event: event(), onTap: () {})), site: site);
       expect(tester.widget<ImageFiltered>(find.byType(ImageFiltered)).imageFilter, ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18), reason: 'the backdrop is really blurred');
       expect(find.descendant(of: find.byType(FlyerThumb), matching: find.byWidgetPredicate((w) => w is ColoredBox && w.color == Colors.black45)), findsOneWidget);
-      expect(tester.getSize(find.byType(FlyerThumb)).height, 190);
+      expect(tester.getSize(find.byType(FlyerThumb)).height, 170);
     });
 
     testWidgets('a card with no flyer keeps the quiet band', (tester) async {
