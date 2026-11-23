@@ -1,3 +1,6 @@
+import 'package:clock/clock.dart';
+import 'package:intl/intl.dart';
+
 import '../models/site_event.dart';
 import '../money.dart';
 
@@ -11,12 +14,27 @@ const int emailMax = 254;
 final RegExp _emailShape = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
 /// Why a ticket type cannot be bought right now, or null when it can.
-enum TierBlock { soldOut, needsCode }
+enum TierBlock { notYetOnSale, saleEnded, soldOut, needsCode }
 
-/// What stops a person buying this ticket type: sold out, or locked until a code is entered. [unlocked] is true once the website accepted the code.
-TierBlock? tierBlock(TicketTier tier, {required bool unlocked}) {
+/// Is this a reason the type cannot be bought at all (as opposed to "needs a code", which the person can fix on the spot)?
+bool blocksPurchase(TierBlock? block) => block == TierBlock.notYetOnSale || block == TierBlock.saleEnded || block == TierBlock.soldOut;
+
+/// What stops a person buying this ticket type: its sales have not opened or have closed (the organizer's dates), it is sold out, or it is locked until a code is entered. [unlocked] is true once the
+/// website accepted the code. [now] is the moment to judge by (the app's clock when not given).
+TierBlock? tierBlock(TicketTier tier, {required bool unlocked, DateTime? now}) {
+  final t = now ?? clock.now();
+  if (tier.salesNotOpen(t)) return TierBlock.notYetOnSale;
+  if (tier.salesClosed(t)) return TierBlock.saleEnded;
   if (tier.soldOut) return TierBlock.soldOut;
   if (tier.requiresAccessCode && !unlocked) return TierBlock.needsCode;
+  return null;
+}
+
+/// "On sale from Dec 5, 7:00 PM" before sales open, "Sales ended" after they close, otherwise null. The time is in the phone's own time zone.
+String? saleLabel(TicketTier tier, {DateTime? now}) {
+  final t = now ?? clock.now();
+  if (tier.salesNotOpen(t)) return 'On sale from ${DateFormat('MMM d, h:mm a').format(tier.saleStartsAt!.toLocal())}';
+  if (tier.salesClosed(t)) return 'Sales ended';
   return null;
 }
 
@@ -50,9 +68,14 @@ String? validateTicketOrder({
   required String name,
   required String email,
   required String phone,
+  DateTime? now,
 }) {
   if (tier == null) return 'Choose a ticket type.';
-  switch (tierBlock(tier, unlocked: unlocked)) {
+  switch (tierBlock(tier, unlocked: unlocked, now: now)) {
+    case TierBlock.notYetOnSale:
+      return 'Sales of ${tier.name} have not opened yet.';
+    case TierBlock.saleEnded:
+      return 'Sales of ${tier.name} have ended.';
     case TierBlock.soldOut:
       return '${tier.name} is sold out.';
     case TierBlock.needsCode:

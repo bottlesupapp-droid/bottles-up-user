@@ -238,6 +238,8 @@ Map<String, dynamic> tierRow({
   int sold = 20,
   bool code = false,
   bool nonTransferable = false,
+  String? saleStarts,
+  String? saleEnds,
 }) =>
     {
       'id': id,
@@ -249,6 +251,8 @@ Map<String, dynamic> tierRow({
       'sold_count': sold,
       'requires_access_code': code,
       'is_non_transferable': nonTransferable,
+      'sale_starts_at': saleStarts,
+      'sale_ends_at': saleEnds,
     };
 
 Map<String, dynamic> orderRow({

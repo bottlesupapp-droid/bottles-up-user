@@ -6,6 +6,9 @@ String? _text(Object? v) {
   return s == null || s.isEmpty ? null : s;
 }
 
+/// A date and time from the database (with its time zone), as an instant; null when missing or unreadable.
+DateTime? _time(Object? v) => v is String ? DateTime.tryParse(v)?.toUtc() : null;
+
 List<String> _texts(Object? v) => v is List ? [for (final x in v) if (x is String && x.trim().isNotEmpty) x.trim()] : const [];
 
 /// One kind of ticket for an event (`site_ticket_tiers`).
@@ -20,6 +23,8 @@ class TicketTier {
     required this.soldCount,
     required this.requiresAccessCode,
     required this.isNonTransferable,
+    this.saleStartsAt,
+    this.saleEndsAt,
   });
 
   final String id;
@@ -35,6 +40,16 @@ class TicketTier {
 
   /// The ticket stays with the buyer: at the door they give a 6-digit code sent to their email.
   final bool isNonTransferable;
+
+  /// When sales of this ticket type open and close (the organizer sets them; either may be empty, and empty means no limit). A type with neither is on sale as always.
+  final DateTime? saleStartsAt;
+  final DateTime? saleEndsAt;
+
+  /// Sales have not opened yet at [now]. They open AT [saleStartsAt].
+  bool salesNotOpen(DateTime now) => saleStartsAt != null && now.isBefore(saleStartsAt!);
+
+  /// Sales have closed at [now]. They close AT [saleEndsAt]: a type set to end at 10:00 cannot be bought at 10:00 (the website checks it the same way).
+  bool salesClosed(DateTime now) => saleEndsAt != null && !now.isBefore(saleEndsAt!);
 
   int get available => capacity - soldCount < 0 ? 0 : capacity - soldCount;
   bool get soldOut => available <= 0;
@@ -58,6 +73,8 @@ TicketTier? parseTicketTier(Map<String, dynamic> row, {String? eventId}) {
     soldCount: _int(row['sold_count']) ?? 0,
     requiresAccessCode: row['requires_access_code'] == true,
     isNonTransferable: row['is_non_transferable'] == true,
+    saleStartsAt: _time(row['sale_starts_at']),
+    saleEndsAt: _time(row['sale_ends_at']),
   );
 }
 
