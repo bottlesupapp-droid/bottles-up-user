@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/widgets/site_widgets.dart';
+import '../../../shared/widgets/flyer.dart';
 import '../../../site/models/site_event.dart';
 import '../../../site/rules/event_rules.dart';
 import '../../../site/when.dart';
@@ -28,7 +28,7 @@ class EventCard extends StatelessWidget {
           children: [
             Stack(
               children: [
-                NetworkPicture(url: event.picture, height: 170, width: double.infinity, radius: 0),
+                FlyerThumb(url: event.picture),
                 if (live)
                   Positioned(
                     left: 12,
