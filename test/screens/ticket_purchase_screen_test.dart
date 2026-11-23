@@ -241,4 +241,35 @@ void main() {
     expect(find.text('Sign in to buy tickets'), findsOneWidget);
     expect(find.byKey(const Key('pay')), findsNothing);
   });
+
+  group('the organizer\'s sales window', () {
+    String iso(Duration from) => DateTime.now().toUtc().add(from).toIso8601String();
+
+    testWidgets('a type whose sales have ended cannot be paid for, and says so', (tester) async {
+      site.tables['site_events'] = [
+        eventRow(cover: null, tiers: [tierRow(id: 't1', name: 'General', saleEnds: iso(const Duration(days: -1)))]),
+      ];
+      await open(tester);
+      expect(textOf(tester, 'purchase-sale-note'), 'Sales ended');
+      expect(tester.widget<FilledButton>(find.byKey(const Key('pay'))).onPressed, isNull);
+    });
+
+    testWidgets('a type whose sales have not opened cannot be paid for, and says when they open', (tester) async {
+      site.tables['site_events'] = [
+        eventRow(cover: null, tiers: [tierRow(id: 't1', name: 'General', saleStarts: iso(const Duration(days: 2)))]),
+      ];
+      await open(tester);
+      expect(textOf(tester, 'purchase-sale-note'), startsWith('On sale from '));
+      expect(tester.widget<FilledButton>(find.byKey(const Key('pay'))).onPressed, isNull);
+    });
+
+    testWidgets('inside the window it is paid for as always, and the note shows only scarcity', (tester) async {
+      site.tables['site_events'] = [
+        eventRow(cover: null, tiers: [tierRow(id: 't1', name: 'General', capacity: 5, sold: 3, saleStarts: iso(const Duration(days: -1)), saleEnds: iso(const Duration(days: 1)))]),
+      ];
+      await open(tester);
+      expect(textOf(tester, 'purchase-sale-note'), 'Only 2 left');
+      expect(tester.widget<FilledButton>(find.byKey(const Key('pay'))).onPressed, isNotNull);
+    });
+  });
 }

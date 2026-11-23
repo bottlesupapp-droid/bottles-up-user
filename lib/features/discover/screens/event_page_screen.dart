@@ -142,7 +142,7 @@ class _EventPageScreenState extends ConsumerState<EventPageScreen> {
                         _TierTile(
                           tier: t,
                           selected: t.id == _tierId,
-                          disabled: over || t.soldOut,
+                          disabled: over || blocksPurchase(tierBlock(t, unlocked: true)),
                           onTap: () => setState(() => _tierId = t.id),
                         ),
                     ReviewsSection(kind: ReviewKind.event, targetId: e.id),
@@ -174,8 +174,8 @@ class _EventPageScreenState extends ConsumerState<EventPageScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   key: const Key('get-tickets'),
-                  onPressed: chosen == null || block == TierBlock.soldOut ? null : () => _buy(e, chosen!),
-                  child: Text(chosen == null ? 'Choose a ticket' : 'Get tickets · ${formatPrice(chosen.priceCents, currency: chosen.currency)}'),
+                  onPressed: chosen == null || blocksPurchase(block) ? null : () => _buy(e, chosen!),
+                  child: Text(chosen == null ? 'Choose a ticket' : (saleLabel(chosen) ?? 'Get tickets · ${formatPrice(chosen.priceCents, currency: chosen.currency)}')),
                 ),
               ),
             ),
@@ -220,6 +220,8 @@ class _TierTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scarce = scarcityLabel(tier);
+    final sale = saleLabel(tier);
+    final closed = blocksPurchase(tierBlock(tier, unlocked: true));
     final notes = <String>[
       if (tier.requiresAccessCode) 'Needs an access code',
       if (tier.isNonTransferable) 'Stays with the buyer: you get a code by email to show at the door',
@@ -239,7 +241,8 @@ class _TierTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tier.name, style: theme.textTheme.titleMedium?.copyWith(color: tier.soldOut ? theme.disabledColor : null)),
+                    Text(tier.name, style: theme.textTheme.titleMedium?.copyWith(color: closed ? theme.disabledColor : null)),
+                    if (sale != null) Text(sale, key: Key('tier-sale-${tier.id}'), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
                     if (scarce != null) Text(scarce, key: Key('tier-scarcity-${tier.id}'), style: theme.textTheme.bodySmall?.copyWith(color: tier.soldOut ? theme.disabledColor : theme.colorScheme.primary)),
                     for (final n in notes) Padding(padding: const EdgeInsets.only(top: 2), child: Text(n, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
                   ],

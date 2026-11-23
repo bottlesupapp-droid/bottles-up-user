@@ -2,6 +2,7 @@ import 'package:bottles_up_user/features/discover/screens/event_page_screen.dart
 import 'package:bottles_up_user/site/models/site_event.dart';
 import 'package:bottles_up_user/site/money.dart';
 import 'package:bottles_up_user/site/when.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -143,6 +144,69 @@ void main() {
       site.tables['site_events'] = [{...eventRow(cover: null), 'venue_id': null}];
       await open(tester);
       expect(find.byKey(const Key('book-table')), findsNothing);
+    });
+  });
+
+  group('the organizer\'s sales window', () {
+    String iso(Duration from) => DateTime.now().toUtc().add(from).toIso8601String();
+
+    void seedWindows() {
+      site.tables['site_events'] = [
+        eventRow(cover: null, tiers: [
+          tierRow(id: 't1', name: 'General', price: 5000, capacity: 100, sold: 20),
+          tierRow(id: 't2', name: 'Opens later', price: 4000, capacity: 100, sold: 0, saleStarts: iso(const Duration(days: 3))),
+          tierRow(id: 't3', name: 'Closed', price: 3000, capacity: 100, sold: 0, saleEnds: iso(const Duration(days: -1))),
+          tierRow(id: 't4', name: 'Open until later', price: 2000, capacity: 100, sold: 0, saleStarts: iso(const Duration(days: -1)), saleEnds: iso(const Duration(days: 2))),
+        ]),
+      ];
+    }
+
+    testWidgets('a type that opens later says when, a closed one says so, and neither can be chosen', (tester) async {
+      seedWindows();
+      await open(tester);
+
+      expect(find.byKey(const Key('tier-sale-t1')), findsNothing, reason: 'a type with no dates says nothing');
+      expect(textOf(tester, 'tier-sale-t2'), startsWith('On sale from '));
+      expect(textOf(tester, 'tier-sale-t3'), 'Sales ended');
+      expect(find.byKey(const Key('tier-sale-t4')), findsNothing, reason: 'inside its window it says nothing');
+
+      await tester.tap(find.byKey(const Key('tier-t2')));
+      await tester.pump();
+      expect(find.byKey(const Key('tier-selected')), findsNothing, reason: 'sales have not opened');
+      await tester.tap(find.byKey(const Key('tier-t3')));
+      await tester.pump();
+      expect(find.byKey(const Key('tier-selected')), findsNothing, reason: 'sales have ended');
+      expect(tester.widget<FilledButton>(find.byKey(const Key('get-tickets'))).onPressed, isNull);
+
+      final dim = Theme.of(tester.element(find.byKey(const Key('tier-t3')))).disabledColor;
+      expect(tester.widget<Text>(find.text('Closed')).style?.color, dim, reason: 'a closed type is dimmed');
+      expect(tester.widget<Text>(find.text('Opens later')).style?.color, dim, reason: 'one that has not opened is dimmed too');
+      expect(tester.widget<Text>(find.text('Open until later')).style?.color, isNot(dim), reason: 'one on sale is not');
+
+      await tester.tap(find.byKey(const Key('tier-t4')));
+      await tester.pump();
+      expect(find.byKey(const Key('tier-selected')), findsOneWidget, reason: 'inside its window it can be chosen');
+      expect(find.text('Get tickets · ${formatPrice(2000, currency: 'cad')}'), findsOneWidget);
+    });
+
+    testWidgets('a type chosen while on sale stops being buyable the moment its sales end', (tester) async {
+      final ends = DateTime.now().toUtc().add(const Duration(hours: 1));
+      site.tables['site_events'] = [
+        eventRow(cover: null, tiers: [tierRow(id: 't1', name: 'General', price: 5000, capacity: 100, sold: 0, saleEnds: ends.toIso8601String())]),
+      ];
+      var now = DateTime.now();
+      await withClock(Clock(() => now), () async {
+        await open(tester);
+        await tester.tap(find.byKey(const Key('tier-t1')));
+        await tester.pump();
+        expect(tester.widget<FilledButton>(find.byKey(const Key('get-tickets'))).onPressed, isNotNull);
+
+        now = ends.toLocal();
+        await tester.tap(find.byKey(const Key('tier-t1')), warnIfMissed: false);
+        await tester.pump();
+        expect(find.descendant(of: find.byKey(const Key('get-tickets')), matching: find.text('Sales ended')), findsOneWidget, reason: 'the button itself says why it is off');
+        expect(tester.widget<FilledButton>(find.byKey(const Key('get-tickets'))).onPressed, isNull);
+      });
     });
   });
 }

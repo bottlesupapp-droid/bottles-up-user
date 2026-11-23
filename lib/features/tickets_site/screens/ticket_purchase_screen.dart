@@ -221,7 +221,7 @@ class _TicketPurchaseScreenState extends ConsumerState<TicketPurchaseScreen> {
         Card(
           child: ListTile(
             title: Text(tier.name, key: const Key('purchase-tier')),
-            subtitle: scarcityLabel(tier) == null ? null : Text(scarcityLabel(tier)!),
+            subtitle: (saleLabel(tier) ?? scarcityLabel(tier)) == null ? null : Text((saleLabel(tier) ?? scarcityLabel(tier))!, key: const Key('purchase-sale-note')),
             trailing: Text(formatPrice(tier.priceCents, currency: tier.currency), style: theme.textTheme.titleMedium),
           ),
         ),
@@ -287,7 +287,7 @@ class _TicketPurchaseScreenState extends ConsumerState<TicketPurchaseScreen> {
         const SizedBox(height: 16),
         FilledButton(
           key: const Key('pay'),
-          onPressed: _busy || block == TierBlock.soldOut ? null : () => _pay(e, tier, acc),
+          onPressed: _busy || blocksPurchase(block) ? null : () => _pay(e, tier, acc),
           child: Text(_busy ? 'Opening payment...' : 'Continue to payment'),
         ),
       ],
